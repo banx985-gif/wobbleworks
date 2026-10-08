@@ -1,6 +1,7 @@
 import { collectMotionDiscoveries, MOTION_REAL_WORLD_CARDS } from "../motion/MotionYard.js";
 import { collectGearDiscoveries, GEAR_REAL_WORLD_CARDS } from "../gears/GearGarage.js";
 import { collectStructureDiscoveries, STRUCTURE_REAL_WORLD_CARDS } from "../structures/BuilderBay.js";
+import { LAB_MODULES } from "../labs/Labs.js";
 export const DISCOVERIES = [
     { id: "motion.gravity-down", kind: "CONCEPT", title: "Gravity pulls down", line: "Let go of something and it falls.", art: "motion.ball", truthContractId: "truth.motion.v1" },
     { id: "motion.slope-effect", kind: "CONCEPT", title: "Slopes change motion", line: "A ramp turns falling into rolling.", art: "motion.ramp", truthContractId: "truth.motion.v1" },
@@ -42,10 +43,24 @@ export const DISCOVERIES = [
     { id: "combo.crane", kind: "COMBINATION", title: "Gears + tower = crane", line: "Your tower held the winch while the gears lifted the load.", art: "gear.winch", truthContractId: "truth.structures.v1" },
     { id: "combo.ramp-bridge", kind: "COMBINATION", title: "Ramp + bridge", line: "Up a Motion ramp and across your bridge in one go.", art: "motion.ramp", truthContractId: "truth.structures.v1" },
     { id: "secret.mega-collapse", kind: "SECRET", title: "Spectacular Collapse", line: "Five parts broke in one test! (That's how engineers learn.)", art: "builder.beam-wood", truthContractId: "truth.structures.v1" },
+    // Power Lab (M14) — every one measured by the CircuitSystem (truth.electricity.v1)
+    { id: "power.complete-circuit", kind: "CONCEPT", title: "Circuits need a loop", line: "Electricity flows out of the battery, through the load, and back again.", art: "icon.lightning", truthContractId: "truth.electricity.v1" },
+    { id: "power.switch-control", kind: "CONCEPT", title: "Switches open the loop", line: "A switch or button makes a gap in the loop — or closes it.", art: "power.button-lever", truthContractId: "truth.electricity.v1" },
+    { id: "power.series", kind: "CONCEPT", title: "Sharing one loop", line: "Bulbs in one long loop share the battery's push, so each is dimmer.", art: "icon.lightning", truthContractId: "truth.electricity.v1" },
+    { id: "power.parallel", kind: "CONCEPT", title: "A path each", line: "Give each bulb its own path and they're all bright — the battery works harder.", art: "icon.power-burst", truthContractId: "truth.electricity.v1" },
+    { id: "power.motor", kind: "CONCEPT", title: "Electricity makes things turn", line: "An electric motor turns when current flows through it.", art: "icon.cat-power", truthContractId: "truth.electricity.v1" },
+    { id: "power.more-batteries", kind: "CONCEPT", title: "Two batteries push harder", line: "Batteries end to end push more electricity round the loop.", art: "icon.battery", truthContractId: "truth.electricity.v1" },
+    { id: "power.easy-path", kind: "CONCEPT", title: "Electricity takes the easy path", line: "A plain wire next to a bulb carries the current around it, so the bulb goes out.", art: "icon.lightning", truthContractId: "truth.electricity.v1" },
+    { id: "power.battery-drain", kind: "CONCEPT", title: "Batteries run down", line: "Everything that's switched on uses up the battery's stored energy.", art: "icon.battery-charge", truthContractId: "truth.electricity.v1" },
+    { id: "combo.power-gears", kind: "COMBINATION", title: "Motor + gears", line: "An electric motor turned your gears and they did the work.", art: "icon.cat-gears", truthContractId: "truth.electricity.v1" },
+    { id: "combo.power-conveyor", kind: "COMBINATION", title: "Electric conveyor", line: "Electricity ran the old Motion Yard conveyor.", art: "icon.energy-orb", truthContractId: "truth.electricity.v1" },
+    { id: "secret.power-overload", kind: "SECRET", title: "Overload!", line: "Too much at once — the power station switched itself off to stay safe.", art: "icon.power-burst", truthContractId: "truth.electricity.v1" },
+    { id: "secret.power-light-show", kind: "SECRET", title: "Light Show", line: "Five bulbs glowing at once!", art: "icon.lightning", truthContractId: "truth.electricity.v1" },
+    { id: "secret.power-duck-alarm", kind: "SECRET", title: "Quack Attack Alarm", line: "A duck set off your alarm. Security is tight.", art: "icon.button", truthContractId: "truth.electricity.v1" },
     { id: "secret.sky-tower", kind: "SECRET", title: "Sky Scraper", line: "A tower so tall it nearly touched the ceiling — and it stood firm!", art: "builder.beam-metal", truthContractId: "truth.structures.v1" }
 ];
 export function discoveryById(id) { return DISCOVERIES.find(d => d.id === id); }
-export function realWorldCard(id) { return [...MOTION_REAL_WORLD_CARDS, ...GEAR_REAL_WORLD_CARDS, ...STRUCTURE_REAL_WORLD_CARDS].find(c => c.discoveryId === id); }
+export function realWorldCard(id) { return [...MOTION_REAL_WORLD_CARDS, ...GEAR_REAL_WORLD_CARDS, ...STRUCTURE_REAL_WORLD_CARDS, ...LAB_MODULES.flatMap(m => m.realWorldCards)].find(c => c.discoveryId === id); }
 // ------------------------------------------------------------------ evidence helpers (read-only)
 /** Separate touches: events on the same object more than `gap` ticks apart count as new episodes. */
 export function episodes(events, gap = 12) {
@@ -190,6 +205,9 @@ const CONCEPT_EVIDENCE = {
 /** Every discovery this TEST run has real evidence for (concept + combination + secret). */
 export function evaluateRunDiscoveries(build, runtime, previous) {
     const concepts = [...collectMotionDiscoveries(undefined, build, runtime), ...collectGearDiscoveries(build, runtime), ...collectStructureDiscoveries(build, runtime, previous)].map(id => ({ id, evidence: CONCEPT_EVIDENCE[id] ?? "Seen in a test." }));
+    for (const m of LAB_MODULES)
+        for (const id of m.collectDiscoveries(build, runtime))
+            concepts.push({ id, evidence: m.conceptEvidence[id] ?? "Seen in a test." });
     return [...concepts, ...collectSpecialDiscoveries(build, runtime)].filter(a => discoveryById(a.id));
 }
 export function eventsFor(runtime, partId, kind) {

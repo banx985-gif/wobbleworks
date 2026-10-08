@@ -139,6 +139,22 @@ export function assertLevelDefinition(value, knownPartIds) {
             if (!authoredTags.has(rule.aTag) || !authoredTags.has(rule.bTag) || rule.minRatio < 1)
                 throw new ValidationError(`Invalid STRUCT_COMPARE rule`);
         }
+        else if (rule.kind === "CIRCUIT_POWERED") {
+            if (!authoredTags.has(rule.targetTag) || rule.minLevel <= 0 || rule.sustainSeconds < 0)
+                throw new ValidationError(`Invalid CIRCUIT_POWERED rule`);
+        }
+        else if (rule.kind === "CIRCUIT_CONTROLLED") {
+            if (!authoredTags.has(rule.targetTag) || !authoredTags.has(rule.controlTag))
+                throw new ValidationError(`CIRCUIT_CONTROLLED tags must exist`);
+        }
+        else if (rule.kind === "CIRCUIT_COMPARE") {
+            if (!authoredTags.has(rule.aTag) || !authoredTags.has(rule.bTag) || rule.minRatio < 1)
+                throw new ValidationError(`Invalid CIRCUIT_COMPARE rule`);
+        }
+        else if (rule.kind === "ENERGY_AT_MOST") {
+            if (!(rule.maxEnergy > 0))
+                throw new ValidationError(`ENERGY_AT_MOST needs a positive limit`);
+        }
         else if (rule.kind === "GEAR_COMPARE") {
             if (!authoredTags.has(rule.aTag) || !authoredTags.has(rule.bTag) || rule.minRatio < 1)
                 throw new ValidationError(`Invalid GEAR_COMPARE rule`);

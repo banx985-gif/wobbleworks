@@ -79,6 +79,31 @@ export const REWARDS = [
     { id: "badge.builder-bay", kind: "BADGE", title: "Builder Bay Restored", icon: "🏅", description: "Builder Bay is sturdy again!" },
     { id: "bolt.builder-hat", kind: "BOLT_COSTUME", title: "Builder's Helmet", icon: "👷", description: "Bolt is now officially in charge of safety." },
     { id: "prop.toy-elephant", kind: "PROP", title: "Toy Elephant", icon: "🐘", description: "A tiny copy of the parade elephant." },
+    // Power Lab (M14)
+    { id: "part.circuit.battery", kind: "PART", title: "Battery", icon: "🔋", description: "Pushes electricity round a loop." },
+    { id: "part.circuit.wire", kind: "PART", title: "Wire", icon: "〰️", description: "Joins things. Only its two ends connect." },
+    { id: "part.circuit.bulb", kind: "PART", title: "Bulb", icon: "💡", description: "Glows when electricity flows through it." },
+    { id: "part.circuit.switch", kind: "PART", title: "Switch", icon: "🎚️", description: "Opens and closes a gap in the loop. Tap it to flip it." },
+    { id: "part.circuit.button", kind: "PART", title: "Button", icon: "🔴", description: "Closes the loop only while it's pressed." },
+    { id: "part.circuit.motor", kind: "PART", title: "Electric Motor", icon: "⚙️", description: "Turns when electricity flows. Swap + and − to turn the other way." },
+    { id: "part.circuit.splitter", kind: "PART", title: "Splitter", icon: "🟡", description: "A post where lots of wires can meet." },
+    { id: "part.circuit.buzzer", kind: "PART", title: "Buzzer", icon: "🔔", description: "BZZZZ. (Sorry.)" },
+    { id: "part.circuit.battery-big", kind: "PART", title: "Big Battery", icon: "🔋", description: "Same push, lasts much longer." },
+    { id: "tool.circuit-scanner", kind: "TOOL", title: "Circuit Scanner", icon: "⚡", description: "Shows the current in every wire and which machines have no power — now in Free Build too." },
+    { id: "sticker.first-light", kind: "STICKER", title: "First Light", icon: "💡", description: "You lit your first bulb." },
+    { id: "sticker.loop-fixer", kind: "STICKER", title: "Loop Fixer", icon: "🔧", description: "You found the break in the loop." },
+    { id: "sticker.button-pusher", kind: "STICKER", title: "Button Pusher", icon: "🔴", description: "Push it, light it." },
+    { id: "sticker.motor-power", kind: "STICKER", title: "Motor Power", icon: "⚡", description: "Electricity moved the old conveyor." },
+    { id: "sticker.two-lights", kind: "STICKER", title: "Double Glow", icon: "✨", description: "Two lights, one battery." },
+    { id: "sticker.path-finder", kind: "STICKER", title: "Path Finder", icon: "🛤️", description: "A path for each bulb." },
+    { id: "sticker.lift-power", kind: "STICKER", title: "Power Lift", icon: "🏗️", description: "Motor, gears and a switch lifted the crate." },
+    { id: "sticker.battery-saver", kind: "STICKER", title: "Battery Saver", icon: "🔋", description: "Job done, battery saved." },
+    { id: "sticker.battery-scientist", kind: "STICKER", title: "Battery Scientist", icon: "🔬", description: "One battery or two — you tested it fairly." },
+    { id: "prop.duck-alarm", kind: "PROP", title: "Duck Alarm", icon: "🚨", description: "Guards the workshop. Quack." },
+    { id: "sprocket.glow-collar", kind: "SPROCKET_ACCESSORY", title: "Glow Collar", icon: "💡", description: "Sprocket lights up the dark." },
+    { id: "avatar.spark-visor", kind: "AVATAR", title: "Spark Visor", icon: "🕶️", description: "For looking cool near lightning." },
+    { id: "badge.power-grid", kind: "BADGE", title: "Grid Restorer", icon: "🔌", description: "You reconnected the campus power grid." },
+    { id: "badge.power-lab", kind: "BADGE", title: "Power Lab Restored", icon: "🏅", description: "The lights are on in the Power Lab!" },
     // hidden prototype lab key pieces — one from a silly mission in each of the first three labs (exploration, never stars)
     { id: "key.prototype-1", kind: "KEY_PIECE", title: "Strange Key Piece", icon: "🗝️", description: "A piece of something. It hums." },
     { id: "key.prototype-2", kind: "KEY_PIECE", title: "Another Strange Key Piece", icon: "🗝️", description: "It fits the first one. Sort of." },
@@ -122,7 +147,19 @@ export const MISSION_REWARDS = Object.freeze({
     "builder.which-bridge-holds-more": { onComplete: ["sticker.bridge-scientist"] },
     "builder.elephant-robot-parade": { onComplete: ["key.prototype-3"], onAllStars: ["prop.toy-elephant"] },
     "builder.the-robot-parade-bridge": { onComplete: ["badge.parade-bridge", "bolt.builder-hat"] },
-    "builder.collapsing-workshop-roof": { onComplete: ["badge.builder-bay"] }
+    "builder.collapsing-workshop-roof": { onComplete: ["badge.builder-bay"] },
+    "power.light-it-up": { onComplete: ["sticker.first-light", "part.circuit.battery", "part.circuit.wire", "part.circuit.bulb"] },
+    "power.broken-loop": { onComplete: ["sticker.loop-fixer", "part.circuit.switch"] },
+    "power.push-the-button": { onComplete: ["sticker.button-pusher", "part.circuit.button"] },
+    "power.motor-power": { onComplete: ["sticker.motor-power", "part.circuit.motor"] },
+    "power.two-lights": { onComplete: ["sticker.two-lights", "part.circuit.splitter"] },
+    "power.which-path": { onComplete: ["sticker.path-finder", "tool.circuit-scanner"] },
+    "power.power-the-lift": { onComplete: ["sticker.lift-power"] },
+    "power.save-the-battery": { onComplete: ["sticker.battery-saver", "part.circuit.battery-big"] },
+    "power.one-battery-or-two": { onComplete: ["sticker.battery-scientist"] },
+    "power.buzz-the-duck": { onComplete: ["part.circuit.buzzer", "prop.duck-alarm"], onAllStars: ["sprocket.glow-collar"] },
+    "power.restore-the-power-grid": { onComplete: ["badge.power-grid", "avatar.spark-visor"] },
+    "power.blackout": { onComplete: ["badge.power-lab"] }
 });
 /** Rewards owed for missions already completed (used when old saves or guest progress move into a profile). */
 export function completionRewardIds(levelIds) {
@@ -139,6 +176,7 @@ export function grantRewardsTo(p, rewardIds) {
     return { added, profile: { ...p, rewards: [...p.rewards, ...added], unseenRewards: [...new Set([...p.unseenRewards, ...added])], unlockedParts: [...new Set([...p.unlockedParts, ...parts])], unlockedTools: [...new Set([...p.unlockedTools, ...tools])] } };
 }
 const wild = (min = 3) => ({ kind: "DISCOVERY_COUNT", min, label: `WILD INVENTION — show ${min} science ideas in one TEST` });
+const nothingAdded = { kind: "PART_BUDGET", maxPlayerParts: 0, label: "NO EXTRAS — solve it without adding any parts" };
 const budget = (n) => ({ kind: "PART_BUDGET", maxPlayerParts: n, label: n === 1 ? "TINY MACHINE — solve it adding just 1 part" : `TINY MACHINE — solve it adding ${n} parts or fewer` });
 export const MISSION_STARS = Object.freeze({
     "motion.roll-with-it": { efficient: budget(1), advanced: wild() },
@@ -176,7 +214,19 @@ export const MISSION_STARS = Object.freeze({
     "builder.which-bridge-holds-more": { efficient: budget(6), advanced: { kind: "DISCOVERY", discoveryId: "structure.span", label: "FAIR TEST — see a plain beam bend and break" } },
     "builder.elephant-robot-parade": { efficient: budget(4), advanced: { kind: "DISCOVERY", discoveryId: "structure.material", label: "HEAVY DUTY — metal where wood would break" } },
     "builder.the-robot-parade-bridge": { efficient: budget(7), advanced: wild(4) },
-    "builder.collapsing-workshop-roof": { efficient: budget(6), advanced: wild() }
+    "builder.collapsing-workshop-roof": { efficient: budget(6), advanced: wild() },
+    "power.light-it-up": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "power.complete-circuit", label: "LOOP SPOTTER — keep the bulb lit" } },
+    "power.broken-loop": { efficient: budget(1), advanced: { kind: "DISCOVERY", discoveryId: "power.easy-path", label: "SHORTCUT SPOTTER — see electricity skip past a bulb" } },
+    "power.push-the-button": { efficient: budget(3), advanced: { kind: "DISCOVERY", discoveryId: "power.switch-control", label: "IN CONTROL — the button switches it on and off" } },
+    "power.motor-power": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "combo.power-conveyor", label: "OLD MEETS NEW — electricity drives the Motion conveyor" } },
+    "power.two-lights": { efficient: budget(3), advanced: { kind: "DISCOVERY", discoveryId: "power.series", label: "SHARE THE PUSH — light both in one loop" } },
+    "power.which-path": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "power.parallel", label: "A PATH EACH — both bulbs bright" } },
+    "power.power-the-lift": { efficient: budget(1), advanced: { kind: "DISCOVERY", discoveryId: "combo.power-gears", label: "MOTOR + GEARS — electric winch" } },
+    "power.save-the-battery": { efficient: nothingAdded, advanced: wild(2) },
+    "power.one-battery-or-two": { efficient: budget(4), advanced: { kind: "DISCOVERY", discoveryId: "power.more-batteries", label: "DOUBLE PUSH — two batteries, brighter bulb" } },
+    "power.buzz-the-duck": { efficient: budget(5), advanced: { kind: "DISCOVERY", discoveryId: "secret.power-duck-alarm", label: "QUACK ATTACK — the duck sets it off" } },
+    "power.restore-the-power-grid": { efficient: budget(8), advanced: wild(3) },
+    "power.blackout": { efficient: nothingAdded, advanced: wild(2) }
 });
 export function evaluateStars(levelId, evidence) {
     const stars = ["solve"];

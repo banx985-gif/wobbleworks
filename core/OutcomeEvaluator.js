@@ -123,6 +123,30 @@ export function evaluateOutcomeRule(rule, build, runtime) {
             return false;
         return Math.max(la.held, lb.held) / Math.min(la.held, lb.held) >= rule.minRatio;
     }
+    if (rule.kind === "CIRCUIT_POWERED") {
+        const loads = tagged(build, rule.targetTag);
+        const need = Math.round(rule.sustainSeconds * 60);
+        return loads.length > 0 && loads.every(l => runtime.circuits.ticksAtLeast(l.id, rule.minLevel) >= Math.max(1, need));
+    }
+    if (rule.kind === "CIRCUIT_CONTROLLED") {
+        const controls = tagged(build, rule.controlTag), loads = tagged(build, rule.targetTag);
+        if (!controls.length || !loads.length)
+            return false;
+        return loads.every(l => controls.some(c => { const t = runtime.circuits.controlTally(c.id, l.id); return t.closedOn >= Math.round(rule.minOnSeconds * 60) && t.openOff >= Math.round(rule.minOffSeconds * 60) && t.openOn <= 3; }));
+    }
+    if (rule.kind === "CIRCUIT_COMPARE") {
+        const a = tagged(build, rule.aTag)[0], b = tagged(build, rule.bTag)[0];
+        if (!a || !b)
+            return false;
+        const la = runtime.circuits.load(a.id), lb = runtime.circuits.load(b.id);
+        if (!la || !lb || la.onTicks < 60 || lb.onTicks < 60 || la.power <= 0)
+            return false;
+        return lb.power / la.power >= rule.minRatio;
+    }
+    if (rule.kind === "ENERGY_AT_MOST")
+        return runtime.circuits.energyUsed() <= rule.maxEnergy;
+    if (rule.kind === "NO_OVERLOAD")
+        return !runtime.circuits.sources().some(s => s.tripped);
     if (rule.kind === "MECHANISM_FAMILY_COUNT") {
         const present = new Set(build.allParts().filter(part => rule.definitionIds.includes(part.definitionId)).map(part => part.definitionId));
         return present.size >= rule.minimum;

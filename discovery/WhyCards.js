@@ -11,7 +11,11 @@ export const WHY_CHOICES = {
     JAMMED: { label: "Jammed", icon: "🔒" },
     BLOCKED: { label: "In the way", icon: "🚧" },
     TOO_SHORT: { label: "Not tall enough", icon: "📏" },
-    SAME: { label: "About the same", icon: "⚖️" }
+    SAME: { label: "About the same", icon: "⚖️" },
+    SHORTCUT: { label: "Took a shortcut", icon: "⚡" },
+    ALWAYS_ON: { label: "Always on", icon: "💡" },
+    USED_TOO_MUCH: { label: "Used too much power", icon: "🔋" },
+    OVERLOAD: { label: "Too much at once", icon: "🔌" }
 };
 function tagged(build, tag) { return build.allParts().find(p => p.tags?.includes(tag)); }
 function state(runtime, id) { try {
@@ -27,6 +31,13 @@ function nameOf(part) {
 const m = (v) => `${v.toFixed(1)} m`;
 /** Picks two other answers deterministically so the same failure shows the same card. */
 function choicesFor(reason) {
+    const power = ["SHORTCUT", "ALWAYS_ON", "USED_TOO_MUCH", "OVERLOAD"].includes(reason);
+    if (power) {
+        const pool = ["NOT_CONNECTED", "SHORTCUT", "ALWAYS_ON", "OVERLOAD", "NOT_ENOUGH_FORCE", "USED_TOO_MUCH"].filter(r => r !== reason);
+        const seed = reason.length;
+        const three = [reason, pool[seed % pool.length], pool[(seed + 2) % pool.length]];
+        return [three[seed % 3], three[(seed + 1) % 3], three[(seed + 2) % 3]];
+    }
     const structure = ["BLOCKED", "TOO_SHORT", "SAME", "UNSTABLE"].includes(reason);
     const gear = ["JAMMED", "TOO_SLOW", "TOO_HEAVY"].includes(reason);
     const pool = (structure ? ["UNSTABLE", "TOO_HEAVY", "NOT_CONNECTED", "BLOCKED", "TOO_SHORT", "TOO_FAST"] : gear ? ["TOO_FAST", "TOO_SLOW", "WRONG_DIRECTION", "NOT_CONNECTED", "JAMMED", "TOO_HEAVY"] : ["TOO_FAST", "NOT_ENOUGH_FORCE", "TOO_MUCH_FORCE", "WRONG_DIRECTION", "NOT_CONNECTED", "UNSTABLE"]).filter(r => r !== reason);
@@ -44,6 +55,10 @@ export function diagnoseRun(level, build, runtime) {
         return undefined;
     const card = (reason, evidence) => ({ reason, evidence, choices: choicesFor(reason) });
     const rules = level?.outcomeRules ?? [];
+    // Power Lab: the circuit's own measurements.
+    const powerCard = diagnosePower(rules, build, runtime, card);
+    if (powerCard)
+        return powerCard;
     // Builder Bay: the structure's own measurements.
     const structureCard = diagnoseStructures(rules, build, runtime, card);
     if (structureCard)
@@ -255,3 +270,64 @@ function diagnoseGears(rules, build, runtime, card) {
     return undefined;
 }
 function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+function diagnosePower(rules, build, runtime, card) {
+    const c = runtime.circuits;
+    if (!c.layout.elements.length)
+        return undefined;
+    const events = runtime.causalEvents;
+    const pct = (v) => `${Math.round(v * 100)}%`;
+    const tripped = events.find(e => e.kind === "BREAKER_TRIPPED");
+    if (tripped)
+        return card("OVERLOAD", `Everything together wanted ${tripped.data?.power} units of power, but the station can only give ${tripped.data?.limit}. It switched off to stay safe.`);
+    for (const r of rules)
+        if (r.kind === "ENERGY_AT_MOST" && c.energyUsed() > r.maxEnergy)
+            return card("USED_TOO_MUCH", `The machine used ${c.energyUsed().toFixed(1)} units of battery energy. The limit was ${r.maxEnergy}.`);
+    for (const r of rules)
+        if (r.kind === "CIRCUIT_CONTROLLED") {
+            for (const load of build.allParts().filter(p => p.tags?.includes(r.targetTag)))
+                for (const ctl of build.allParts().filter(p => p.tags?.includes(r.controlTag))) {
+                    const t = c.controlTally(ctl.id, load.id);
+                    if (t.openOn > 3)
+                        return card("ALWAYS_ON", `It was on for ${(t.openOn / 60).toFixed(1)} s while the button wasn't pressed — the button isn't part of its loop.`);
+                }
+        }
+    const bypass = events.find(e => e.kind === "LOAD_BYPASSED");
+    if (bypass)
+        return card("SHORTCUT", `The current went through a plain wire beside ${nameOf(build.getPart(bypass.sourceId))} instead of through it, so it got almost nothing.`);
+    const stalled = events.find(e => e.kind === "GEAR_STALLED" && runtime.gears.isElectric(e.sourceId));
+    if (stalled)
+        return card("TOO_HEAVY", `The motor could only turn with ${stalled.data?.available} units of force, but the load needed ${stalled.data?.required}.`);
+    const targets = rules.flatMap(r => r.kind === "CIRCUIT_POWERED" || r.kind === "CIRCUIT_CONTROLLED" ? [r.targetTag] : r.kind === "CIRCUIT_COMPARE" ? [r.aTag, r.bTag] : []);
+    const motors = runtime.gears.nodes.filter(n => runtime.gears.isElectric(n.id)).map(n => n.id);
+    const loose = c.layout.terminals.filter(t => !t.isWire && c.layout.terminals.filter(u => u.node === t.node).length < 2).length;
+    for (const tag of targets)
+        for (const p of build.allParts().filter(q => q.tags?.includes(tag))) {
+            const l = c.load(p.id);
+            if (!l)
+                continue;
+            if (!l.everOn)
+                return card("NOT_CONNECTED", `${nameOf(p)} got no electricity at all — its loop has a gap${loose ? ` (${loose} dot${loose === 1 ? "" : "s"} with nothing plugged in)` : ""}.`);
+        }
+    for (const r of rules)
+        if (r.kind === "CIRCUIT_POWERED") {
+            const dim = build.allParts().filter(p => p.tags?.includes(r.targetTag)).map(p => c.load(p.id)).filter(l => l && l.on && l.peakLevel < r.minLevel);
+            if (dim.length)
+                return card("NOT_ENOUGH_FORCE", `It only got ${pct(dim[0].peakLevel)} power — ${dim.length > 1 ? "the bulbs are sharing one battery's push in one long loop" : "not enough push reached it"}.`);
+        }
+    for (const r of rules)
+        if (r.kind === "CIRCUIT_COMPARE") {
+            const a = build.allParts().find(p => p.tags?.includes(r.aTag)), b = build.allParts().find(p => p.tags?.includes(r.bTag));
+            const la = a && c.load(a.id), lb = b && c.load(b.id);
+            if (la?.on && lb?.on && lb.power / Math.max(la.power, 1e-6) < r.minRatio)
+                return card("SAME", `Bulb A got ${pct(la.level)} and bulb B got ${pct(lb.level)} — about the same. Is B really using both batteries?`);
+        }
+    for (const id of motors) {
+        const drive = c.motorDrive(id);
+        const zone = rules.find(r => r.kind === "OBJECT_ENTERS_ZONE");
+        if (drive < 0 && zone?.kind === "OBJECT_ENTERS_ZONE")
+            return card("WRONG_DIRECTION", "The motor turned backwards, so the machine moved the wrong way. Swap which wire goes to + and which to −.");
+        if (drive === 0 && !c.load(id)?.everOn)
+            return card("NOT_CONNECTED", "The motor never got any electricity — its loop isn't complete" + (build.allParts().some(p => p.definitionId === "circuit.switch" && !c.isClosed(p.id)) ? " (is the switch on?)." : "."));
+    }
+    return undefined;
+}

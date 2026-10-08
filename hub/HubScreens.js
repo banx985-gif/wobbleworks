@@ -116,7 +116,8 @@ export function sprocketArt(accessory, awake = true) {
         ? `<path d="M63 44 q6 6 12 0" fill="#18323f"/><path d="M66 46 q3 7 6 0" fill="#f06595" stroke="#18323f" stroke-width="2"/>`
         : `<path d="M64 44 q5 3 10 0" fill="none" stroke="#18323f" stroke-width="3" stroke-linecap="round"/>`;
     const acc = accessory === "sprocket.bandana" ? `<path d="M56 54 l26 0 -12 14z" fill="#fa5252" ${O}/>`
-        : accessory === "sprocket.spring-collar" ? `<path d="M56 54 q4 -6 8 0 q4 6 8 0 q4 -6 8 0" fill="none" stroke="#845ef7" stroke-width="5"/>` : "";
+        : accessory === "sprocket.glow-collar" ? `<path d="M55 51 q14 8 28 0" fill="none" stroke="#ffd43b" stroke-width="7" stroke-linecap="round" opacity=".9"/><circle cx="69" cy="58" r="5" fill="#fff59d" stroke="#18323f" stroke-width="2"/>`
+            : accessory === "sprocket.spring-collar" ? `<path d="M56 54 q4 -6 8 0 q4 6 8 0 q4 -6 8 0" fill="none" stroke="#845ef7" stroke-width="5"/>` : "";
     return svg(`
     <path d="M18 60 q-12 -6 -8 -20" fill="none" stroke="#18323f" stroke-width="9" stroke-linecap="round" class="sprocket-tail"/>
     <path d="M18 60 q-12 -6 -8 -20" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" class="sprocket-tail"/>

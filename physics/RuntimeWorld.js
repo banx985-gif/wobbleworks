@@ -4,6 +4,7 @@ import { verifyBuildSnapshot } from "../core/BuildSnapshot.js";
 import { PhysicsWorld } from "./PhysicsWorld.js";
 import { GearSystem } from "../gears/GearSystem.js";
 import { StructureSystem } from "../structures/StructureSystem.js";
+import { CircuitSystem } from "../power/CircuitSystem.js";
 export class RuntimeWorld {
     snapshotSignature;
     physics = new PhysicsWorld();
@@ -11,6 +12,11 @@ export class RuntimeWorld {
     gears;
     /** Builder Bay structures (M13): beams, ropes, braces, and the loads that cross them. */
     structures;
+    /** Power Lab circuits (M14): batteries, wires, switches and loads, solved every tick. */
+    circuits;
+    /** Buttons held down by a finger during this TEST, and switches flipped since the last tick. */
+    fingerPressed = new Set();
+    flips = new Set();
     unmounted = new Set();
     carried = new Set();
     lifted = new Set();
@@ -48,6 +54,7 @@ export class RuntimeWorld {
         }
         this.structures = new StructureSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.gears = new GearSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined, this.snapshot.connections, extraLoads);
+        this.circuits = new CircuitSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.installPipeline();
     }
     constructPhysics() {
@@ -78,7 +85,7 @@ export class RuntimeWorld {
     }
     installPipeline() {
         this.pipeline.on("TICK_BEGIN", () => { this.pendingEvents = []; });
-        this.pipeline.on("NETWORK_TOPOLOGY", () => this.resolveNetworks());
+        this.pipeline.on("NETWORK_TOPOLOGY", ({ dt }) => { this.resolveNetworks(); this.stepCircuits(dt); });
         this.pipeline.on("PRE_PHYSICS_SENSORS", () => this.sampleSensors());
         this.pipeline.on("LOGIC_EVALUATION", () => this.evaluateLogic());
         this.pipeline.on("ACTUATOR_RESOLUTION", () => this.resolveActuators());
@@ -106,6 +113,52 @@ export class RuntimeWorld {
                     this.power.set(c.config.channel, Math.max(this.power.get(c.config.channel) ?? 0, source.supply));
             }
         }
+    }
+    /** A finger on a button during a TEST (held while down). */
+    pressButton(id, down) { if (down)
+        this.fingerPressed.add(id);
+    else
+        this.fingerPressed.delete(id); }
+    /** A tap on a switch during a TEST flips it on the next tick. */
+    flipSwitch(id) { this.flips.add(id); }
+    /** Is this button held down: by a finger, by Bolt's scheduled press, or by something resting on it? */
+    buttonPressed(id) {
+        if (this.fingerPressed.has(id))
+            return true;
+        const part = this.snapshot.parts.find(p => p.id === id);
+        if (!part)
+            return false;
+        const from = Number(part.parameters.pressFrom), to = Number(part.parameters.pressTo);
+        if (Number.isFinite(from) && this.elapsedTime >= from && (!Number.isFinite(to) || this.elapsedTime < to))
+            return true;
+        const rigid = this.definition(id).behaviours.find(b => b.kind === "RIGID_BODY");
+        if (rigid?.kind !== "RIGID_BODY")
+            return false;
+        const top = part.position.y - rigid.height / 2;
+        return this.snapshot.parts.some(o => {
+            if (o.id === id)
+                return false;
+            const r = this.definition(o.id).behaviours.find(b => b.kind === "RIGID_BODY");
+            if (r?.kind !== "RIGID_BODY" || r.bodyType !== "DYNAMIC")
+                return false;
+            const st = this.safeState(o.id);
+            if (!st)
+                return false;
+            const bottom = st.y + r.height / 2;
+            return Math.abs(st.x - part.position.x) <= rigid.width / 2 + 0.1 && bottom >= top - 0.15 && bottom <= top + 0.25;
+        });
+    }
+    /** Circuits first in the tick (network topology): then electric motors drive their gear trains at the current they get. */
+    stepCircuits(dt) {
+        if (!this.circuits.hasCircuit() && !this.circuits.layout.elements.length)
+            return;
+        this.circuits.step(dt, id => this.buttonPressed(id), this.flips);
+        this.flips.clear();
+        for (const n of this.gears.nodes)
+            if (this.gears.isElectric(n.id))
+                this.gears.setDriveScale(n.id, this.circuits.motorDrive(n.id));
+        for (const e of this.circuits.drainEvents())
+            this.event(e.kind, e.sourceId, e.targetId, e.data);
     }
     sampleSensors() {
         for (const part of this.snapshot.parts) {

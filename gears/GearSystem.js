@@ -29,7 +29,7 @@ export function gearNodeFrom(part, def) {
     const dir = Number(part.parameters.direction ?? 1) < 0 ? -1 : 1;
     return {
         id: part.id, definitionId: part.definitionId, x: part.position.x, y: part.position.y, role: g.role, radius: g.radius, teeth: g.teeth, parameters: part.parameters,
-        ...(d?.kind === "GEAR_DRIVER" ? { driver: { kind: d.driver, speed: d.speed * dir, torque: d.torque } } : {}),
+        ...(d?.kind === "GEAR_DRIVER" ? { driver: { kind: d.driver, speed: d.speed * dir, torque: d.torque, ...(d.electric ? { electric: true } : {}) } } : {}),
         ...(o?.kind === "GEAR_OUTPUT" ? { output: { kind: o.output, load: Number(part.parameters.load ?? o.load), drum: o.drum ?? g.radius } } : {})
     };
 }
@@ -114,14 +114,18 @@ export class GearSystem {
     runTicks = new Map();
     held = new Set();
     extraLoad = new Map();
+    /** Electric motors (Power Lab): how hard the circuit drives each one (0 = no current, ±1 ≈ one battery, sign = direction). */
+    driveScale = new Map();
+    announcedTrains = new Map();
     pending = [];
-    announced = false;
     tick = 0;
     constructor(parts, definition, connections = [], extraLoads = new Map()) {
         this.analysis = analyzeGears(parts, definition, connections);
         for (const n of this.analysis.nodes) {
             this.angle.set(n.id, 0);
             this.runTicks.set(n.id, 0);
+            if (n.driver?.electric)
+                this.driveScale.set(n.id, 0);
         }
         for (const [id, load] of extraLoads)
             this.extraLoad.set(id, load);
@@ -214,13 +218,28 @@ export class GearSystem {
         }
     }
     trainOf(id) { const ax = this.analysis.axleOf.get(id); return ax === undefined ? undefined : this.trains.find(t => t.axles.has(ax)); }
+    /** Drive scale of a train's driver: 1 for cranks and ordinary motors; whatever the circuit gives an electric motor. */
+    scaleOf(t) { return t.driverId ? this.driveScale.get(t.driverId) ?? 1 : 0; }
+    /** Status right now: an electric motor with no current is idle; a weak current can't turn a heavy load (stall). */
+    effective(t) {
+        if (t.status === "JAMMED" || t.status === "IDLE" || !t.driverId)
+            return t.status;
+        const s = this.scaleOf(t);
+        if (s === 0)
+            return "IDLE";
+        return t.required > t.available * Math.abs(s) + 1e-9 ? "STALLED" : "TURNING";
+    }
     status(id) { const t = this.trainOf(id); if (!t)
-        return "IDLE"; return t.status === "TURNING" && t.driverId && this.held.has(t.driverId) ? "HELD" : t.status; }
+        return "IDLE"; const e = this.effective(t); return e === "TURNING" && t.driverId && this.held.has(t.driverId) ? "HELD" : e; }
+    /** Power Lab: set how hard the circuit drives an electric motor (no effect on cranks or ordinary motors). */
+    setDriveScale(driverId, scale) { if (this.driveScale.has(driverId))
+        this.driveScale.set(driverId, scale); }
+    isElectric(id) { return this.driveScale.has(id); }
     trainInfo(id) {
         const t = this.trainOf(id);
         if (!t)
             return undefined;
-        return { status: this.status(id), ...(t.reason ? { reason: t.reason } : {}), required: t.required, available: t.available, ...(t.driverId ? { driverId: t.driverId } : {}) };
+        return { status: this.status(id), ...(t.reason ? { reason: t.reason } : {}), required: t.required, available: t.available * Math.abs(this.driveScale.has(t.driverId ?? "") ? this.scaleOf(t) : 1), ...(t.driverId ? { driverId: t.driverId } : {}) };
     }
     /** ω (rad/s, + = clockwise on screen) right now. */
     omega(id) {
@@ -228,7 +247,7 @@ export class GearSystem {
         if (!t || this.status(id) !== "TURNING")
             return 0;
         const driver = this.node(t.driverId);
-        return (t.factors.get(this.analysis.axleOf.get(id)) ?? 0) * driver.driver.speed;
+        return (t.factors.get(this.analysis.axleOf.get(id)) ?? 0) * driver.driver.speed * this.scaleOf(t);
     }
     state(id) {
         const n = this.node(id);
@@ -238,7 +257,7 @@ export class GearSystem {
         const ax = this.analysis.axleOf.get(id);
         const factor = t.factors.get(ax) ?? 0, depth = t.depths.get(ax) ?? 0;
         const driver = t.driverId ? this.node(t.driverId) : undefined;
-        const torque = driver?.driver && factor ? driver.driver.torque / Math.abs(factor) * Math.pow(LINK_EFFICIENCY, depth) : 0;
+        const torque = driver?.driver && factor ? driver.driver.torque * Math.abs(this.scaleOf(t)) / Math.abs(factor) * Math.pow(LINK_EFFICIENCY, depth) : 0;
         const angle = this.angle.get(id);
         return { id, angle, omega: this.omega(id), factor, depth, torque, turns: Math.abs(angle) / (Math.PI * 2), runTicks: this.runTicks.get(id) };
     }
@@ -249,10 +268,7 @@ export class GearSystem {
         this.pending.push({ kind: "GEAR_HELD", sourceId: outputId });
     } }
     step(dt) {
-        if (!this.announced) {
-            this.announced = true;
-            this.announce();
-        }
+        this.announce();
         for (const n of this.analysis.nodes) {
             const w = this.omega(n.id);
             const before = this.angle.get(n.id);
@@ -264,19 +280,28 @@ export class GearSystem {
         }
         this.tick += 1;
     }
+    /** Each train's news is told once, the first tick it happens (straight away for cranks; when the current arrives for electric motors). */
     announce() {
         for (const t of this.trains) {
             if (!t.driverId)
                 continue;
-            if (t.status === "JAMMED") {
+            const status = this.effective(t);
+            if (status === "IDLE")
+                continue;
+            const told = this.announcedTrains.get(t) ?? new Set();
+            if (told.has(status))
+                continue;
+            told.add(status);
+            this.announcedTrains.set(t, told);
+            if (status === "JAMMED") {
                 this.pending.push({ kind: "GEAR_JAMMED", sourceId: t.driverId, data: { reason: t.reason ?? "LOOP" } });
                 continue;
             }
-            if (t.status === "STALLED") {
-                this.pending.push({ kind: "GEAR_STALLED", sourceId: t.driverId, data: { required: round(t.required), available: round(t.available) } });
+            if (status === "STALLED") {
+                this.pending.push({ kind: "GEAR_STALLED", sourceId: t.driverId, data: { required: round(t.required), available: round(t.available * Math.abs(this.scaleOf(t))) } });
                 continue;
             }
-            if (t.status !== "TURNING")
+            if (status !== "TURNING")
                 continue;
             this.pending.push({ kind: "GEAR_TRAIN_RUNNING", sourceId: t.driverId, data: { axles: t.axles.size } });
             for (const l of this.analysis.links) {

@@ -20,7 +20,14 @@ export const LEVEL_SCENERY = {
     "builder.tallest-tower": [S("scaffold-tower", 2.2, 8.2, 1.9)],
     "builder.keep-the-egg-safe": [S("egg-cushion", 12.6, 8.2, 2.2)],
     "builder.the-robot-parade-bridge": [S("parade-bridge", 14.1, 5.25, 2.1)],
-    "builder.collapsing-workshop-roof": [S("rope-anchors", 8, 1.75, 1.6), S("hazard-sign", 15.3, 8.2, 1.1)]
+    "builder.collapsing-workshop-roof": [S("rope-anchors", 8, 1.75, 1.6), S("hazard-sign", 15.3, 8.2, 1.1)],
+    // Power Lab
+    "power.light-it-up": [S("three-bulbs", 13.2, 8.2, 2)],
+    "power.broken-loop": [S("broken-targets", 13.2, 8.2, 2)],
+    "power.push-the-button": [S("button-target", 14, 8.2, 1.2)],
+    "power.two-lights": [S("three-bulbs", 14.4, 8.2, 1.8)],
+    "power.restore-the-power-grid": [S("power-grid", 14.6, 8.2, 2)],
+    "power.blackout": [S("hazard-sign", 15, 8.2, 1.1)]
 };
 /** Picture aspect ratios (width / height), so the layout can be checked without loading pictures. */
 export const SCENERY_ASPECT = {

@@ -407,3 +407,5 @@ html.high-contrast { --ink:#000; --panel:#fff; --accent:#006b1b; --danger:#a0000
 .set-icon img{width:44px;height:44px;object-fit:contain;display:block;margin:0 auto}
 .parent-h{display:flex;align-items:center;gap:10px}.parent-h .parent-icon{width:44px;height:44px}.parent-line{display:flex;align-items:center;gap:8px}.parent-icon{width:30px;height:30px;object-fit:contain;flex:none}
 .map-pic{width:clamp(28px,5.2cqw,58px);height:clamp(28px,5.2cqw,58px);object-fit:contain;display:block;margin:0 auto;filter:drop-shadow(0 2px 0 #18323f55)}
+.beam-icon.wire{background:radial-gradient(ellipse at 50% 0,transparent 55%,#203040 56% 64%,transparent 65%)}
+.emoji-icon{display:block;width:40px;height:40px;font-size:30px;line-height:40px;text-align:center;pointer-events:none}

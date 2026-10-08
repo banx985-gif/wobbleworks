@@ -16,7 +16,10 @@ export const PART_CARDS = [
     { partId: "builder.beam-wood", title: "Wooden Beam", uses: [{ id: "bridge", label: "Carry someone across" }, { id: "prop", label: "Hold up a load" }] },
     { partId: "builder.beam-metal", title: "Metal Beam", uses: [{ id: "heavy", label: "Carry a heavy load" }, { id: "tower", label: "Stand tall" }] },
     { partId: "builder.brace", title: "Triangle Brace", uses: [{ id: "triangle", label: "Make a triangle" }, { id: "squash", label: "Push back when squashed" }] },
-    { partId: "builder.rope", title: "Rope", uses: [{ id: "tie", label: "Pull tight" }, { id: "net", label: "Catch softly" }] }
+    { partId: "builder.rope", title: "Rope", uses: [{ id: "tie", label: "Pull tight" }, { id: "net", label: "Catch softly" }] },
+    { partId: "circuit.wire", title: "Wire", uses: [{ id: "loop", label: "Close a loop" }, { id: "branch", label: "Make a second path" }] },
+    { partId: "circuit.switch", title: "Switch", uses: [{ id: "control", label: "Turn something on and off" }] },
+    { partId: "circuit.motor", title: "Electric Motor", uses: [{ id: "turn", label: "Turn gears with electricity" }] }
 ];
 const HEAVY = new Set(["motion.cart", "motion.parcel", "silly.bolt"]);
 function speed(runtime, id) { try {
@@ -209,6 +212,23 @@ export function observePartUses(build, runtime) {
                 add(part.definitionId, "tie");
             if (st.eggStates().some(e => e.onMember === m.id))
                 add(part.definitionId, "net");
+        }
+    }
+    // Circuits: uses from what the CircuitSystem measured.
+    const c = runtime.circuits;
+    if (c.layout.elements.length) {
+        const lit = c.loadStates().filter(l => c.ticksAtLeast(l.id, 0.15) >= 30);
+        for (const part of build.allParts()) {
+            if (part.definitionId === "circuit.wire" && Math.abs(c.current(part.id)) > 0.05 && lit.length) {
+                add(part.definitionId, "loop");
+                const e = c.layout.elements.find(x => x.partId === part.id);
+                if (e && lit.filter(l => { const le = c.layout.elements.find(x => x.partId === l.id); return le && (le.a === e.a || le.a === e.b || le.b === e.a || le.b === e.b); }).length >= 2 && c.layout.terminals.filter(t => t.node === e.a || t.node === e.b).length >= 4)
+                    add(part.definitionId, "branch");
+            }
+            if (part.definitionId === "circuit.switch" && runtime.causalEvents.some(ev => ev.kind === "SWITCH_CHANGED" && ev.sourceId === part.id) && runtime.causalEvents.some(ev => ev.kind === "LOAD_ON" || ev.kind === "LOAD_OFF"))
+                add(part.definitionId, "control");
+            if (part.definitionId === "circuit.motor" && (runtime.gears.state(part.id)?.runTicks ?? 0) >= 30)
+                add(part.definitionId, "turn");
         }
     }
     return uses.filter(u => PART_CARDS.some(c => c.partId === u.partId && c.uses.some(x => x.id === u.useId)));

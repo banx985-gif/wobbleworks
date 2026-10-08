@@ -29,7 +29,11 @@ import { labMissionUnlocked, nextRequiredLabMission } from "./progression/LabPro
 import { evaluateGearMission, GEAR_REAL_WORLD_CARDS, loadGearGarageLevels } from "./gears/GearGarage.js";
 import { analyzeGears, gearNodeFrom, gearSnapPosition } from "./gears/GearSystem.js";
 import { evaluateBuilderMission, loadBuilderBayLevels, runSummary, STRUCTURE_REAL_WORLD_CARDS } from "./structures/BuilderBay.js";
-import { analyzeStructure, beamEndpoints, beamEndSnap } from "./structures/StructureSystem.js";
+import { analyzeStructure, beamEndpoints as structureBeamEndpoints, beamEndSnap } from "./structures/StructureSystem.js";
+import { analyzeCircuit, circuitBehaviour, wireEnds, wireEndSnap } from "./power/CircuitSystem.js";
+import { LAB_MODULES, evaluateLabMission, labModule } from "./labs/Labs.js";
+import { loadLabLevels } from "./labs/LabModule.js";
+import { hasLabBackdrop } from "./render/LabBackdrops.js";
 import { InputManager } from "./input/InputManager.js";
 import { CanvasRenderer } from "./render/CanvasRenderer.js";
 import { CameraController } from "./render/CameraController.js";
@@ -195,6 +199,9 @@ const ui = {
     resetCamera: document.querySelector("#btn-camera"), tools: document.querySelector("#btn-tools"),
     debug: document.querySelector("#debug"), mode: document.querySelector("#mode-label")
 };
+/** Parts you stretch by their ends: Builder Bay beams and Power Lab wires. */
+function beamEndpoints(part, def) { return structureBeamEndpoints(part, def) ?? wireEnds(part, def); }
+function isWirePart(id) { const p = build.getPart(id); return p !== undefined && registry.get(p.definitionId).behaviours.some(b => b.kind === "WIRE"); }
 function delay(ms) { return new Promise(resolve => window.setTimeout(resolve, ms)); }
 function now() { return performance.now(); }
 function gameplayAllowed() { return shell.canUseGameplay(now()); }
@@ -256,6 +263,9 @@ function evaluateLevel(level, runtime) {
         const prev = lastRuns.get(level.id);
         return evaluateBuilderMission(level, build, runtime, prev);
     }
+    const module = labModule(lab);
+    if (module)
+        return evaluateLabMission(module, level, build, runtime);
     return lab === "gear-garage" ? evaluateGearMission(level, build, runtime) : evaluateMotionMission(level, build, runtime);
 }
 /** Remember this run so the next TEST can show whether a change (like a brace) really helped. */
@@ -389,7 +399,7 @@ function loadMission(id) {
     forceScannerButton.classList.remove("hidden", "force-on");
     forceScannerButton.setAttribute("aria-pressed", "false");
     document.querySelector(".motion-hud .motion-badge").textContent = lab.title.toUpperCase();
-    forceScannerButton.textContent = labId === "gear-garage" ? "Spin Scanner" : labId === "builder-bay" ? "Stress Scanner" : "Force Scanner";
+    forceScannerButton.textContent = labModule(labId)?.scannerName ?? (labId === "gear-garage" ? "Spin Scanner" : labId === "builder-bay" ? "Stress Scanner" : "Force Scanner");
     updateOpeningTray(level);
     resetGuidance(level.id);
     enterWorkshop();
@@ -456,7 +466,7 @@ function maybeCompleteMotionMission() {
     setHint(undefined);
     hideBoltTip();
     hintButton.classList.remove("offer");
-    const card = result.discoveries.map(id => [...MOTION_REAL_WORLD_CARDS, ...GEAR_REAL_WORLD_CARDS, ...STRUCTURE_REAL_WORLD_CARDS].find(c => c.discoveryId === id)).find(Boolean);
+    const card = result.discoveries.map(id => [...MOTION_REAL_WORLD_CARDS, ...GEAR_REAL_WORLD_CARDS, ...STRUCTURE_REAL_WORLD_CARDS, ...LAB_MODULES.flatMap(m => m.realWorldCards)].find(c => c.discoveryId === id)).find(Boolean);
     rememberRun();
     const discovered = card ? ` ${card.title}: ${card.example}` : result.discoveries.length ? ` You discovered ${result.discoveries[0].replace("motion.", "").replaceAll("-", " ")}.` : "";
     const cleared = outcome.labCleared ? ` The ${regionById(outcome.labCleared)?.title ?? "lab"} is restored!` : "";
@@ -733,6 +743,8 @@ async function loadAppState() {
         labLevels.set("motion-yard", await loadMotionYardLevels(registry));
         labLevels.set("gear-garage", await loadGearGarageLevels(registry));
         labLevels.set("builder-bay", await loadBuilderBayLevels(registry));
+        for (const m of LAB_MODULES)
+            labLevels.set(m.labId, await loadLabLevels(registry, m.labId, m.folder));
         appSave = loaded.payload ?? createDefaultAppSave();
         savingBlocked = loaded.futureVersion;
         applySettings();
@@ -954,7 +966,7 @@ function startFreeBuild(from) {
     motionObjective.textContent = "Build anything. TEST it. Change it. TEST again.";
     document.querySelector(".motion-badge").textContent = "WORKSHOP";
     resetGuidance(undefined);
-    const scanner = (p?.unlockedTools.includes("tool.force-scanner") || p?.unlockedTools.includes("tool.spin-scanner") || p?.unlockedTools.includes("tool.stress-scanner")) ?? false;
+    const scanner = (p?.unlockedTools.includes("tool.force-scanner") || p?.unlockedTools.includes("tool.spin-scanner") || p?.unlockedTools.includes("tool.stress-scanner") || p?.unlockedTools.includes("tool.circuit-scanner")) ?? false;
     forceScannerButton.textContent = "Scanner";
     forceScannerButton.classList.toggle("hidden", !scanner);
     forceScannerButton.classList.remove("force-on");
@@ -1250,15 +1262,18 @@ function snapGear(id) {
 // ------------------------------------------------------------------ Builder Bay beam editing
 /** A beam reshaped so its ends sit at two points (middle, angle and length follow). */
 function beamFromEnds(p, a, b) {
-    const length = Math.max(0.5, Math.min(6, Math.hypot(b.x - a.x, b.y - a.y)));
+    const wire = registry.get(p.definitionId).behaviours.some(x => x.kind === "WIRE");
+    const length = Math.max(wire ? 0.2 : 0.5, Math.min(wire ? 12 : 6, Math.hypot(b.x - a.x, b.y - a.y)));
     const ang = Math.atan2(b.y - a.y, b.x - a.x);
     return { ...p, position: { x: a.x + Math.cos(ang) * length / 2, y: a.y + Math.sin(ang) * length / 2 }, rotation: ang, parameters: { ...p.parameters, length } };
 }
 /** Let go of a beam end: it snaps onto a nearby joint, anchor, cliff top or the floor. Placement only. */
 function finishBeamEnd(drag) {
     const others = build.allParts().filter(p => p.id !== drag.id);
-    const layout = analyzeStructure(others, id => registry.has(id) ? registry.get(id) : undefined);
-    const target = beamEndSnap(drag.moving.x, drag.moving.y, layout, undefined, currentAssistance(appSave).snapAssist ? 0.35 : 0.2) ?? drag.moving;
+    const reach = currentAssistance(appSave).snapAssist ? 0.35 : 0.2;
+    const target = (isWirePart(drag.id)
+        ? wireEndSnap(drag.moving.x, drag.moving.y, analyzeCircuit(others, id => registry.has(id) ? registry.get(id) : undefined), undefined, reach)
+        : beamEndSnap(drag.moving.x, drag.moving.y, analyzeStructure(others, id => registry.has(id) ? registry.get(id) : undefined), undefined, reach)) ?? drag.moving;
     const shaped = beamFromEnds(build.getPart(drag.id), drag.fixed, target);
     build.reshape(drag.id, { position: shaped.position, rotation: shaped.rotation, parameters: { length: Number(shaped.parameters.length) } });
     sfx(700, .04);
@@ -1271,9 +1286,11 @@ function snapBeam(id) {
     const ends = beamEndpoints(part, registry.get(part.definitionId));
     if (!ends)
         return;
-    const layout = analyzeStructure(build.allParts().filter(p => p.id !== id), d => registry.has(d) ? registry.get(d) : undefined);
     const reach = currentAssistance(appSave).snapAssist ? 0.35 : 0.2;
-    const s1 = beamEndSnap(ends.x1, ends.y1, layout, undefined, reach), s2 = beamEndSnap(ends.x2, ends.y2, layout, undefined, reach);
+    const others = build.allParts().filter(p => p.id !== id);
+    const lookup = (d) => registry.has(d) ? registry.get(d) : undefined;
+    const snap = isWirePart(id) ? (() => { const layout = analyzeCircuit(others, lookup); return (x, y) => wireEndSnap(x, y, layout, undefined, reach); })() : (() => { const layout = analyzeStructure(others, lookup); return (x, y) => beamEndSnap(x, y, layout, undefined, reach); })();
+    const s1 = snap(ends.x1, ends.y1), s2 = snap(ends.x2, ends.y2);
     const d1 = s1 ? Math.hypot(s1.x - ends.x1, s1.y - ends.y1) : Infinity, d2 = s2 ? Math.hypot(s2.x - ends.x2, s2.y - ends.y2) : Infinity;
     if (s1 && s2) {
         const shaped = beamFromEnds(part, s1, s2);
@@ -1780,6 +1797,8 @@ canvas.addEventListener("wheel", event => { if (!gameplayAllowed())
     return; event.preventDefault(); camera.setZoom(camera.zoom * (event.deltaY > 0 ? 0.92 : 1.08)); }, { passive: false });
 window.addEventListener("pointerdown", () => void audio.unlock(), { once: true });
 function pointerWorld(sample) { const logical = renderer.viewport.screenToLogical(sample.x, sample.y); const worldLogical = camera.logicalToWorld(logical); return { x: worldLogical.x / 100, y: worldLogical.y / 100 }; }
+/** Locked switches in a level can still be flipped (they can't be moved). */
+function lockedSwitchAt(x, y) { return build.allParts().find(p => p.parameters.locked === true && circuitBehaviour(registry.get(p.definitionId))?.role === "SWITCH" && Math.abs(p.position.x - x) <= 0.5 && Math.abs(p.position.y - y) <= 0.45)?.id; }
 function hitPart(x, y, padding = (labActive || freeBuildActive) ? currentGuidance().touchPadding : 0.18) {
     const parts = [...build.allParts()].reverse();
     return parts.find(p => {
@@ -1799,14 +1818,44 @@ function hitPart(x, y, padding = (labActive || freeBuildActive) ? currentGuidanc
         return Math.abs(p.position.x - x) <= w / 2 + padding && Math.abs(p.position.y - y) <= h / 2 + padding;
     })?.id;
 }
+/** During a TEST: hold a button down with a finger, or tap a switch to flip it (the circuit reacts straight away). */
+let fingerButton;
+function testModeTouch(event, sample) {
+    const runtime = tests.active();
+    if (!runtime)
+        return;
+    if (event === "down") {
+        const w = pointerWorld(sample);
+        const hit = [...build.allParts()].reverse().find(p => { const b = circuitBehaviour(registry.get(p.definitionId)); return (b?.role === "BUTTON" || b?.role === "SWITCH") && Math.abs(p.position.x - w.x) <= 0.6 && Math.abs(p.position.y - w.y) <= 0.5; });
+        if (!hit)
+            return;
+        const role = circuitBehaviour(registry.get(hit.definitionId)).role;
+        if (role === "BUTTON") {
+            fingerButton = hit.id;
+            runtime.pressButton(hit.id, true);
+        }
+        else
+            runtime.flipSwitch(hit.id);
+        sfx(role === "BUTTON" ? 520 : 680, .04);
+        buzz(15);
+    }
+    else if (event !== "move" && fingerButton) {
+        runtime.pressButton(fingerButton, false);
+        fingerButton = undefined;
+    }
+}
 input.on((event, sample) => {
+    if (testMode && gameplayAllowed()) {
+        testModeTouch(event, sample);
+        return;
+    }
     if (testMode || !gameplayAllowed())
         return;
     const w = pointerWorld(sample);
     if (event === "down") {
         if (openingActive)
             openingDirector.noteInteraction(now());
-        const hit = hitPart(w.x, w.y);
+        const hit = hitPart(w.x, w.y) ?? lockedSwitchAt(w.x, w.y);
         selectedId = hit;
         const hitBeam = hit ? beamEndpoints(build.getPart(hit), registry.get(build.getPart(hit).definitionId)) : undefined;
         const nearEnd = hitBeam ? (Math.hypot(w.x - hitBeam.x1, w.y - hitBeam.y1) <= 0.35 ? 1 : Math.hypot(w.x - hitBeam.x2, w.y - hitBeam.y2) <= 0.35 ? 2 : 0) : 0;
@@ -1846,6 +1895,21 @@ input.on((event, sample) => {
             const dropped = build.getPart(droppedId);
             const openingRamp = openingActive && dropped?.definitionId === "motion.ramp" && [2, 5].includes(openingDirector.currentStep());
             const surfacePart = dropped && ["motion.friction-high", "motion.friction-low", "motion.bounce-pad"].includes(dropped.definitionId);
+            // A tap (no real drag) on a switch flips it on or off.
+            if (dropped && Math.hypot(dragPreview.x - dragStart.originalX, dragPreview.y - dragStart.originalY) < 0.06 && circuitBehaviour(registry.get(dropped.definitionId))?.role === "SWITCH") {
+                build.reshape(droppedId, { parameters: { closed: dropped.parameters.closed !== true } });
+                sfx(dropped.parameters.closed === true ? 420 : 760, .05);
+                dragStart = undefined;
+                dragPreview = undefined;
+                panStart = undefined;
+                return;
+            }
+            if (dropped?.parameters.locked === true) {
+                dragStart = undefined;
+                dragPreview = undefined;
+                panStart = undefined;
+                return;
+            }
             if (dragPreview.x < 0.4 || dragPreview.x > 15.6 || dragPreview.y < 0.5 || dragPreview.y > 9)
                 observer.noteDragError();
             build.move(droppedId, { x: Math.max(0.4, Math.min(15.6, dragPreview.x)), y: openingRamp ? 7.95 : surfacePart ? 8.32 : Math.max(0.5, Math.min(8.2, dragPreview.y)) });
@@ -1868,6 +1932,8 @@ function render() {
             renderer.drawGearGarageBackdrop(now() / 1000);
         else if (currentLabId === "builder-bay")
             renderer.drawBuilderBayBackdrop();
+        else if (hasLabBackdrop(currentLabId))
+            renderer.drawLabBackdrop(currentLabId, now() / 1000);
         else
             renderer.drawMotionYardBackdrop();
         renderer.drawScenery(activeLevel?.id);
@@ -1876,7 +1942,11 @@ function render() {
     const states = runtime?.physics.states();
     const parts = build.allParts().map(p => p.id === dragStart?.id && dragPreview ? { ...p, position: dragPreview } : p);
     const shown = beamEndDrag ? parts.map(p => p.id === beamEndDrag.id ? beamFromEnds(p, beamEndDrag.fixed, beamEndDrag.moving) : p) : parts;
-    renderer.drawParts(shown, registry, states, selectedId, runtime?.gears, now() / 1000, runtime?.structures, forceScanner);
+    renderer.drawParts(shown, registry, states, selectedId, runtime?.gears, now() / 1000, runtime?.structures, forceScanner, runtime);
+    if (!runtime && shown.some(p => circuitBehaviour(registry.get(p.definitionId))))
+        renderer.drawCircuitTerminals(analyzeCircuit(shown, id => registry.has(id) ? registry.get(id) : undefined));
+    if (runtime && forceScanner && runtime.circuits.layout.elements.length)
+        renderer.drawCircuitScanner(shown, registry, runtime.circuits);
     if (!runtime && shown.some(p => registry.get(p.definitionId).behaviours.some(b => b.kind === "BEAM")))
         renderer.drawJoints(analyzeStructure(shown, id => registry.has(id) ? registry.get(id) : undefined));
     if (runtime) {
@@ -1913,5 +1983,5 @@ clock.reset(performance.now());
 requestAnimationFrame(frame);
 if ("serviceWorker" in navigator)
     navigator.serviceWorker.register("./sw.js").catch(() => undefined);
-console.info(`WobbleWorks Milestones 0-13 (Builder Bay) loaded: ${DEFAULT_PARTS.length} technical part definitions`);
+console.info(`WobbleWorks loaded (labs: ${[...labLevels.keys()].join(", ") || "loading"}): ${DEFAULT_PARTS.length} technical part definitions`);
 void boot();
