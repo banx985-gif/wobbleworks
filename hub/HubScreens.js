@@ -6,6 +6,7 @@ import { lockerItems, progressSummary } from "../progression/ProgressionManager.
 import { hubFeatures, restorationStage, dueVisitors, restorationProps } from "../progression/Restoration.js";
 import { REWARDS, rewardById, MISSION_STARS } from "../progression/Rewards.js";
 import { renderLook } from "../inventor/LookView.js";
+import { CENTRAL_MACHINE_SYSTEMS, collectedStory } from "../story/CampusStory.js";
 /**
  * The look to draw: the maker look, wearing whatever the locker has equipped in the avatar slot when that
  * reward is also a maker piece (hard hat, goggles, cap) — one shared list, so the locker puts it on.
@@ -353,8 +354,7 @@ export function renderLocker(root, save, tab, cb) {
     root.lastElementChild.append(preview, grid);
     root.append(hint);
 }
-// ------------------------------------------------------------------ trophies + shelf
-export function renderTrophies(root, save) {
+export function renderTrophies(root, save, cb) {
     root.replaceChildren();
     const p = activeProfile(save);
     if (!p)
@@ -383,7 +383,33 @@ export function renderTrophies(root, save) {
         row.append(el("span", "", lab.icon), el("strong", "", lab.title), el("span", "star on", "★"), el("span", "", `${got} of ${lab.missions.length * 3}`));
         labs.append(row);
     }
-    root.append(head, labs, badges);
+    root.append(head, labs, badges, storyBook(save, cb));
+}
+/** The Campus Story book: the great machine's blueprint as it is found, plus recordings and memories to replay. */
+function storyBook(save, cb) {
+    const c = collectedStory(save);
+    const book = el("section", "story-book");
+    book.append(el("h2", "", "📜 Campus Story"));
+    const grid = el("div", "blueprint-grid");
+    const found = new Set(c.blueprints.map(s => s.labId));
+    MAIN_LABS.forEach((lab, i) => { const piece = el("div", `blueprint-piece${found.has(lab.id) ? " found" : ""}`, found.has(lab.id) ? CENTRAL_MACHINE_SYSTEMS[i] : "?"); piece.title = found.has(lab.id) ? c.blueprints.find(s => s.labId === lab.id).lines[0] : `Restore the ${lab.title} to find this piece`; grid.append(piece); });
+    book.append(el("p", "", c.complete ? "The whole blueprint! The great machine is waiting in the Grand Invention Hall." : `Blueprint pieces found: ${c.blueprints.length} of ${MAIN_LABS.length}. Each restored lab adds one.`), grid);
+    const list = (title, scenes, empty) => {
+        const wrap = el("div", "");
+        wrap.append(el("strong", "", title));
+        const row = el("div", "story-list");
+        if (!scenes.length)
+            row.append(el("span", "muted", empty));
+        for (const s of scenes) {
+            const b = el("button", "", `▶ ${MAIN_LABS.find(l => l.id === s.labId)?.title ?? s.title}`);
+            b.addEventListener("click", () => cb?.replayStory(s));
+            row.append(b);
+        }
+        wrap.append(row);
+        return wrap;
+    };
+    book.append(list("Old inventor recordings", c.recordings, "Finish a lab's Mega Build to find its recording."), list("Bolt's memories", c.memories, "Restore a lab to help Bolt remember."));
+    return book;
 }
 export function renderShelf(root, save, cb) {
     root.replaceChildren();

@@ -435,3 +435,29 @@ html.high-contrast { --ink:#000; --panel:#fff; --accent:#006b1b; --danger:#a0000
 .prog-slot { min-height: 56px; text-align: left; font-style: italic; color: #495057; background: #f8f9fa; border: 3px dashed #adb5bd; border-radius: 12px; }
 .prog-slot.sel { outline: 4px solid #ffd43b; }
 .prog-empty { color: #495057; font-weight: 700; }
+
+/* Campus story moments (M20): short, skippable, never in the way */
+.story-scene { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: #0b1026cc; padding: 16px; }
+.story-scene.hidden { display: none; }
+.story-card { width: min(760px, 100%); background: #fff8e8; border: 5px solid #203040; border-radius: 26px; box-shadow: 0 16px 40px #0007; display: grid; grid-template-columns: 150px 1fr; gap: 16px; padding: 18px; animation: story-in .35s ease-out; }
+.story-card.kind-RECORDING { background: #f3f0ff; } .story-card.kind-BLUEPRINT, .story-card.kind-FINALE { background: #e7f5ff; background-image: linear-gradient(#a5d8ff55 1px, transparent 1px), linear-gradient(90deg, #a5d8ff55 1px, transparent 1px); background-size: 24px 24px; } .story-card.kind-MEMORY { background: #fff3bf; }
+.story-art { width: 150px; height: 150px; display: grid; place-items: center; }
+.story-art img { max-width: 140px; max-height: 140px; }
+.story-copy { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.story-kicker { font-weight: 900; font-size: 13px; letter-spacing: .12em; color: #e8590c; }
+.story-copy strong { font-size: 24px; }
+.story-speaker { font-weight: 800; color: #495057; }
+.story-copy p { font-size: 20px; line-height: 1.35; margin: 4px 0; min-height: 3.2em; }
+.story-progress { height: 8px; border-radius: 4px; background: #dee2e6; overflow: hidden; }
+.story-progress span { display: block; height: 100%; width: 0; background: #ffd43b; transition: width .2s linear; }
+.story-actions { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 12px; }
+.story-actions button { min-height: 56px; min-width: 120px; font-size: 18px; font-weight: 900; border-radius: 16px; }
+@keyframes story-in { from { transform: translateY(24px) scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .story-card { animation: none; } }
+.story-book { margin-top: 14px; display: grid; gap: 10px; }
+.story-book h2 { margin: 0; font-size: 20px; }
+.blueprint-grid { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; }
+.blueprint-piece { min-height: 56px; border: 3px dashed #74c0fc; border-radius: 12px; display: grid; place-items: center; text-align: center; font-weight: 800; font-size: 12px; padding: 4px; background: #e7f5ff; }
+.blueprint-piece.found { border-style: solid; border-color: #1c7ed6; background: #d0ebff; }
+.story-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.story-list button { min-height: 56px; border-radius: 14px; font-weight: 800; }

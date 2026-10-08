@@ -137,5 +137,12 @@
 
   <div id="transition-shield" class="transition-shield" aria-hidden="true"></div>
   <script type="module" src="./main.js"></script>
+  <div id="story-scene" class="story-scene hidden" role="dialog" aria-modal="true" aria-labelledby="story-title" aria-live="polite">
+    <div class="story-card">
+      <div id="story-art" class="story-art" aria-hidden="true"></div>
+      <div class="story-copy"><span id="story-kicker" class="story-kicker"></span><strong id="story-title"></strong><span id="story-speaker" class="story-speaker"></span><p id="story-line"></p><div class="story-progress" aria-hidden="true"><span id="story-bar"></span></div></div>
+      <div class="story-actions"><button id="btn-story-skip">Skip ⏭</button><button id="btn-story-next" class="primary">Next ▶</button></div>
+    </div>
+  </div>
 </body>
 </html>

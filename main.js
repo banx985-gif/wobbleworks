@@ -6,6 +6,7 @@ import { renderParentDashboard, renderParentGate } from "./parent/ParentArea.js"
 import { OWNERSHIP_CHILD_COPY, regionById, routeToRegion } from "./progression/Campus.js";
 import { addToShelf, equipCosmetic, markRestorationSeen, markRewardsSeen, meetVisitor, recordMissionSuccess } from "./progression/ProgressionManager.js";
 import { pendingRestorationMoments } from "./progression/Restoration.js";
+import { markStorySeen, pendingEntryScene, pendingStoryScenes } from "./story/CampusStory.js";
 import { rewardById } from "./progression/Rewards.js";
 import { backupFileName, exportBackup, importBackup, IMPORT_MESSAGES } from "./save/BackupPackage.js";
 import { migrateAppSave } from "./save/Migrations.js";
@@ -371,6 +372,10 @@ function showLab(labId = currentLabId) {
     updateOpeningTray();
     renderLabMenu();
     transition("MOTION_YARD", true);
+    // First visit: Bolt shows you round (5–20 seconds, skippable, plays once per inventor).
+    const entry = pendingEntryScene(appSave, labId);
+    if (entry)
+        playStory([entry]);
 }
 function loadMission(id) {
     const labId = labOfLevel(id);
@@ -655,7 +660,7 @@ function renderShell() {
     if (current === "LOCKER")
         renderLockerScreen();
     if (current === "TROPHIES") {
-        renderTrophies(trophyRoot, appSave);
+        renderTrophies(trophyRoot, appSave, { replayStory: s => playStory([s], () => undefined, false) });
         void commit(markRewardsSeen(appSave, (activeProfile(appSave)?.unseenRewards ?? []).filter(id => id.startsWith("badge.") || id.startsWith("sticker."))));
     }
     if (current === "SHELF")
@@ -859,6 +864,9 @@ function showHub() {
     transition("HUB", true);
 }
 function queueHubMoments() {
+    // Story first (a recording, then the blueprint piece and Bolt's memory when a lab is restored), then the hub changes.
+    for (const s of pendingStoryScenes(appSave))
+        hubQueue.push({ kind: "STORY", title: s.title, body: s.lines.join(" "), scene: s });
     const moments = [...pendingRestorationMoments(appSave)];
     for (const m of moments)
         hubQueue.push({ kind: "BOLT", title: m.boltLine, body: m.change, onDone: () => { void commit(markRestorationSeen(appSave, [m])); } });
@@ -868,9 +876,14 @@ function queueHubMoments() {
 }
 function showNextHubMoment() {
     const next = hubQueue[0];
-    hubMoment.classList.toggle("hidden", !next);
+    hubMoment.classList.toggle("hidden", !next || next.kind === "STORY");
     if (!next)
         return;
+    if (next.kind === "STORY" && next.scene) {
+        if (!storyPlaying)
+            playStory([next.scene], () => { hubQueue.shift(); renderHubScreen(); });
+        return;
+    }
     document.querySelector("#hub-moment-title").textContent = next.title;
     document.querySelector("#hub-moment-body").textContent = next.body;
     const face = document.querySelector("#hub-moment-bolt");
@@ -886,6 +899,93 @@ document.querySelector("#btn-hub-moment").addEventListener("click", () => {
     done?.onDone?.();
     renderHubScreen();
 });
+// ---------------------------------------------------------------- Campus story moments (M20)
+const storyEl = document.querySelector("#story-scene");
+const storyCard = storyEl.querySelector(".story-card");
+const storyKicker = document.querySelector("#story-kicker"), storyTitle = document.querySelector("#story-title"), storySpeaker = document.querySelector("#story-speaker");
+const storyLine = document.querySelector("#story-line"), storyBar = document.querySelector("#story-bar"), storyArt = document.querySelector("#story-art");
+let storyPlaying;
+/** Play story scenes one after another. Each lasts its own 5–20 seconds, moves on by itself, and Skip ends them all. */
+function playStory(scenes, done = () => undefined, markSeen = true) {
+    if (!scenes.length) {
+        done();
+        return;
+    }
+    if (storyPlaying)
+        finishStory(false);
+    storyPlaying = { scenes, index: 0, line: 0, started: now(), timer: 0, done, markSeen };
+    storyEl.classList.remove("hidden");
+    showStoryScene();
+}
+function showStoryScene() {
+    const st = storyPlaying;
+    if (!st)
+        return;
+    const s = st.scenes[st.index];
+    st.line = 0;
+    st.started = now();
+    storyCard.className = `story-card kind-${s.kind}`;
+    storyKicker.textContent = s.kicker;
+    storyTitle.textContent = s.title;
+    storySpeaker.textContent = s.kind === "RECORDING" ? `🎙️ ${s.speaker}` : s.speaker === "Bolt" ? "Bolt says:" : s.speaker;
+    storyArt.replaceChildren(s.kind === "ENTRY" || s.kind === "MEMORY" ? boltArt(activeProfile(appSave)?.equipped.bolt, s.kind === "MEMORY" ? "sign" : "wave") : (() => { const img = document.createElement("img"); img.alt = ""; const a = assets.getImage(s.art); if (a)
+        img.src = a.src; return img; })());
+    showStoryLine();
+    window.clearInterval(st.timer);
+    st.timer = window.setInterval(tickStory, 200);
+    sfx(s.kind === "RECORDING" ? 420 : 760, .06);
+}
+function showStoryLine() { const st = storyPlaying; if (!st)
+    return; const s = st.scenes[st.index]; storyLine.textContent = s.lines[st.line] ?? ""; currentNarration = storyLine.textContent; speakCurrentLine(); }
+function tickStory() {
+    const st = storyPlaying;
+    if (!st)
+        return;
+    const s = st.scenes[st.index];
+    const elapsed = (now() - st.started) / 1000;
+    storyBar.style.width = `${Math.min(100, elapsed / s.seconds * 100)}%`;
+    const perLine = s.seconds / s.lines.length;
+    const line = Math.min(s.lines.length - 1, Math.floor(elapsed / perLine));
+    if (line !== st.line) {
+        st.line = line;
+        showStoryLine();
+    }
+    if (elapsed >= s.seconds)
+        nextStory();
+}
+function nextStory() {
+    const st = storyPlaying;
+    if (!st)
+        return;
+    const s = st.scenes[st.index];
+    if (st.line < s.lines.length - 1) {
+        st.line++;
+        st.started = now() - st.line * (s.seconds / s.lines.length) * 1000;
+        showStoryLine();
+        return;
+    }
+    if (st.index < st.scenes.length - 1) {
+        st.index++;
+        showStoryScene();
+        return;
+    }
+    finishStory(true);
+}
+function finishStory(runDone) {
+    const st = storyPlaying;
+    if (!st)
+        return;
+    window.clearInterval(st.timer);
+    storyPlaying = undefined;
+    storyEl.classList.add("hidden");
+    window.speechSynthesis?.cancel?.();
+    if (st.markSeen)
+        void commit(markStorySeen(appSave, st.scenes));
+    if (runDone)
+        st.done();
+}
+document.querySelector("#btn-story-next").addEventListener("click", () => nextStory());
+document.querySelector("#btn-story-skip").addEventListener("click", () => { const st = storyPlaying; finishStory(false); st?.done(); });
 function renderHubScreen() {
     renderHub(hubRoot, appSave, {
         openMap: () => { mapNote.textContent = "Tap a building."; transition("CAMPUS_MAP"); void commit(withLocation(appSave, "MAP")); },
