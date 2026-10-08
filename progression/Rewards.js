@@ -148,6 +148,31 @@ export const REWARDS = [
     { id: "avatar.snorkel", kind: "AVATAR", title: "Snorkel Mask", icon: "🤿", description: "For very wet experiments." },
     { id: "badge.grand-fountain", kind: "BADGE", title: "Fountain Restorer", icon: "⛲", description: "The Grand Fountain sprays again!" },
     { id: "badge.water-works", kind: "BADGE", title: "Water Works Restored", icon: "🏅", description: "The water is flowing again!" },
+    // Flight Hangar (M17)
+    { id: "part.flight.fan", kind: "PART", title: "Wind Fan", icon: "🌬️", description: "Blows a breeze. Tap it to turn it." },
+    { id: "part.flight.glider", kind: "PART", title: "Glider Body", icon: "✈️", description: "Clip wings, a tail and more onto it." },
+    { id: "part.flight.wing-large", kind: "PART", title: "Big Wing", icon: "🪽", description: "Lots of lift." },
+    { id: "part.flight.wing-small", kind: "PART", title: "Small Wing", icon: "🪽", description: "Light and quick." },
+    { id: "part.flight.tail", kind: "PART", title: "Tail", icon: "🛩️", description: "Keeps the nose steady." },
+    { id: "part.flight.parachute", kind: "PART", title: "Parachute", icon: "🪂", description: "For soft landings." },
+    { id: "part.flight.balloon", kind: "PART", title: "Balloon", icon: "🎈", description: "A little upward push." },
+    { id: "part.flight.propeller", kind: "PART", title: "Propeller", icon: "🌀", description: "Pushes forwards — needs a battery pack." },
+    { id: "part.flight.power-pack", kind: "PART", title: "Battery Pack", icon: "🔋", description: "Powers a propeller for a little while." },
+    { id: "tool.air-scanner", kind: "TOOL", title: "Air Scanner", icon: "🌬️", description: "Shows lift, weight, thrust and drag on flying machines — now in Free Build too." },
+    { id: "sticker.breezy", kind: "STICKER", title: "Breezy", icon: "🌬️", description: "Blown into place." },
+    { id: "sticker.long-glide", kind: "STICKER", title: "Long Glide", icon: "🛫", description: "Past the flag!" },
+    { id: "sticker.soft-landing", kind: "STICKER", title: "Soft Landing", icon: "🪂", description: "Gently does it." },
+    { id: "sticker.balloon-lift", kind: "STICKER", title: "Up, Up and Away", icon: "🎈", description: "Lifted by balloons." },
+    { id: "sticker.hoops", kind: "STICKER", title: "Hoop Flyer", icon: "⭕", description: "Through both hoops." },
+    { id: "sticker.balanced", kind: "STICKER", title: "Steady Flyer", icon: "⚖️", description: "No more flips." },
+    { id: "sticker.propeller", kind: "STICKER", title: "Propeller Power", icon: "🌀", description: "Took off under its own power." },
+    { id: "sticker.canyon", kind: "STICKER", title: "Canyon Hopper", icon: "🏜️", description: "Across the gap." },
+    { id: "sticker.wing-scientist", kind: "STICKER", title: "Wing Scientist", icon: "🔬", description: "A fair flight test." },
+    { id: "prop.toy-plane", kind: "PROP", title: "Toy Plane", icon: "🛩️", description: "Loops around the workshop." },
+    { id: "sprocket.flying-goggles", kind: "SPROCKET_ACCESSORY", title: "Flying Goggles", icon: "🥽", description: "Sprocket, ace pilot." },
+    { id: "avatar.aviator-cap", kind: "AVATAR", title: "Aviator Cap", icon: "🧑‍✈️", description: "Chocks away!" },
+    { id: "badge.canyon-flyer", kind: "BADGE", title: "Canyon Flyer", icon: "🛩️", description: "Crossed the workshop canyon and landed softly." },
+    { id: "badge.flight-hangar", kind: "BADGE", title: "Flight Hangar Restored", icon: "🏅", description: "Planes are flying again!" },
     { id: "badge.power-lab", kind: "BADGE", title: "Power Lab Restored", icon: "🏅", description: "The lights are on in the Power Lab!" },
     // hidden prototype lab key pieces — one from a silly mission in each of the first three labs (exploration, never stars)
     { id: "key.prototype-1", kind: "KEY_PIECE", title: "Strange Key Piece", icon: "🗝️", description: "A piece of something. It hums." },
@@ -228,7 +253,19 @@ export const MISSION_REWARDS = Object.freeze({
     "water.which-pipe-fills-faster": { onComplete: ["sticker.pipe-scientist", "part.plumb.pipe-narrow"] },
     "water.duck-water-park": { onComplete: ["prop.duck-flume"], onAllStars: ["sprocket.rain-hat"] },
     "water.the-grand-fountain": { onComplete: ["badge.grand-fountain", "avatar.snorkel"] },
-    "water.flooded-workshop": { onComplete: ["badge.water-works"] }
+    "water.flooded-workshop": { onComplete: ["badge.water-works"] },
+    "flight.blow-it-over": { onComplete: ["sticker.breezy", "part.flight.fan"] },
+    "flight.long-glide": { onComplete: ["sticker.long-glide", "part.flight.glider", "part.flight.wing-large", "part.flight.tail"] },
+    "flight.safe-landing": { onComplete: ["sticker.soft-landing", "part.flight.parachute"] },
+    "flight.balloon-lift": { onComplete: ["sticker.balloon-lift", "part.flight.balloon"] },
+    "flight.through-the-hoops": { onComplete: ["sticker.hoops", "tool.air-scanner"] },
+    "flight.balance-the-wings": { onComplete: ["sticker.balanced", "part.flight.wing-small"] },
+    "flight.propeller-push": { onComplete: ["sticker.propeller", "part.flight.propeller", "part.flight.power-pack"] },
+    "flight.cross-the-canyon": { onComplete: ["sticker.canyon"] },
+    "flight.which-wing-flies-farther": { onComplete: ["sticker.wing-scientist"] },
+    "flight.flying-sprocket": { onComplete: ["prop.toy-plane"], onAllStars: ["sprocket.flying-goggles"] },
+    "flight.the-canyon-flyer": { onComplete: ["badge.canyon-flyer", "avatar.aviator-cap"] },
+    "flight.falling-cargo": { onComplete: ["badge.flight-hangar"] }
 });
 /** Rewards owed for missions already completed (used when old saves or guest progress move into a profile). */
 export function completionRewardIds(levelIds) {
@@ -319,7 +356,19 @@ export const MISSION_STARS = Object.freeze({
     "water.which-pipe-fills-faster": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "water.narrow", label: "FAIR RACE — wide against narrow" } },
     "water.duck-water-park": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "secret.water-duck-splash", label: "SPLASHDOWN — the duck reaches the pool" } },
     "water.the-grand-fountain": { efficient: budget(4), advanced: wild(3) },
-    "water.flooded-workshop": { efficient: budget(3), advanced: wild(2) }
+    "water.flooded-workshop": { efficient: budget(3), advanced: wild(2) },
+    "flight.blow-it-over": { efficient: budget(1), advanced: { kind: "DISCOVERY", discoveryId: "flight.wind", label: "BREEZE — moving air pushes" } },
+    "flight.long-glide": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "flight.stability", label: "STEADY — tail keeps it level" } },
+    "flight.safe-landing": { efficient: budget(1), advanced: { kind: "DISCOVERY", discoveryId: "flight.parachute", label: "SOFT — catch the air" } },
+    "flight.balloon-lift": { efficient: budget(3), advanced: { kind: "DISCOVERY", discoveryId: "flight.buoyancy", label: "FLOAT — push beats weight" } },
+    "flight.through-the-hoops": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "combo.flight-spring", label: "OLD MEETS NEW — spring launch" } },
+    "flight.balance-the-wings": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "flight.stability", label: "BALANCED — fly without flipping" } },
+    "flight.propeller-push": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "flight.thrust-lift", label: "PUSH & LIFT — two different jobs" } },
+    "flight.cross-the-canyon": { efficient: budget(4), advanced: { kind: "DISCOVERY", discoveryId: "combo.flight-battery", label: "GLIDE HOME — battery out, wings on" } },
+    "flight.which-wing-flies-farther": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "flight.lift", label: "LIFT — see wings hold it up" } },
+    "flight.flying-sprocket": { efficient: budget(4), advanced: { kind: "DISCOVERY", discoveryId: "secret.flight-sprocket", label: "SKY PUPPY — through a hoop" } },
+    "flight.the-canyon-flyer": { efficient: budget(4), advanced: wild(3) },
+    "flight.falling-cargo": { efficient: budget(2), advanced: wild(2) }
 });
 export function evaluateStars(levelId, evidence) {
     const stars = ["solve"];

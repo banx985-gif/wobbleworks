@@ -40,7 +40,13 @@ export const LEVEL_SCENERY = {
     "water.water-the-garden": [S("garden-beds", 13.8, 8.2, 2.2)],
     "water.spray-the-target": [S("spray-targets", 14.6, 8.2, 1.8)],
     "water.the-grand-fountain": [S("fountain", 14.9, 8.2, 1.5)],
-    "water.flooded-workshop": [S("hazard-sign", 10.5, 8.2, 1.1), S("leaky-pipe", 15, 8.2, 1.4)]
+    "water.flooded-workshop": [S("hazard-sign", 10.5, 8.2, 1.1), S("leaky-pipe", 15, 8.2, 1.4)],
+    // Flight Hangar
+    "flight.blow-it-over": [S("wind-spinner", 13.6, 8.2, 2)],
+    "flight.through-the-hoops": [S("hoops", 14.4, 8.2, 1.8)],
+    "flight.falling-cargo": [S("cargo-parachute", 13.6, 8.2, 1.8)],
+    "flight.flying-sprocket": [S("hover-pads", 13.6, 8.2, 2.2)],
+    "flight.safe-landing": [S("cargo-parachute", 3, 8.2, 1.6)]
 };
 /** Picture aspect ratios (width / height), so the layout can be checked without loading pictures. */
 export const SCENERY_ASPECT = {

@@ -93,6 +93,39 @@ THEMES["water-works"] = { title: "WATER WORKS", top: "#1864ab", bottom: "#4dabf7
             c.fill();
         }
     } };
+/** Flight Hangar: a tall hangar with a big open door onto the sky and a windsock. */
+THEMES["flight-hangar"] = { title: "FLIGHT HANGAR", top: "#a5d8ff", bottom: "#d0ebff", wall: "#dee2e6", floor: "#868e96", accent: "#74c0fc", motif: (c, t) => {
+        c.fillStyle = "#c9e8ff";
+        c.fillRect(380, 150, 840, 520);
+        c.fillStyle = "#ffffff";
+        for (let k = 0; k < 4; k++) {
+            const x = ((t * 20 + k * 260) % 1000) + 300;
+            c.beginPath();
+            c.ellipse(x, 220 + k * 40, 60, 18, 0, 0, Math.PI * 2);
+            c.fill();
+        }
+        c.strokeStyle = "#adb5bd";
+        c.lineWidth = 8;
+        for (let x = 0; x < 1600; x += 160) {
+            c.beginPath();
+            c.moveTo(x, 130);
+            c.lineTo(x + 80, 150);
+            c.lineTo(x + 160, 130);
+            c.stroke();
+        }
+        c.save();
+        c.translate(1450, 260);
+        c.rotate(Math.sin(t) * 0.1);
+        c.fillStyle = "#ff922b";
+        c.beginPath();
+        c.moveTo(0, 0);
+        c.lineTo(110, 10);
+        c.lineTo(110, 40);
+        c.lineTo(0, 50);
+        c.closePath();
+        c.fill();
+        c.restore();
+    } };
 export function hasLabBackdrop(labId) { return labId in THEMES; }
 export function drawLabBackdrop(c, labId, time) {
     const th = THEMES[labId];

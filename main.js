@@ -33,6 +33,7 @@ import { analyzeStructure, beamEndpoints as structureBeamEndpoints, beamEndSnap 
 import { analyzeCircuit, circuitBehaviour, wireEnds, wireEndSnap } from "./power/CircuitSystem.js";
 import { magnetBehaviour } from "./magnets/MagnetSystem.js";
 import { analyzeFluid, fluidBehaviour, pipeEnds, pipeEndSnap } from "./water/FluidSystem.js";
+import { aeroBehaviour, craftSnap, fanBehaviour, isCraft } from "./flight/FlightSystem.js";
 import { LAB_MODULES, evaluateLabMission, labModule } from "./labs/Labs.js";
 import { loadLabLevels } from "./labs/LabModule.js";
 import { hasLabBackdrop } from "./render/LabBackdrops.js";
@@ -969,7 +970,7 @@ function startFreeBuild(from) {
     motionObjective.textContent = "Build anything. TEST it. Change it. TEST again.";
     document.querySelector(".motion-badge").textContent = "WORKSHOP";
     resetGuidance(undefined);
-    const scanner = (p?.unlockedTools.includes("tool.force-scanner") || p?.unlockedTools.includes("tool.spin-scanner") || p?.unlockedTools.includes("tool.stress-scanner") || p?.unlockedTools.includes("tool.circuit-scanner") || p?.unlockedTools.includes("tool.magnet-scanner") || p?.unlockedTools.includes("tool.flow-scanner")) ?? false;
+    const scanner = (p?.unlockedTools.includes("tool.force-scanner") || p?.unlockedTools.includes("tool.spin-scanner") || p?.unlockedTools.includes("tool.stress-scanner") || p?.unlockedTools.includes("tool.circuit-scanner") || p?.unlockedTools.includes("tool.magnet-scanner") || p?.unlockedTools.includes("tool.flow-scanner") || p?.unlockedTools.includes("tool.air-scanner")) ?? false;
     forceScannerButton.textContent = "Scanner";
     forceScannerButton.classList.toggle("hidden", !scanner);
     forceScannerButton.classList.remove("force-on");
@@ -1280,6 +1281,24 @@ function finishBeamEnd(drag) {
     const shaped = beamFromEnds(build.getPart(drag.id), drag.fixed, target);
     build.reshape(drag.id, { position: shaped.position, rotation: shaped.rotation, parameters: { length: Number(shaped.parameters.length) } });
     sfx(700, .04);
+}
+/** A wing, tail, propeller, balloon… dropped next to a flying machine clips onto its slot. Placement only. */
+function snapToCraft(id) {
+    const part = build.getPart(id);
+    if (!part)
+        return;
+    const aero = aeroBehaviour(registry.get(part.definitionId));
+    if (!aero)
+        return;
+    const crafts = build.allParts().filter(p => isCraft(registry.get(p.definitionId))).sort((a, b) => Math.hypot(a.position.x - part.position.x, a.position.y - part.position.y) - Math.hypot(b.position.x - part.position.x, b.position.y - part.position.y));
+    for (const c of crafts) {
+        const target = craftSnap(part.position.x, part.position.y, aero.part, { x: c.position.x, y: c.position.y, angle: c.rotation });
+        if (target) {
+            build.move(id, target);
+            sfx(780, .04);
+            return;
+        }
+    }
 }
 /** A dropped beam slides so whichever end is closest to a joint/support lands exactly on it. */
 function snapBeam(id) {
@@ -1810,6 +1829,8 @@ function tapAction(p) {
         return "VALVE";
     if (def.id === "plumb.nozzle")
         return "AIM";
+    if (fanBehaviour(def))
+        return "EIGHTH";
     const bar = magnetBehaviour(def);
     if (!bar || bar.electric)
         return undefined;
@@ -1922,7 +1943,7 @@ input.on((event, sample) => {
                 else if (tap === "AIM")
                     build.reshape(droppedId, { rotation: dropped.rotation - Math.PI / 12 < -Math.PI / 2 - 1e-6 ? 0.25 : dropped.rotation - Math.PI / 12 });
                 else
-                    build.reshape(droppedId, { rotation: ((dropped.rotation + (tap === "QUARTER" ? Math.PI / 2 : Math.PI)) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) });
+                    build.reshape(droppedId, { rotation: ((dropped.rotation + (tap === "EIGHTH" ? -Math.PI / 4 : tap === "QUARTER" ? Math.PI / 2 : Math.PI)) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) });
                 sfx(tap === "FLIP" && dropped.parameters.closed === true ? 420 : 760, .05);
                 dragStart = undefined;
                 dragPreview = undefined;
@@ -1939,6 +1960,7 @@ input.on((event, sample) => {
                 observer.noteDragError();
             build.move(droppedId, { x: Math.max(0.4, Math.min(15.6, dragPreview.x)), y: openingRamp ? 7.95 : surfacePart ? 8.32 : Math.max(0.5, Math.min(8.2, dragPreview.y)) });
             snapToGhost(droppedId);
+            snapToCraft(droppedId);
             snapGear(droppedId);
             snapBeam(droppedId);
             autoSnapOpeningWheel(droppedId);
@@ -1976,6 +1998,8 @@ function render() {
         renderer.drawMagnetForces(runtime);
     if (runtime && runtime.water.layout.ports.length)
         renderer.drawWaterEffects(runtime, now() / 1000);
+    if (runtime && forceScanner && runtime.flight.hasFlight())
+        renderer.drawFlightForces(runtime);
     if (!runtime && shown.some(p => fluidBehaviour(registry.get(p.definitionId)) || registry.get(p.definitionId).behaviours.some(b => b.kind === "PIPE")))
         renderer.drawWaterPorts(analyzeFluid(shown, id => registry.has(id) ? registry.get(id) : undefined));
     if (!runtime && shown.some(p => registry.get(p.definitionId).behaviours.some(b => b.kind === "BEAM")))

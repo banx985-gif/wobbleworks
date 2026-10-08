@@ -200,6 +200,35 @@ export function evaluateOutcomeRule(rule, build, runtime) {
             return false;
         return Math.max(ta, tb) / Math.max(1e-6, Math.min(ta, tb)) >= rule.minRatio;
     }
+    if (rule.kind === "FLIGHT_DISTANCE")
+        return tagged(build, rule.craftTag).some(c => { const st = runtime.flight.craft(c.id); return st !== undefined && st.flying && st.maxX >= rule.minX; });
+    if (rule.kind === "SAFE_LANDING") {
+        if (runtime.elapsedTime < (rule.minElapsed ?? 0))
+            return false;
+        const objs = tagged(build, rule.objectTag);
+        return objs.length > 0 && objs.every(o => runtime.flight.hasLanded(o.id) && runtime.flight.peakImpact(o.id) <= rule.maxImpact && speed(runtime, o.id) < 0.2);
+    }
+    if (rule.kind === "GATES_PASSED") {
+        const gates = tagged(build, rule.gateTag);
+        return gates.length > 0 && tagged(build, rule.craftTag).some(c => gates.every(g => runtime.flight.gatesPassed(c.id).includes(g.id)));
+    }
+    if (rule.kind === "STEADY_FLIGHT")
+        return tagged(build, rule.craftTag).some(c => { const st = runtime.flight.craft(c.id); return st !== undefined && st.flying && st.maxX - c.position.x >= rule.minDistance && st.pitchSpread <= rule.maxPitchSpread; });
+    if (rule.kind === "REACH_HEIGHT")
+        return tagged(build, rule.objectTag).some(o => position(runtime, o).y <= rule.aboveY);
+    if (rule.kind === "FLIGHT_COMPARE") {
+        const a = tagged(build, rule.aTag)[0], b = tagged(build, rule.bTag)[0];
+        if (!a || !b)
+            return false;
+        const sa = runtime.flight.craft(a.id), sb = runtime.flight.craft(b.id);
+        if (sa?.landedX === undefined || sb?.landedX === undefined)
+            return false;
+        // How far each flew before touching down (sliding along the floor afterwards doesn't count).
+        const da = sa.maxX - a.position.x, db = sb.maxX - b.position.x;
+        if (da <= 0.2 || db <= 0.2)
+            return false;
+        return Math.max(da, db) / Math.min(da, db) >= rule.minRatio;
+    }
     if (rule.kind === "MECHANISM_FAMILY_COUNT") {
         const present = new Set(build.allParts().filter(part => rule.definitionIds.includes(part.definitionId)).map(part => part.definitionId));
         return present.size >= rule.minimum;

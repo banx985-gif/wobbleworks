@@ -7,6 +7,7 @@ import { StructureSystem } from "../structures/StructureSystem.js";
 import { CircuitSystem } from "../power/CircuitSystem.js";
 import { MagnetSystem } from "../magnets/MagnetSystem.js";
 import { FluidSystem } from "../water/FluidSystem.js";
+import { FlightSystem } from "../flight/FlightSystem.js";
 export class RuntimeWorld {
     snapshotSignature;
     physics = new PhysicsWorld();
@@ -20,6 +21,8 @@ export class RuntimeWorld {
     magnets;
     /** Water Works (M16): pipes, tanks, valves, pumps, nozzles and water wheels. */
     water;
+    /** Flight Hangar (M17): gliders and their wings, tails, propellers, balloons and parachutes; fans' wind. */
+    flight;
     /** Buttons held down by a finger during this TEST, and switches flipped since the last tick. */
     fingerPressed = new Set();
     flips = new Set();
@@ -61,6 +64,7 @@ export class RuntimeWorld {
         this.structures = new StructureSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.gears = new GearSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined, this.snapshot.connections, extraLoads);
         this.circuits = new CircuitSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
+        this.flight = new FlightSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.water = new FluidSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.magnets = new MagnetSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.installPipeline();
@@ -76,7 +80,7 @@ export class RuntimeWorld {
             const restitution = Number(part.parameters.restitution ?? rigid.restitution);
             // Boxes collide as upright rectangles, so a magnet turned a quarter turn gets its width and height swapped instead of an angle.
             const quarter = rigid.shape === "BOX" && def.behaviours.some(b => b.kind === "MAGNET_BAR") && Math.abs(Math.sin(part.rotation)) > 0.99;
-            this.physics.addBody({ id: part.id, type: rigid.bodyType, shape: rigid.shape, position: part.position, angle: quarter ? 0 : part.rotation, width: quarter ? rigid.height : rigid.width, height: quarter ? rigid.width : rigid.height, density, friction, restitution });
+            this.physics.addBody({ id: part.id, type: rigid.bodyType, shape: rigid.shape, position: part.position, angle: quarter ? 0 : part.rotation, width: quarter ? rigid.height : rigid.width, height: quarter ? rigid.width : rigid.height, density, friction, restitution, ...(typeof part.parameters.collisionGroup === "string" ? { group: part.parameters.collisionGroup } : {}) });
             const initialVx = Number(part.parameters.initialVx ?? 0), initialVy = Number(part.parameters.initialVy ?? 0);
             if ((initialVx !== 0 || initialVy !== 0) && rigid.bodyType === "DYNAMIC")
                 this.physics.setLinearVelocity(part.id, { x: initialVx, y: initialVy });
@@ -99,9 +103,13 @@ export class RuntimeWorld {
         this.pipeline.on("PRE_PHYSICS_SENSORS", () => this.sampleSensors());
         this.pipeline.on("LOGIC_EVALUATION", () => this.evaluateLogic());
         this.pipeline.on("ACTUATOR_RESOLUTION", () => this.resolveActuators());
-        this.pipeline.on("FORCE_AND_COUPLING", ({ dt }) => { this.stepMagnets(dt); this.applyJets(); this.applyCouplings(); this.gears.step(dt); this.applyGearCouplings(); this.stepStructures(dt); });
+        this.pipeline.on("FORCE_AND_COUPLING", ({ dt }) => { this.stepMagnets(dt); this.applyJets(); this.stepFlight(dt); this.applyCouplings(); this.gears.step(dt); this.applyGearCouplings(); this.stepStructures(dt); });
         this.pipeline.on("PHYSICS_STEP", ({ dt }) => this.physics.step(dt));
-        this.pipeline.on("POST_PHYSICS_CONTACTS", () => { this.magnets.applyGuides(this.physics); this.collectPhysicsEvents(); });
+        this.pipeline.on("POST_PHYSICS_CONTACTS", () => { this.magnets.applyGuides(this.physics); if (this.flight.hasFlight()) {
+            this.flight.observe(this.physics);
+            for (const e of this.flight.drainEvents())
+                this.event(e.kind, e.sourceId, e.targetId, e.data);
+        } this.collectPhysicsEvents(); });
         this.pipeline.on("DOMAIN_TRANSFER", ({ dt }) => this.transferDomains(dt));
         this.pipeline.on("CAUSAL_EVENT_RECORDING", () => { this.causalEvents.push(...this.pendingEvents); });
         this.pipeline.on("GOAL_AND_CONCEPT_EVIDENCE", () => undefined);
@@ -181,6 +189,13 @@ export class RuntimeWorld {
                 }
             }
         }
+    }
+    stepFlight(dt) {
+        if (!this.flight.hasFlight())
+            return;
+        this.flight.step(dt, this.physics);
+        for (const e of this.flight.drainEvents())
+            this.event(e.kind, e.sourceId, e.targetId, e.data);
     }
     stepMagnets(dt) {
         if (!this.magnets.hasMagnets())

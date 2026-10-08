@@ -6,6 +6,7 @@ import { drawCircuitPart, drawCircuitScanner, drawCircuitTerminals, isCircuitPar
 import { drawLabBackdrop } from "./LabBackdrops.js";
 import { drawMagnetForces, drawMagnetPart, isMagnetPart } from "./MagnetRenderer.js";
 import { drawWaterEffects, drawWaterPart, drawWaterPorts, isWaterPart } from "./WaterRenderer.js";
+import { drawFlightForces, drawFlightPart, isFlightPart } from "./FlightRenderer.js";
 import { drawDoorPanel, drawGearGarageBackdrop, drawGearLinks, drawGearPart, drawRotationView, gearBehaviour, gearOutput } from "./GearRenderer.js";
 export class CanvasRenderer {
     canvas;
@@ -114,14 +115,16 @@ export class CanvasRenderer {
     drawParts(parts, registry, runtimeStates, selectedId, gears, time = 0, structures, showStress = false, runtime) {
         const states = new Map(runtimeStates?.map(s => [s.id, s]) ?? []);
         // Draw order only: fixed things first (zones, ramps, pads), then shafts, then gears, then moving things in front.
-        const layer = (p) => { const def = registry.get(p.definitionId); if (isWaterPart(def))
+        const layer = (p) => { const def = registry.get(p.definitionId); if (isFlightPart(def))
+            return def.id === "flight.cliff" ? -1 : def.behaviours.some(b => b.kind === "AERO" && (b.part === "PARACHUTE" || b.part === "BALLOON" || b.part === "TAIL")) ? 2.5 : def.behaviours.some(b => b.kind === "AERO") ? 3.5 : def.behaviours.some(b => b.kind === "CRAFT") ? 3 : 0.5; if (isWaterPart(def))
             return def.behaviours.some(b => b.kind === "PIPE") ? 0.7 : def.behaviours.some(b => b.kind === "WATER_TARGET") ? -1 : def.behaviours.some(b => b.kind === "GEAR") ? 1 : 0.5; if (isCircuitPart(def))
             return def.behaviours.some(b => b.kind === "WIRE") ? 2.5 : def.behaviours.some(b => b.kind === "GEAR") ? 1 : 0.5; if (structureKind(def))
             return [-2, -1, 1.5, 1.6, 4][structureLayer(def)] ?? 4; const g = gearBehaviour(def); if (g)
             return g.role === "SHAFT" ? 1 : 2; const r = def.behaviours.find(b => b.kind === "RIGID_BODY"); return !r || (r.kind === "RIGID_BODY" && r.bodyType === "STATIC") ? 0 : 3; };
-        const ordered = [-2, -1, 0, 0.5, 0.7, 1, 1.5, 1.6, 2, 2.5, 3, 4].flatMap(k => parts.filter(p => layer(p) === k));
+        const ordered = [-2, -1, 0, 0.5, 0.7, 1, 1.5, 1.6, 2, 2.5, 3, 3.5, 4].flatMap(k => parts.filter(p => layer(p) === k));
         const structCtx = { ...(structures ? { structures } : {}), registry: (id) => registry.get(id), art: this.art, time, showStress };
         const magnetCtx = { ...(runtime ? { magnets: runtime.magnets } : {}), states, art: this.art, time, scanner: showStress };
+        const flightCtx = { ...(runtime ? { flight: runtime.flight } : {}), states, art: this.art, time, scanner: showStress, pose: (id) => runtime?.flight.attachedPose(id, runtime.physics) };
         const waterCtx = { ...(runtime ? { water: runtime.water } : {}), art: this.art, time, scanner: showStress, gearAngle: (id) => gears?.state(id)?.angle ?? 0 };
         const powerCtx = { ...(runtime ? { circuits: runtime.circuits } : {}), art: this.art, time, scanner: showStress };
         const gearCtx = { ...(gears ? { gears } : {}), states, parts, registry: (id) => registry.get(id), time, art: this.art };
@@ -131,6 +134,8 @@ export class CanvasRenderer {
             if (drawStructurePart(this.ctx, part, def, selectedId === part.id, structCtx))
                 continue;
             if (isMagnetPart(def) && drawMagnetPart(this.ctx, part, def, selectedId === part.id, magnetCtx))
+                continue;
+            if (isFlightPart(def) && drawFlightPart(this.ctx, part, def, selectedId === part.id, flightCtx))
                 continue;
             if (isWaterPart(def) && drawWaterPart(this.ctx, part, def, selectedId === part.id, waterCtx))
                 continue;
@@ -241,6 +246,7 @@ export class CanvasRenderer {
     /** Backdrop for a lab added from M14 on. */
     drawLabBackdrop(labId, time) { drawLabBackdrop(this.ctx, labId, time); }
     drawMagnetForces(runtime) { drawMagnetForces(this.ctx, runtime.magnets, new Map(runtime.physics.states().map(s => [s.id, s]))); }
+    drawFlightForces(runtime) { drawFlightForces(this.ctx, runtime.flight, new Map(runtime.physics.states().map(s => [s.id, s]))); }
     drawWaterEffects(runtime, time) { drawWaterEffects(this.ctx, runtime.water, time); }
     drawWaterPorts(layout) { drawWaterPorts(this.ctx, layout); }
     drawCircuitTerminals(layout) { drawCircuitTerminals(this.ctx, layout); }

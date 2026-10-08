@@ -21,7 +21,8 @@ export const WHY_CHOICES = {
     NOT_MAGNETIC: { label: "Not magnetic", icon: "🪵" },
     TOO_HIGH: { label: "Too high to reach", icon: "⛰️" },
     LEAKING: { label: "Leaking", icon: "💧" },
-    MISSED: { label: "Missed the target", icon: "🎯" }
+    MISSED: { label: "Missed the target", icon: "🎯" },
+    NO_LIFT: { label: "Nothing holding it up", icon: "🪽" }
 };
 function tagged(build, tag) { return build.allParts().find(p => p.tags?.includes(tag)); }
 function state(runtime, id) { try {
@@ -37,6 +38,12 @@ function nameOf(part) {
 const m = (v) => `${v.toFixed(1)} m`;
 /** Picks two other answers deterministically so the same failure shows the same card. */
 function choicesFor(reason) {
+    if (["NO_LIFT"].includes(reason)) {
+        const pool = ["NO_LIFT", "UNSTABLE", "TOO_FAST", "TOO_HEAVY", "NOT_CONNECTED", "TOO_SLOW"].filter(r => r !== reason);
+        const seed = reason.length;
+        const three = [reason, pool[seed % pool.length], pool[(seed + 2) % pool.length]];
+        return [three[seed % 3], three[(seed + 1) % 3], three[(seed + 2) % 3]];
+    }
     if (["TOO_HIGH", "LEAKING", "MISSED"].includes(reason)) {
         const pool = ["TOO_HIGH", "LEAKING", "MISSED", "NOT_CONNECTED", "TOO_SLOW", "WRONG_DIRECTION"].filter(r => r !== reason);
         const seed = reason.length;
@@ -78,6 +85,9 @@ export function diagnoseRun(level, build, runtime) {
     const waterCard = diagnoseWater(rules, build, runtime, card);
     if (waterCard)
         return waterCard;
+    const flightCard = diagnoseFlight(rules, build, runtime, card);
+    if (flightCard)
+        return flightCard;
     // Builder Bay: the structure's own measurements.
     const structureCard = diagnoseStructures(rules, build, runtime, card);
     if (structureCard)
@@ -489,5 +499,60 @@ function diagnoseWater(rules, build, runtime, card) {
         if (rules.some(r => r.kind === "GEAR_OUTPUT"))
             return card("NOT_CONNECTED", "The water wheel turned, but nothing passed its turning on to the machine.");
     }
+    return undefined;
+}
+function diagnoseFlight(rules, build, runtime, card) {
+    const f = runtime.flight;
+    if (!f.hasFlight())
+        return undefined;
+    const events = runtime.causalEvents;
+    const tag = (t) => build.allParts().filter(p => p.tags?.includes(t));
+    const defs = (c) => c.attached.map(id => build.getPart(id)?.definitionId ?? "");
+    for (const r of rules)
+        if (r.kind === "SAFE_LANDING")
+            for (const p of tag(r.objectTag)) {
+                const hit = f.peakImpact(p.id);
+                if (hit > r.maxImpact)
+                    return card("TOO_FAST", `${nameOf(p)} hit the ground at ${hit.toFixed(1)} m/s. A gentle landing is ${r.maxImpact} m/s or less.`);
+            }
+    for (const r of rules)
+        if (r.kind === "REACH_HEIGHT")
+            for (const p of tag(r.objectTag)) {
+                const c = f.craft(p.id);
+                if (!c)
+                    continue;
+                const lift = defs(c).filter(d => d === "flight.balloon").length * 1.2;
+                if (lift < c.weight)
+                    return card("TOO_HEAVY", `The balloons push up with ${lift.toFixed(1)} units, but everything weighs ${c.weight.toFixed(1)}. Up only wins when the push is bigger.`);
+            }
+    for (const r of rules)
+        if (r.kind === "FLIGHT_COMPARE") {
+            const a = tag(r.aTag)[0], b = tag(r.bTag)[0];
+            const ca = a && f.craft(a.id), cb = b && f.craft(b.id);
+            if (ca && cb && ca.landedX !== undefined && cb.landedX !== undefined)
+                return card("SAME", `A flew ${(ca.maxX - a.position.x).toFixed(1)} m and B flew ${(cb.maxX - b.position.x).toFixed(1)} m — about the same. Did their wings really differ?`);
+        }
+    const crafts = rules.flatMap(r => r.kind === "FLIGHT_DISTANCE" || r.kind === "STEADY_FLIGHT" || r.kind === "GATES_PASSED" ? tag(r.craftTag) : r.kind === "OBJECT_ENTERS_ZONE" ? tag(r.objectTag) : []).filter(p => f.craft(p.id));
+    for (const p of crafts) {
+        const c = f.craft(p.id);
+        const parts = defs(c);
+        if (events.some(e => e.kind === "CRAFT_TUMBLE" && e.sourceId === p.id))
+            return card("UNSTABLE", parts.includes("flight.tail") ? "It flipped over in the air — it's too nose-heavy or tail-heavy to fly steadily." : "It flipped over in the air — nothing at the back kept the nose steady.");
+        if (parts.includes("flight.propeller") && !parts.includes("flight.power-pack"))
+            return card("NOT_CONNECTED", "The propeller never turned — it had no battery pack to power it.");
+        if (p.definitionId === "flight.basket" && !parts.includes("flight.balloon"))
+            return card("NO_LIFT", "Nothing was pushing the basket up, so it never left the ground.");
+        if (!parts.some(d => d.startsWith("flight.wing")))
+            return card("NO_LIFT", `With no wings, nothing held it up, so it dropped after ${Math.max(0, c.maxX - p.position.x).toFixed(1)} m.`);
+        if (!c.flying)
+            return card("TOO_SLOW", "Wings only lift when they're moving fast — it never got going fast enough to fly.");
+    }
+    for (const r of rules)
+        if (r.kind === "GATES_PASSED")
+            for (const p of tag(r.craftTag)) {
+                const missed = tag(r.gateTag).filter(g => !f.gatesPassed(p.id).includes(g.id));
+                if (missed.length)
+                    return card("MISSED", `It missed ${missed.length === 1 ? "a hoop" : `${missed.length} hoops`} — its path went too high or too low.`);
+            }
     return undefined;
 }

@@ -20,7 +20,7 @@ export class PhysicsWorld {
             id: spec.id, type: spec.type, shape: spec.shape, x: spec.position.x, y: spec.position.y,
             angle: spec.angle ?? 0, width: spec.width, height: spec.height, vx: 0, vy: 0,
             angularVelocity: 0, mass, friction: spec.friction ?? 0.4, restitution: spec.restitution ?? 0.2,
-            forceX: 0, forceY: 0, lastForceX: 0, lastForceY: 0
+            forceX: 0, forceY: 0, lastForceX: 0, lastForceY: 0, ...(spec.group ? { group: spec.group } : {})
         });
     }
     addSpring(a, b, restLength, stiffness = 20, damping = 1.5) { this.springs.push({ a, b, restLength, stiffness, damping }); }
@@ -47,6 +47,9 @@ export class PhysicsWorld {
         b.angle = angle;
         b.angularVelocity = 0;
     } }
+    /** Flight Hangar: a craft weighs its body plus everything attached to it (set once at the start of a TEST). */
+    setMass(id, mass) { const b = this.mustBody(id); if (b.type === "DYNAMIC")
+        b.mass = Math.max(0.02, mass); }
     /** Space Centre: gravity can differ per environment (mass never changes). */
     setGravity(g) { this.gravity = g; }
     getGravity() { return this.gravity; }
@@ -166,6 +169,8 @@ export class PhysicsWorld {
             for (let j = i + 1; j < list.length; j += 1) {
                 const a = list[i], b = list[j];
                 if (a.type === "STATIC" && b.type === "STATIC")
+                    continue;
+                if (a.group !== undefined && a.group === b.group)
                     continue;
                 const surfaceBody = a.type === "DYNAMIC" && b.type === "STATIC" && b.shape === "BOX" && b.height <= 0.35 && Math.abs(b.angle) < 0.0001 ? a
                     : b.type === "DYNAMIC" && a.type === "STATIC" && a.shape === "BOX" && a.height <= 0.35 && Math.abs(a.angle) < 0.0001 ? b : undefined;

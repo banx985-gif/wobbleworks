@@ -84,6 +84,18 @@ export const DISCOVERIES = [
     { id: "combo.water-electric", kind: "COMBINATION", title: "Electric fountain", line: "An electric pump fed a jet that hit its target.", art: "icon.energy-flask", truthContractId: "truth.water.v1" },
     { id: "secret.water-duck-splash", kind: "SECRET", title: "Duck Water Park", line: "SPLASH! The duck rode the jets into the pool.", art: "duck.plain", truthContractId: "truth.water.v1" },
     { id: "secret.water-big-spill", kind: "SECRET", title: "Indoor Swimming Pool", line: "Ten litres on the floor! Bolt has fetched a mop.", art: "fx.splash", truthContractId: "truth.water.v1" },
+    // Flight Hangar (M17) — every one measured by the FlightSystem (truth.flight.v1)
+    { id: "flight.lift", kind: "CONCEPT", title: "Wings make lift", line: "Air rushing over a tilted wing pushes it up.", art: "icon.wings", truthContractId: "truth.flight.v1" },
+    { id: "flight.stability", kind: "CONCEPT", title: "Tails keep it steady", line: "A tail at the back stops the nose bobbing about.", art: "icon.biplane", truthContractId: "truth.flight.v1" },
+    { id: "flight.parachute", kind: "CONCEPT", title: "Parachutes catch air", line: "Lots of drag means a slow, soft landing.", art: "level.cargo-parachute", truthContractId: "truth.flight.v1" },
+    { id: "flight.thrust-lift", kind: "CONCEPT", title: "Push and lift are different", line: "The propeller pushes forwards; the wings lift up.", art: "icon.drone", truthContractId: "truth.flight.v1" },
+    { id: "flight.buoyancy", kind: "CONCEPT", title: "Balloons float up", line: "When the upward push beats the weight, up it goes.", art: "icon.balloon", truthContractId: "truth.flight.v1" },
+    { id: "flight.wind", kind: "CONCEPT", title: "Moving air pushes", line: "A breeze pushed something along.", art: "icon.feather", truthContractId: "truth.flight.v1" },
+    { id: "flight.stall", kind: "CONCEPT", title: "Too steep stalls", line: "Tilt a wing too much and it loses its lift.", art: "icon.wings", truthContractId: "truth.flight.v1" },
+    { id: "combo.flight-spring", kind: "COMBINATION", title: "Spring launch", line: "An old Motion Yard spring flung a glider into the sky.", art: "motion.spring", truthContractId: "truth.flight.v1" },
+    { id: "combo.flight-battery", kind: "COMBINATION", title: "Glide home", line: "The battery ran out and the wings glided it down.", art: "icon.battery", truthContractId: "truth.flight.v1" },
+    { id: "secret.flight-loop", kind: "SECRET", title: "Loop-the-Loop", line: "Whoa — it flipped right over! (Tails help with that.)", art: "icon.rotate", truthContractId: "truth.flight.v1" },
+    { id: "secret.flight-sprocket", kind: "SECRET", title: "Sky Puppy", line: "Sprocket floated through a hoop. Best day ever.", art: "icon.balloon-rainbow", truthContractId: "truth.flight.v1" },
     { id: "secret.sky-tower", kind: "SECRET", title: "Sky Scraper", line: "A tower so tall it nearly touched the ceiling — and it stood firm!", art: "builder.beam-metal", truthContractId: "truth.structures.v1" }
 ];
 export function discoveryById(id) { return DISCOVERIES.find(d => d.id === id); }
