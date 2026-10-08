@@ -83,6 +83,8 @@ function pulley(c, r, fill, selected) {
     c.stroke();
 }
 /** Draws one Gear Garage part at its place. Returns false for parts that aren't gear parts. */
+/** Decided 9 Oct: blue ring = small 8-tooth, purple hub = medium 12-tooth, green bolt = large 20-tooth. */
+export const GEAR_ART = { "gear.small": "gear.ring-blue", "gear.medium": "gear.hub-purple", "gear.large": "gear.bolt-green" };
 export function drawGearPart(c, part, def, selected, ctx) {
     const g = gearBehaviour(def);
     if (!g)
@@ -98,7 +100,27 @@ export function drawGearPart(c, part, def, selected, ctx) {
     if (drive)
         drawDriverBody(c, drive.driver, angle);
     c.rotate(angle);
-    if (g.role === "GEAR")
+    const pic = GEAR_ART[part.definitionId] ? ctx.art?.(GEAR_ART[part.definitionId]) : undefined;
+    if (g.role === "GEAR" && pic) {
+        // Painted gear scaled to this gear's size (the painted teeth needn't match the count; the solver uses the real one).
+        if (selected) {
+            c.shadowColor = "#ffd43b";
+            c.shadowBlur = 24;
+        }
+        const d = r * 2 * 1.12;
+        c.drawImage(pic, -d / 2, -d / 2, d, d);
+        c.shadowBlur = 0;
+        if (selected) {
+            c.strokeStyle = "#ffd43b";
+            c.lineWidth = 5;
+            c.setLineDash([12, 9]);
+            c.beginPath();
+            c.arc(0, 0, r * 1.12, 0, Math.PI * 2);
+            c.stroke();
+            c.setLineDash([]);
+        }
+    }
+    else if (g.role === "GEAR")
         toothedGear(c, r, Math.max(6, g.teeth), GEAR_COLOURS[part.definitionId] ?? "#ced4da", selected);
     else if (g.role === "PULLEY")
         pulley(c, r, GEAR_COLOURS[part.definitionId] ?? "#b197fc", selected);

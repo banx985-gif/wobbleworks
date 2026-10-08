@@ -3,7 +3,8 @@ import { GEAR_PARENT_MAPPINGS } from "../gears/GearGarage.js";
 import { STRUCTURE_PARENT_MAPPINGS } from "../structures/BuilderBay.js";
 import { MAIN_LABS } from "../progression/CampaignData.js";
 import { labCleared } from "../progression/LabProgression.js";
-import { ownsFullGame } from "../progression/Campus.js";
+import { INSTALLED_REGION_CONTENT, ownsFullGame } from "../progression/Campus.js";
+import { LAB_MODULES } from "../labs/Labs.js";
 import { formatBytes } from "../save/StorageMonitor.js";
 /**
  * Grown-ups area (Milestone 10 slice): gate keypad, per-child concept summary, storage manager,
@@ -60,6 +61,16 @@ export function renderParentGate(root, gate, message, onPress, onBack, onDelete 
     actions.append(back, el("span"), el("span"));
     root.append(body, actions);
 }
+/** A painted grown-ups icon (assets/parent/, filed 9 Oct). */
+function parentIcon(id) { const img = el("img", "parent-icon"); img.src = `./assets/parent/parent.icon.${id}.webp`; img.alt = ""; return img; }
+function heading(icon, text) { const h = el("h2", "parent-h"); h.append(parentIcon(icon), document.createTextNode(text)); return h; }
+function line(icon, text) { const s = el("span", "parent-line"); s.append(parentIcon(icon), el("span", "", text)); return s; }
+/** Every lab's grown-up concept lines, in campaign order. */
+export const PARENT_CONCEPT_GROUPS = [
+    { concept: "Gears & Mechanisms", mappings: GEAR_PARENT_MAPPINGS },
+    { concept: "Structures & Forces", mappings: STRUCTURE_PARENT_MAPPINGS },
+    ...LAB_MODULES.map(m => ({ concept: m.concept, mappings: m.parentMappings }))
+];
 function conceptLines(p, mappings = MOTION_PARENT_MAPPINGS) {
     const found = new Set(p.discoveries);
     return mappings.filter(m => found.has(m.discoveryId)).map(m => m.evidence);
@@ -69,7 +80,7 @@ export function renderParentDashboard(root, save, storage, notice, cb) {
     if (notice)
         root.append(el("p", "parent-notice", notice));
     const kids = el("section", "parent-section");
-    kids.append(el("h2", "", "Your inventors"));
+    kids.append(heading("family", "Your inventors"));
     if (!save.profiles.length)
         kids.append(el("p", "muted", "No inventor profiles yet."));
     for (const p of save.profiles) {
@@ -77,13 +88,12 @@ export function renderParentDashboard(root, save, storage, notice, cb) {
         const labs = MAIN_LABS.filter(l => labCleared(l, done)).map(l => l.title);
         const card = el("div", "parent-kid");
         const lines = conceptLines(p);
-        card.append(el("strong", "", p.name), el("span", "", `Missions finished: ${done.size} · Labs restored: ${labs.length ? labs.join(", ") : "none yet"} · Inventions saved: ${p.shelf.length}`), el("span", "", `Force & Motion explored: ${lines.length ? lines.join(", ") : "just getting started"}`));
-        const gearLines = conceptLines(p, GEAR_PARENT_MAPPINGS);
-        if (gearLines.length)
-            card.append(el("span", "", `Gears & Mechanisms explored: ${gearLines.join(", ")}`));
-        const structureLines = conceptLines(p, STRUCTURE_PARENT_MAPPINGS);
-        if (structureLines.length)
-            card.append(el("span", "", `Structures & Forces explored: ${structureLines.join(", ")}`));
+        card.append(el("strong", "", p.name), line("progress", `Missions finished: ${done.size} · Inventions saved: ${p.shelf.length}`), line("explore", `Labs restored: ${labs.length ? labs.join(", ") : "none yet"}`), line("science", `Force & Motion explored: ${lines.length ? lines.join(", ") : "just getting started"}`));
+        for (const g of PARENT_CONCEPT_GROUPS) {
+            const found = conceptLines(p, g.mappings);
+            if (found.length)
+                card.append(line("science", `${g.concept} explored: ${found.join(", ")}`));
+        }
         const del = el("button", "danger small", "Remove inventor…");
         del.addEventListener("click", () => { if (window.confirm(`Remove ${p.name} and all of their progress from this device? This can't be undone unless you have a backup.`))
             cb.deleteProfile(p.id); });
@@ -92,7 +102,7 @@ export function renderParentDashboard(root, save, storage, notice, cb) {
     }
     kids.append(el("p", "muted", "WobbleWorks describes what your child explored. It never grades or labels ability."));
     const store = el("section", "parent-section");
-    store.append(el("h2", "", "Storage & backups"));
+    store.append(heading("activity", "Storage & backups"));
     if (storage) {
         const usage = storage.usageBytes !== undefined && storage.quotaBytes !== undefined ? `${formatBytes(storage.usageBytes)} of ${formatBytes(storage.quotaBytes)} available space used` : "Device storage size not reported by this browser";
         store.append(el("p", "", `Save size: ${formatBytes(storage.saveBytes)} · Saved inventions: ${storage.inventionCount} · ${usage}`));
@@ -114,14 +124,14 @@ export function renderParentDashboard(root, save, storage, notice, cb) {
     row.append(exp, label);
     store.append(row, el("p", "muted", "Importing replaces everything on this device. Your current save is kept as a safety copy first."));
     const own = el("section", "parent-section");
-    own.append(el("h2", "", "Full game"));
+    own.append(heading("award", "Full game"));
     own.append(el("p", "", ownsFullGame(save.entitlement) ? "The full campus is unlocked on this device." : "Free: the opening, all of the Motion Yard and Empty Workshop Free Build. The full game opens the rest of the campus."));
     own.append(el("p", "muted", "Buying and restoring the full game arrive in a later development build."));
     const toggle = el("button", "", ownsFullGame(save.entitlement) ? "Test tool: lock full game again" : "Test tool: pretend full game is owned");
     toggle.addEventListener("click", () => cb.setFullGameForTesting(!ownsFullGame(save.entitlement)));
     own.append(toggle);
     if (ownsFullGame(save.entitlement) && cb.openLabForTesting) {
-        for (const [labId, title] of [["gear-garage", "Gear Garage"], ["builder-bay", "Builder Bay"]]) {
+        for (const { id: labId, title } of MAIN_LABS.filter(l => l.id !== "motion-yard" && INSTALLED_REGION_CONTENT.has(l.id))) {
             const peek = el("button", "", `Test tool: open the ${title} now`);
             peek.addEventListener("click", () => cb.openLabForTesting(labId));
             own.append(peek);

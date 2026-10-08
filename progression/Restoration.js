@@ -82,3 +82,18 @@ export function dueVisitors(save) {
     const met = new Set(p.visitorsMet);
     return VISITOR_HOOKS.filter(v => stageIndex(v.arrivesAt) <= reached && !met.has(v.id));
 }
+/**
+ * Painted hub props that appear as the campus is restored (Part 0 art hookup, 9 Oct art):
+ * each one is switched on by the hub feature its lab's restoration moment describes.
+ */
+export const HUB_RESTORATION_PROPS = [
+    { feature: "conveyor-moving", prop: "hub.prop.conveyor" },
+    { feature: "plants-revived", prop: "hub.prop.plant" },
+    { feature: "fountain-on", prop: "hub.prop.fountain" },
+    { feature: "planes-overhead", prop: "hub.prop.toy-plane" }
+];
+/** The restoration props visible at a stage. */
+export function restorationProps(stage) {
+    const on = new Set(hubFeatures(stage));
+    return HUB_RESTORATION_PROPS.filter(p => on.has(p.feature)).map(p => p.prop);
+}

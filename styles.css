@@ -386,3 +386,24 @@ html.high-contrast { --ink:#000; --panel:#fff; --accent:#006b1b; --danger:#a0000
 .bolt-tip .bolt-art{width:52px}
 .why-bolt{position:absolute;left:-46px;top:-30px;width:86px;pointer-events:none}
 @media (max-width:760px){.result-bolt{left:-34px;width:70px}.bolt-avatar.painted{width:56px;height:76px}.why-bolt{left:-20px;width:60px}}
+/* Part 0 (9 Oct art): painted Workshop Hub props */
+.hub-station .hub-prop{width:100%;height:100%;object-fit:contain;object-position:center bottom;display:block;min-height:0;filter:drop-shadow(0 4px 0 #18323f33)}
+.hub-decor{position:absolute;pointer-events:none;z-index:0}.hub-decor .hub-prop{width:100%;height:auto;display:block}
+.hub-station{z-index:1}
+.station-stack.bolt-charger,.station-stack.sprocket-bed,.station-stack.shelf-stack{position:relative;display:block;width:100%;height:100%}
+.station-stack.bolt-charger .hub-prop{position:absolute;inset:auto 0 0 0;height:100%}
+.station-stack.bolt-charger .bolt-art{position:absolute;left:23%;bottom:22%;width:54%;margin:0;z-index:1}
+.station-stack.sprocket-bed .hub-prop{position:absolute;inset:auto 0 0 0;height:78%}
+.station-stack.sprocket-bed .sprocket-art{position:absolute;left:18%;bottom:24%;width:62%;height:auto;margin:0}
+.shelf-count{position:absolute;left:0;right:0;top:44%;text-align:center;color:#ffd43b;font-size:clamp(.6rem,1.6cqw,1rem);text-shadow:0 0 6px #fff59d;pointer-events:none}
+.hub-decor.spin-gears .hub-prop{transform-origin:40% 50%}.f-wall-gears-turning .hub-decor.spin-gears .hub-prop{animation:gearwobble 2.4s ease-in-out infinite}
+@keyframes gearwobble{0%,100%{transform:rotate(0)}50%{transform:rotate(14deg)}}
+.hub-decor.unlit .hub-prop{filter:grayscale(1) brightness(.75)}.hub-decor.half-lit .hub-prop{filter:saturate(.6)}.hub-decor.lit .hub-prop{filter:drop-shadow(0 0 10px #74c0fc)}
+.hub-decor.track .hub-prop{filter:saturate(.4) brightness(.9)}
+.f-test-track-running .station-freebuild .hub-prop{animation:trackbob 1.4s ease-in-out infinite}@keyframes trackbob{50%{transform:translateY(-3px)}}
+.hub-decor.belt .hub-prop{animation:trackbob .6s linear infinite}
+.hub-decor.fly{animation:fly 14s linear infinite}@keyframes fly{0%{left:-10%;top:4%}50%{top:1%}100%{left:100%;top:5%}}
+.reduced-motion .hub-decor,.reduced-motion .hub-decor .hub-prop,.reduced-motion .hub-station .hub-prop{animation:none!important}
+.set-icon img{width:44px;height:44px;object-fit:contain;display:block;margin:0 auto}
+.parent-h{display:flex;align-items:center;gap:10px}.parent-h .parent-icon{width:44px;height:44px}.parent-line{display:flex;align-items:center;gap:8px}.parent-icon{width:30px;height:30px;object-fit:contain;flex:none}
+.map-pic{width:clamp(28px,5.2cqw,58px);height:clamp(28px,5.2cqw,58px);object-fit:contain;display:block;margin:0 auto;filter:drop-shadow(0 2px 0 #18323f55)}

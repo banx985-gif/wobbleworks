@@ -12,6 +12,48 @@ export function structureLayer(def) {
     const k = structureKind(def);
     return k === "CHASM" || k === "STRUCT_GROUND" ? 0 : k === "STRUCT_ANCHOR" ? 1 : k === "BEAM" ? 2 : 4;
 }
+/**
+ * Painted structure pieces (9 Oct art, assets/parts/structure.*). Each picture is laid along its member:
+ * long pictures for long members, the yellow connector bar for braces, the post for columns. Drawing only.
+ */
+export function beamArtId(definitionId, material, lengthPx) {
+    if (definitionId === "builder.brace")
+        return "structure.connector-bar";
+    if (definitionId === "builder.column")
+        return "structure.post";
+    if (material === "WOOD")
+        return lengthPx >= 150 ? "structure.beam-wood-long" : "structure.beam-wood-short";
+    if (material === "METAL")
+        return lengthPx >= 150 ? "structure.beam-metal-long" : "structure.beam-metal-short";
+    return undefined;
+}
+/** Thickness of a member picture on screen (px): chunky enough to read, thin enough to see the shape. */
+export function beamArtThickness(definitionId, thicknessPx) { return definitionId === "builder.column" ? Math.max(36, thicknessPx * 2.2) : definitionId === "builder.brace" ? 24 : Math.max(30, thicknessPx * 2.4); }
+function drawMemberArt(c, img, id, len, h, broken) {
+    const draw = (x0, w, dy) => {
+        if (id === "builder.column") {
+            c.save();
+            c.translate(x0 + w / 2, dy);
+            c.rotate(Math.PI / 2);
+            c.drawImage(img, -w / 2 - 6, -h / 2, w + 12, h);
+            c.restore();
+        }
+        else
+            c.drawImage(img, x0 - 6, -h / 2 + dy, w + 12, h);
+    };
+    if (!broken) {
+        draw(0, len, 0);
+        return;
+    }
+    for (const [x0, dy] of [[0, 0], [len * 0.52, 6]]) {
+        c.save();
+        c.beginPath();
+        c.rect(x0 - 8, -h, len * 0.48 + 8, h * 2);
+        c.clip();
+        draw(0, len, dy);
+        c.restore();
+    }
+}
 function stressColour(r) { return r < 0.5 ? "#40c057" : r < 0.8 ? "#fab005" : "#e03131"; }
 /** One Builder Bay part. False when the part isn't a structure part. */
 export function drawStructurePart(c, part, def, selected, ctx) {
@@ -59,6 +101,9 @@ export function drawStructurePart(c, part, def, selected, ctx) {
                 c.ellipse(x - w / 2 + k + (j % 2) * 12, y - h / 2 + j, 9, 6, 0, 0, Math.PI * 2);
                 c.fill();
             }
+    }
+    else if (kind === "STRUCT_ANCHOR" && ctx.art("structure.hinge")) {
+        c.drawImage(ctx.art("structure.hinge"), x - 24, y - 20, 48, 42);
     }
     else if (kind === "STRUCT_ANCHOR") {
         c.fillStyle = "#868e96";
@@ -238,7 +283,17 @@ function drawBeam(c, part, def, selected, ctx) {
         c.fillStyle = selected ? "#ffe066" : fill;
         c.strokeStyle = INK;
         c.lineWidth = selected ? 7 : 4;
-        if (ms?.broken) {
+        const artId = beamArtId(def.id, b.material, len);
+        const img = artId ? ctx.art(artId) : undefined;
+        if (img) {
+            if (selected) {
+                c.shadowColor = "#ffd43b";
+                c.shadowBlur = 22;
+            }
+            drawMemberArt(c, img, def.id, len, beamArtThickness(def.id, t), ms?.broken ?? false);
+            c.shadowBlur = 0;
+        }
+        else if (ms?.broken) {
             c.beginPath();
             c.roundRect(0, -t / 2, len * 0.48, t, 4);
             c.fill();
@@ -254,7 +309,8 @@ function drawBeam(c, part, def, selected, ctx) {
             c.fill();
             c.stroke();
         }
-        if (b.material === "WOOD") {
+        if (img) { /* painted */ }
+        else if (b.material === "WOOD") {
             c.strokeStyle = "#a0693a";
             c.lineWidth = 2;
             for (let k = 12; k < len - 8; k += 26) {
@@ -316,7 +372,11 @@ function drawBeam(c, part, def, selected, ctx) {
         }
         c.restore();
     }
-    // Bolts at the ends.
+    // Bolts at the ends (the painted pictures have their own end plates).
+    if (b.material !== "ROPE" && ctx.art(beamArtId(def.id, b.material, Math.hypot(x2 - x1, y2 - y1)) ?? "")) {
+        c.globalAlpha = 1;
+        return;
+    }
     c.globalAlpha = 1;
     c.fillStyle = "#495057";
     c.strokeStyle = INK;
@@ -406,12 +466,27 @@ function drawTraveller(c, who, x, y, art, fallen) {
     c.restore();
 }
 /** BUILD mode: joint dots (green = held by a support, white = free) so children can see what's connected. */
-export function drawJoints(c, layout) {
+export function drawJoints(c, layout, art = () => undefined) {
     c.save();
+    const cube = art("structure.connector-cube"), ball = art("structure.ball-joint");
     layout.joints.forEach((j, i) => {
         const used = layout.members.filter(m => m.a === i || m.b === i).length;
         if (!used)
             return;
+        if (cube && ball) {
+            // Painted joints: a connector cube where beams meet, a ball joint where one end is still loose; green ring = held by a support.
+            const pic = used >= 2 || j.supported ? cube : ball;
+            const size = j.supported ? 30 : 24;
+            c.drawImage(pic, j.x * 100 - size / 2, j.y * 100 - size / 2, size, size);
+            if (j.supported) {
+                c.strokeStyle = "#2f9e44";
+                c.lineWidth = 4;
+                c.beginPath();
+                c.arc(j.x * 100, j.y * 100, size / 2 + 4, 0, Math.PI * 2);
+                c.stroke();
+            }
+            return;
+        }
         c.fillStyle = j.supported ? "#2f9e44" : used >= 2 ? "#ffffff" : "#ffd43b";
         c.strokeStyle = INK;
         c.lineWidth = 3;

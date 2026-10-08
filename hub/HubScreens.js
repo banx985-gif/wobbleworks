@@ -3,7 +3,7 @@ import { MAIN_LABS } from "../progression/CampaignData.js";
 import { CAMPUS_REGIONS, regionStatus } from "../progression/Campus.js";
 import { labCompletionCount } from "../progression/LabProgression.js";
 import { lockerItems, progressSummary } from "../progression/ProgressionManager.js";
-import { hubFeatures, restorationStage, dueVisitors } from "../progression/Restoration.js";
+import { hubFeatures, restorationStage, dueVisitors, restorationProps } from "../progression/Restoration.js";
 import { REWARDS, rewardById, MISSION_STARS } from "../progression/Rewards.js";
 import { renderLook } from "../inventor/LookView.js";
 /**
@@ -137,6 +137,11 @@ export function sprocketArt(accessory, awake = true) {
     <g transform="translate(69 58)"><circle r="5.5" fill="#ff922b" stroke="#18323f" stroke-width="2"/>${Array.from({ length: 6 }, (_, i) => `<rect x="-1.6" y="-8" width="3.2" height="3.5" fill="#ff922b" stroke="#18323f" stroke-width="1" transform="rotate(${i * 60})"/>`).join("")}<circle r="2" fill="#ffd43b"/></g>
     ${acc}`, "0 0 100 90", "sprocket-art");
 }
+/** A painted hub prop (assets/hub/, filed 9 Oct). */
+export function hubProp(id) { const img = el("img", "hub-prop"); img.src = `./assets/hub/${id}.webp`; img.alt = ""; img.draggable = false; return img; }
+/** The display cabinet, with a little glow per invention on the shelf. */
+function shelfArt(count) { const g = el("div", "station-stack shelf-stack"); g.append(hubProp("hub.prop.display-cabinet")); if (count)
+    g.append(el("span", "shelf-count", "★".repeat(Math.min(3, count)))); return g; }
 let hubActions;
 export function renderHub(root, save, cb) {
     const p = activeProfile(save);
@@ -176,29 +181,50 @@ export function renderHub(root, save, cb) {
       <line x1="500" y1="40" x2="500" y2="190" stroke="#18323f" stroke-width="6"/></g>
     <g class="hub-sign"><rect x="390" y="208" width="220" height="40" rx="12" fill="#fffdf5" stroke="#18323f" stroke-width="5"/>
       <text x="500" y="236" text-anchor="middle" font-size="22" font-weight="900" fill="#18323f" font-family="system-ui">WOBBLEWORKS</text></g>
-    <g class="wall-gear" transform="translate(70 70)"><g class="spin"><circle r="44" fill="#ced4da" stroke="#18323f" stroke-width="6"/>
-      ${Array.from({ length: 8 }, (_, i) => `<rect x="-8" y="-58" width="16" height="18" rx="3" fill="#ced4da" stroke="#18323f" stroke-width="5" transform="rotate(${i * 45})"/>`).join("")}<circle r="12" fill="#18323f"/></g></g>
-    <g class="test-track"><rect x="0" y="520" width="1000" height="26" fill="#f7b731" stroke="#18323f" stroke-width="5"/>
-      <g class="track-dashes">${Array.from({ length: 22 }, (_, i) => `<rect x="${i * 50}" y="528" width="26" height="10" rx="3" fill="#18323f"/>`).join("")}</g></g>
+    <rect x="0" y="520" width="1000" height="40" fill="#b5c7cf"/>
     <rect class="hub-dim" width="1000" height="560" fill="#0b1a24"/>
   `, "0 0 1000 560", "hub-backdrop", true));
     const unseen = new Set(p.unseenRewards);
     const shelfBadge = p.shelf.length ? String(p.shelf.length) : undefined;
     const lockerNew = p.unseenRewards.some(id => { const k = rewardById(id)?.kind; return k === "AVATAR" || k === "BOLT_COSTUME" || k === "SPROCKET_ACCESSORY" || k === "FRAME"; });
     const trophyNew = p.unseenRewards.some(id => id.startsWith("badge.") || id.startsWith("sticker."));
+    const prop = (id) => () => hubProp(id);
     const stations = [
-        { id: "map", label: "Campus Map", x: 15, y: 9, w: 19, h: 33, onTap: cb.openMap, art: () => svg(`<rect x="6" y="6" width="108" height="78" rx="8" fill="#fffdf5" stroke="#18323f" stroke-width="6"/><path d="M18 70 C40 30 60 70 80 34 S104 30 104 18" fill="none" stroke="#fa5252" stroke-width="5" stroke-dasharray="8 7"/><circle cx="18" cy="70" r="7" fill="#ffd43b" stroke="#18323f" stroke-width="4"/><circle cx="104" cy="18" r="7" fill="#74c0fc" stroke="#18323f" stroke-width="4"/>`, "0 0 120 90") },
-        { id: "workbench", label: "Workbench", x: 39, y: 52, w: 23, h: 26, onTap: cb.openWorkbench, art: () => svg(`<rect x="6" y="20" width="148" height="20" rx="6" fill="#e8590c" stroke="#18323f" stroke-width="6"/><rect x="18" y="40" width="12" height="44" fill="#a0522d" stroke="#18323f" stroke-width="5"/><rect x="130" y="40" width="12" height="44" fill="#a0522d" stroke="#18323f" stroke-width="5"/><circle cx="58" cy="10" r="10" fill="#74c0fc" stroke="#18323f" stroke-width="4"/><path d="M84 18 l22 -16 16 16z" fill="#ffd43b" stroke="#18323f" stroke-width="4" stroke-linejoin="round"/>`, "0 0 160 90") },
-        { id: "shelf", label: "Invention Shelf", x: 66, y: 8, w: 17, h: 30, onTap: cb.openShelf, ...(shelfBadge ? { badge: shelfBadge } : {}), art: () => svg(`<rect x="6" y="30" width="108" height="10" rx="3" fill="#a0522d" stroke="#18323f" stroke-width="5"/><rect x="6" y="72" width="108" height="10" rx="3" fill="#a0522d" stroke="#18323f" stroke-width="5"/>${p.shelf.slice(0, 3).map((_, i) => `<rect x="${14 + i * 34}" y="6" width="26" height="24" rx="4" fill="#fffdf5" stroke="#18323f" stroke-width="4"/>`).join("")}${p.shelf.slice(3, 6).map((_, i) => `<rect x="${14 + i * 34}" y="48" width="26" height="24" rx="4" fill="#fffdf5" stroke="#18323f" stroke-width="4"/>`).join("")}`, "0 0 120 90") },
-        { id: "trophies", label: "Trophy Shelf", x: 84, y: 8, w: 14, h: 30, onTap: cb.openTrophies, ...(trophyNew ? { badge: "NEW" } : {}), art: () => svg(`<rect x="4" y="60" width="92" height="10" rx="3" fill="#a0522d" stroke="#18323f" stroke-width="5"/>${summary.trophies.length ? `<path d="M30 24 h40 v8 q0 20 -20 22 q-20 -2 -20 -22z" fill="#ffd43b" stroke="#18323f" stroke-width="5"/><rect x="42" y="52" width="16" height="8" fill="#ffd43b" stroke="#18323f" stroke-width="4"/>` : `<path d="M30 30 h40 v6 q0 18 -20 20 q-20 -2 -20 -20z" fill="none" stroke="#18323f" stroke-width="4" stroke-dasharray="6 5"/>`}`, "0 0 100 80") },
-        { id: "locker", label: "Locker", x: 1.5, y: 44, w: 11, h: 40, onTap: cb.openLocker, ...(lockerNew ? { badge: "NEW" } : {}), art: () => svg(`<rect x="8" y="4" width="64" height="126" rx="8" fill="#4dabf7" stroke="#18323f" stroke-width="6"/><line x1="40" y1="4" x2="40" y2="130" stroke="#18323f" stroke-width="5"/>${[20, 30, 40].map(y => `<line x1="16" y1="${y}" x2="32" y2="${y}" stroke="#18323f" stroke-width="4"/><line x1="48" y1="${y}" x2="64" y2="${y}" stroke="#18323f" stroke-width="4"/>`).join("")}<circle cx="34" cy="74" r="4" fill="#18323f"/><circle cx="46" cy="74" r="4" fill="#18323f"/>`, "0 0 80 134") },
-        { id: "bolt", label: "Bolt", x: 15, y: 50, w: 13, h: 34, onTap: cb.pokeBolt, art: () => { const g = el("div", "station-stack"); const pad = svg(`<rect x="6" y="6" width="88" height="18" rx="9" fill="#495057" stroke="#18323f" stroke-width="5"/><rect class="charge-light" x="38" y="10" width="24" height="10" rx="5" fill="#69db7c"/>`, "0 0 100 30", "charge-pad"); g.append(boltArt(p.equipped.bolt), pad); return g; } },
-        { id: "sprocket", label: "Sprocket", x: 66, y: 58, w: 14, h: 26, onTap: cb.pokeSprocket, art: () => { const g = el("div", "station-stack"); g.append(sprocketArt(p.equipped.sprocket, features.includes("sprocket-awake")), svg(`<ellipse cx="50" cy="14" rx="46" ry="11" fill="#e64980" stroke="#18323f" stroke-width="5"/>`, "0 0 100 28", "sprocket-bed")); return g; } },
-        { id: "door", label: visitors[0] ? visitors[0].name : "Visitor Door", x: 86, y: 44, w: 12, h: 40, onTap: () => { if (visitors[0])
+        { id: "map", label: "Campus Map", x: 2, y: 3, w: 15, h: 38, onTap: cb.openMap, art: prop("hub.prop.blueprint-board") },
+        { id: "workbench", label: "Workbench", x: 39, y: 42, w: 22, h: 40, onTap: cb.openWorkbench, art: prop("hub.prop.workbench") },
+        { id: "shelf", label: "Invention Shelf", x: 68, y: 2, w: 12, h: 40, onTap: cb.openShelf, ...(shelfBadge ? { badge: shelfBadge } : {}), art: () => shelfArt(p.shelf.length) },
+        { id: "trophies", label: "Trophy Shelf", x: 81, y: 2, w: 15, h: 40, onTap: cb.openTrophies, ...(trophyNew ? { badge: "NEW" } : {}), art: prop("hub.prop.trophy-shelf") },
+        { id: "locker", label: "Locker", x: 1, y: 42, w: 12, h: 42, onTap: cb.openLocker, ...(lockerNew ? { badge: "NEW" } : {}), art: prop("hub.prop.parts-drawers") },
+        { id: "bolt", label: "Bolt", x: 13, y: 40, w: 14, h: 46, onTap: cb.pokeBolt, art: () => { const g = el("div", "station-stack bolt-charger"); g.append(hubProp("hub.prop.bolt-charger"), boltArt(p.equipped.bolt)); return g; } },
+        { id: "sprocket", label: "Sprocket", x: 63, y: 56, w: 15, h: 30, onTap: cb.pokeSprocket, art: () => { const g = el("div", "station-stack sprocket-bed"); g.append(hubProp("hub.prop.sprocket-bed"), sprocketArt(p.equipped.sprocket, features.includes("sprocket-awake"))); return g; } },
+        { id: "door", label: visitors[0] ? visitors[0].name : "Visitor Door", x: 87, y: 44, w: 12, h: 40, onTap: () => { if (visitors[0])
                 cb.meetVisitor(visitors[0].id); }, ...(visitors[0] ? { badge: "!" } : {}), art: () => svg(`<rect x="6" y="4" width="72" height="128" rx="10" fill="#a0522d" stroke="#18323f" stroke-width="6"/><circle cx="62" cy="70" r="5" fill="#ffd43b" stroke="#18323f" stroke-width="3"/><rect x="18" y="18" width="48" height="30" rx="6" fill="#a5d8ff" stroke="#18323f" stroke-width="4"/>${visitors[0] ? `<text x="42" y="42" text-anchor="middle" font-size="22">${visitors[0].icon}</text>` : ""}`, "0 0 84 136") }
     ];
     if (p.freeBuildUnlocked)
-        stations.push({ id: "freebuild", label: "Free Build", x: 40, y: 81, w: 21, h: 14, onTap: cb.openFreeBuild, art: () => svg(`<rect x="6" y="6" width="148" height="34" rx="12" fill="#69db7c" stroke="#18323f" stroke-width="6"/><text x="80" y="30" text-anchor="middle" font-size="15" font-weight="900" fill="#18323f" font-family="system-ui">BUILD ANYTHING</text>`, "0 0 160 46") });
+        stations.push({ id: "freebuild", label: "Free Build", x: 41, y: 79, w: 18, h: 21, onTap: cb.openFreeBuild, art: prop("hub.prop.test-track") });
+    // Painted props that aren't buttons: wall gears, the Bolt sign, the parts shelf, and what each lab's restoration brings back.
+    const decor = [
+        { id: "hub.prop.wall-gears", x: 18, y: 2, w: 10, cls: "spin-gears" },
+        { id: "hub.prop.bolt-sign", x: 29, y: 3, w: 8, cls: features.includes("all-signs-lit") ? "lit" : features.includes("motion-sign-lit") ? "half-lit" : "unlit" },
+        { id: "hub.prop.parts-shelf", x: 27.5, y: 44, w: 10.5 },
+        { id: "hub.prop.inventor-statue", x: 62.5, y: 16, w: 4.6 },
+        ...(p.freeBuildUnlocked ? [] : [{ id: "hub.prop.test-track", x: 42.5, y: 78, w: 15, cls: "track" }])
+    ];
+    const where = {
+        "hub.prop.conveyor": { x: 25.5, y: 83, w: 12, cls: "belt" }, "hub.prop.plant": { x: 78.5, y: 58, w: 8 },
+        "hub.prop.fountain": { x: 47, y: 13, w: 8 }, "hub.prop.toy-plane": { x: 0, y: 1, w: 9, cls: "fly" }
+    };
+    for (const id of restorationProps(stage))
+        decor.push({ id, ...where[id] });
+    for (const d of decor) {
+        const box = el("div", `hub-decor${d.cls ? ` ${d.cls}` : ""}`);
+        box.style.left = `${d.x}%`;
+        box.style.top = `${d.y}%`;
+        box.style.width = `${d.w}%`;
+        box.dataset.prop = d.id;
+        box.append(hubProp(d.id));
+        scene.append(box);
+    }
     for (const s of stations) {
         const b = el("button", `hub-station station-${s.id}`);
         b.style.left = `${s.x}%`;
@@ -217,6 +243,13 @@ export function renderHub(root, save, cb) {
     void unseen;
     root.append(top, scene);
 }
+/** Painted campus-map pictures (9 Oct art): lab icons from assets/icons/, other places from assets/map/. */
+export const REGION_ICON_ART = {
+    "workshop-hub": "./assets/map/map.house.webp", "motion-yard": "./assets/icons/icon.cat-wheels.webp", "gear-garage": "./assets/icons/icon.cat-gears.webp",
+    "builder-bay": "./assets/map/map.tower.webp", "power-lab": "./assets/icons/icon.cat-power.webp", "magnet-factory": "./assets/icons/icon.magnet.webp",
+    "water-works": "./assets/icons/icon.water-drop.webp", "flight-hangar": "./assets/icons/icon.biplane.webp", "robot-lab": "./assets/icons/icon.robot.webp",
+    "space-centre": "./assets/icons/icon.rocket.webp", "grand-invention-hall": "./assets/map/map.castle.webp", "hidden-prototype-lab": "./assets/map/map.windmill.webp"
+};
 const STATUS_LABEL = { OPEN: "Open", CLEARED: "Restored!", LOCKED_PROGRESS: "Locked", LOCKED_OWNERSHIP: "Closed", UNDER_REPAIR: "Being fixed" };
 export function renderCampusMap(root, save, cb) {
     root.replaceChildren();
@@ -236,7 +269,15 @@ export function renderCampusMap(root, save, cb) {
         b.style.left = `${region.map.x / 10}%`;
         b.style.top = `${region.map.y / 5.6}%`;
         b.style.setProperty("--region", region.colour);
-        const icon = el("span", "map-icon", status === "LOCKED_PROGRESS" && region.kind === "SECRET" ? "?" : region.icon);
+        const hiddenSecret = status === "LOCKED_PROGRESS" && region.kind === "SECRET";
+        const icon = el("span", "map-icon", hiddenSecret || REGION_ICON_ART[region.id] ? (hiddenSecret ? "?" : "") : region.icon);
+        if (!hiddenSecret && REGION_ICON_ART[region.id]) {
+            const img = el("img", "map-pic");
+            img.src = REGION_ICON_ART[region.id];
+            img.alt = "";
+            img.addEventListener("error", () => { img.remove(); icon.textContent = region.icon; });
+            icon.append(img);
+        }
         const name = el("strong", "map-name", region.kind === "SECRET" && status === "LOCKED_PROGRESS" ? "???" : region.title);
         const tag = el("span", "map-status", STATUS_LABEL[status]);
         b.append(icon, name, tag);

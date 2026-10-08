@@ -1,6 +1,7 @@
 import { LOGICAL_HEIGHT, LOGICAL_WIDTH, Viewport } from "./Viewport.js";
 import { PART_ART_SOURCE, partArtRect, rampArtRect } from "./PartArt.js";
 import { drawBuilderBayBackdrop, drawJoints, drawStructurePart, structureKind, structureLayer } from "./StructureRenderer.js";
+import { drawLevelScenery } from "./LevelScenery.js";
 import { drawDoorPanel, drawGearGarageBackdrop, drawGearLinks, drawGearPart, drawRotationView, gearBehaviour, gearOutput } from "./GearRenderer.js";
 export class CanvasRenderer {
     canvas;
@@ -114,7 +115,7 @@ export class CanvasRenderer {
             return g.role === "SHAFT" ? 1 : 2; const r = def.behaviours.find(b => b.kind === "RIGID_BODY"); return !r || (r.kind === "RIGID_BODY" && r.bodyType === "STATIC") ? 0 : 3; };
         const ordered = [-2, -1, 0, 1, 1.5, 1.6, 2, 3, 4].flatMap(k => parts.filter(p => layer(p) === k));
         const structCtx = { ...(structures ? { structures } : {}), registry: (id) => registry.get(id), art: this.art, time, showStress };
-        const gearCtx = { ...(gears ? { gears } : {}), states, parts, registry: (id) => registry.get(id), time };
+        const gearCtx = { ...(gears ? { gears } : {}), states, parts, registry: (id) => registry.get(id), time, art: this.art };
         for (const part of ordered) {
             const def = registry.get(part.definitionId);
             const rigid = def.behaviours.find(b => b.kind === "RIGID_BODY");
@@ -220,8 +221,10 @@ export class CanvasRenderer {
         }
         c.restore();
     }
+    /** Painted scenery for this mission, behind everything else (drawing only). */
+    drawScenery(levelId) { drawLevelScenery(this.ctx, levelId, this.art); }
     drawBuilderBayBackdrop() { drawBuilderBayBackdrop(this.ctx); }
-    drawJoints(layout) { drawJoints(this.ctx, layout); }
+    drawJoints(layout) { drawJoints(this.ctx, layout, this.art); }
     drawGearGarageBackdrop(time) { drawGearGarageBackdrop(this.ctx, time); }
     drawGearLinks(analysis, building) { drawGearLinks(this.ctx, analysis, building); }
     drawRotationView(gears, showValues) { drawRotationView(this.ctx, gears, showValues); }

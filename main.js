@@ -83,7 +83,7 @@ async function loadArt() {
     catch {
         return;
     }
-    const wanted = Object.keys(artManifest).filter(id => /^(motion|structure|air|level|fx|ui\.hint|duck|toy|char\.bolt)\./.test(id));
+    const wanted = Object.keys(artManifest).filter(id => /^(motion|structure|air|level|fx|ui\.hint|duck|toy|char\.bolt|gear|power|water|robot|icon|magnet|flight|space)\./.test(id));
     await Promise.allSettled(wanted.map(id => assets.loadImage(id, artManifest[id])));
 }
 let appSave = createDefaultAppSave();
@@ -1870,6 +1870,7 @@ function render() {
             renderer.drawBuilderBayBackdrop();
         else
             renderer.drawMotionYardBackdrop();
+        renderer.drawScenery(activeLevel?.id);
     }
     const runtime = tests.active();
     const states = runtime?.physics.states();
