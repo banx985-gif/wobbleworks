@@ -85,6 +85,9 @@ export function analyzeCircuit(parts, definition) {
     });
     const elements = [];
     const suns = parts.filter(p => definition(p.definitionId)?.behaviours.some(b => b.kind === "SUN"));
+    // Sandbox "limited power": a power limit in the room caps every battery's store of energy.
+    const limit = parts.find(p => p.definitionId === "sandbox.power-limit");
+    const cap = limit ? Number(limit.parameters.capacity ?? 40) : Infinity;
     for (const p of parts) {
         const def = definition(p.definitionId);
         if (!def)
@@ -108,7 +111,7 @@ export function analyzeCircuit(parts, definition) {
             continue;
         }
         if (c.role === "BATTERY")
-            elements.push({ ...base, kind: "BATTERY", ohms: c.ohms ?? 0.5, volts: Number(p.parameters.volts ?? c.volts ?? ONE_BATTERY_VOLTS), capacity: Number(p.parameters.capacity ?? c.capacity ?? 400), maxPower: Number(p.parameters.maxPower ?? c.maxPower ?? Infinity) });
+            elements.push({ ...base, kind: "BATTERY", ohms: c.ohms ?? 0.5, volts: Number(p.parameters.volts ?? c.volts ?? ONE_BATTERY_VOLTS), capacity: Math.min(cap, Number(p.parameters.capacity ?? c.capacity ?? 400)), maxPower: Number(p.parameters.maxPower ?? c.maxPower ?? Infinity) });
         else if (c.role === "SWITCH" || c.role === "BUTTON")
             elements.push({ ...base, kind: c.role, ohms: 0.01, volts: 0, capacity: 0, maxPower: Infinity });
         else

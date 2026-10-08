@@ -154,9 +154,9 @@ export class MagnetSystem {
                 }
                 if (fx === 0 && fy === 0)
                     continue;
+                // Newton's third law: the magnet is pulled back just as hard (a fixed magnet passes that pull to whatever holds it).
                 add(e.part.id, fx, fy);
-                if (m.dynamic)
-                    add(m.id, -fx, -fy);
+                add(m.id, -fx, -fy);
                 if (Math.hypot(fx, fy) > 0.8 && !this.once.has(`pull:${m.id}|${e.part.id}`)) {
                     this.once.add(`pull:${m.id}|${e.part.id}`);
                     this.pending.push({ kind: "MAGNET_PULL_MATERIAL", sourceId: m.id, targetId: e.part.id, data: { material: e.material } });

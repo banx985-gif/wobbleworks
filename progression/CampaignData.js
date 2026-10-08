@@ -158,4 +158,10 @@ export const EXPERIMENT_LAB = { id: "experiment-lab", title: "Experiment Lab", c
         { id: "exp.bounce-grip-or-slide", title: "Bounce, Grip or Slide?", slot: "CHALLENGE", objective: "material preset vs restitution/friction outcome", requiredForProgression: false },
         { id: "exp.earth-gravity-vs-moon-gravity", title: "Earth Gravity vs Moon Gravity", slot: "CHALLENGE", objective: "gravity setting vs weight/trajectory", requiredForProgression: false }
     ] };
-export const CREATIVE_MODES = [CHAIN_WORKSHOP, EXPERIMENT_LAB];
+/** Free Build (M23): the 13 sandbox rooms (their furniture, prompts and modifiers are in src/sandbox/Sandboxes.ts). */
+export const FREE_BUILD_ROOMS = { id: "free-build", title: "Free Build", concepts: "Build anything", colour: "#8ce99a", icon: "🧰", missions: [
+        ["sandbox.empty-workshop", "Empty Workshop"], ["sandbox.test-track", "Test Track"], ["sandbox.tall-tower-room", "Tall Tower Room"], ["sandbox.water-room", "Water Room"], ["sandbox.flight-room", "Flight Room"],
+        ["sandbox.robot-arena", "Robot Arena"], ["sandbox.construction-yard", "Construction Yard"], ["sandbox.toy-city", "Toy City"], ["sandbox.windy-mountain", "Windy Mountain"], ["sandbox.water-test-tank", "Water Test Tank"],
+        ["sandbox.moon-lab", "Moon Lab"], ["sandbox.crazy-lab", "Crazy Lab"], ["sandbox.everything-lab", "Everything Lab"]
+    ].map(([id, title]) => ({ id: id, title: title, slot: "CHALLENGE", objective: "Build anything.", requiredForProgression: false })) };
+export const CREATIVE_MODES = [CHAIN_WORKSHOP, EXPERIMENT_LAB, FREE_BUILD_ROOMS];

@@ -11,6 +11,7 @@ import { FlightSystem } from "../flight/FlightSystem.js";
 import { RobotSystem } from "../robots/RobotSystem.js";
 import { SpaceSystem } from "../space/SpaceSystem.js";
 import { ChainSystem } from "../chain/ChainSystem.js";
+import { SandboxSystem } from "../sandbox/SandboxSystem.js";
 export class RuntimeWorld {
     snapshotSignature;
     physics = new PhysicsWorld();
@@ -32,6 +33,9 @@ export class RuntimeWorld {
     space;
     /** Chain Reaction Workshop (M21): the chain counter and its toy mechanisms. */
     chain;
+    /** Sandbox (M23): air drag, floating balloons, moving platforms, fragile things. */
+    sandbox;
+    reedWas = new Map();
     /** Switches flipped and buttons held by a finger this tick (a child's starting action). */
     fingerThisTick = [];
     /** Buttons held down by a finger during this TEST, and switches flipped since the last tick. */
@@ -41,6 +45,7 @@ export class RuntimeWorld {
     carried = new Set();
     lifted = new Set();
     flung = new Set();
+    magnetLoaded = new Set();
     pipeline = new SimulationPipeline();
     causalEvents = [];
     signals = new Map();
@@ -76,6 +81,7 @@ export class RuntimeWorld {
         this.gears = new GearSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined, this.snapshot.connections, extraLoads);
         this.circuits = new CircuitSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.robots = new RobotSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
+        this.sandbox = new SandboxSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.chain = new ChainSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.space = new SpaceSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.flight = new FlightSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
@@ -125,7 +131,11 @@ export class RuntimeWorld {
             this.chain.step(this.physics);
             for (const e of this.chain.drainEvents())
                 this.event(e.kind, e.sourceId, e.targetId, e.data);
-        } this.stepMagnets(dt); this.applyJets(); this.stepFlight(dt); this.stepSpace(dt); this.applyCouplings(); this.gears.step(dt); this.applyGearCouplings(); this.stepStructures(dt); });
+        } this.stepMagnets(dt); this.applyJets(); this.stepFlight(dt); this.stepSpace(dt); if (this.sandbox.active) {
+            this.sandbox.step(dt, this.physics, x => this.space.airAt(x));
+            for (const e of this.sandbox.drainEvents())
+                this.event(e.kind, e.sourceId, e.targetId, e.data);
+        } this.applyCouplings(); this.gears.step(dt); this.applyGearCouplings(); this.stepStructures(dt); });
         this.pipeline.on("PHYSICS_STEP", ({ dt }) => this.physics.step(dt));
         this.pipeline.on("POST_PHYSICS_CONTACTS", () => { this.magnets.applyGuides(this.physics); if (this.flight.hasFlight() || this.space.hasSpace()) {
             this.flight.observe(this.physics);
@@ -134,6 +144,10 @@ export class RuntimeWorld {
         } if (this.space.hasSpace()) {
             this.space.observe(this.physics);
             for (const e of this.space.drainEvents())
+                this.event(e.kind, e.sourceId, e.targetId, e.data);
+        } if (this.sandbox.active) {
+            this.sandbox.observe(this.physics);
+            for (const e of this.sandbox.drainEvents())
                 this.event(e.kind, e.sourceId, e.targetId, e.data);
         } this.collectPhysicsEvents(); });
         this.pipeline.on("DOMAIN_TRANSFER", ({ dt }) => this.transferDomains(dt));
@@ -173,6 +187,15 @@ export class RuntimeWorld {
             return true;
         if (this.chain.buttonHeld(id))
             return true;
+        // A magnet switch closes when the magnetic field where it sits is strong enough (magnetism → electricity/logic).
+        const sensor = this.safeDefinition(id)?.behaviours.find(b => b.kind === "MAGNET_SENSOR");
+        if (sensor?.kind === "MAGNET_SENSOR") {
+            const p = this.snapshot.parts.find(q => q.id === id);
+            if (!p)
+                return false;
+            const f = this.magnets.fieldAt(p.position.x, p.position.y);
+            return Math.hypot(f.x, f.y) >= sensor.threshold;
+        }
         const part = this.snapshot.parts.find(p => p.id === id);
         if (!part)
             return false;
@@ -306,6 +329,15 @@ export class RuntimeWorld {
     stepCircuits(dt) {
         if (!this.circuits.layout.elements.length && !this.water.layout.ports.length)
             return;
+        for (const p of this.snapshot.parts) {
+            if (!this.safeDefinition(p.id)?.behaviours.some(b => b.kind === "MAGNET_SENSOR"))
+                continue;
+            const on = this.buttonPressed(p.id);
+            if (on !== (this.reedWas.get(p.id) ?? false)) {
+                this.reedWas.set(p.id, on);
+                this.event(on ? "MAGNET_SWITCH_CLOSED" : "MAGNET_SWITCH_OPENED", p.id);
+            }
+        }
         this.circuits.step(dt, id => this.buttonPressed(id), this.flips);
         // Water after electricity (pumps need current); valves tapped during the TEST flip here too.
         if (this.water.layout.ports.length) {
@@ -552,6 +584,18 @@ export class RuntimeWorld {
             // The rope pulls down on the mount with the load's weight once the load is off the ground (load units: newtons × 0.5).
             if (start.position.y - s.y > 0.02)
                 hanging.push({ x: n.x, y: n.y, force: this.physics.mass(String(n.parameters.ropeTo)) * 9.81 * 0.5, sourceId: n.id });
+        }
+        // A magnet mounted on a structure is pulled by whatever it pulls (Newton's third law): that pull loads the structure.
+        for (const m of this.magnets.magnets()) {
+            const f = this.magnets.force(m.id);
+            const part = this.snapshot.parts.find(p => p.id === m.id);
+            if (!f || !part || f.y <= 0.05 || !this.structures.hasJointNear(part.position.x, part.position.y))
+                continue;
+            hanging.push({ x: part.position.x, y: part.position.y, force: f.y * 0.5, sourceId: m.id });
+            if (!this.magnetLoaded.has(m.id)) {
+                this.magnetLoaded.add(m.id);
+                this.event("STRUCTURE_MAGNET_LOAD", m.id, undefined, { force: Math.round(f.y * 100) / 100 });
+            }
         }
         this.structures.step(dt, hanging);
         for (const e of this.structures.drainEvents())

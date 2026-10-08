@@ -232,6 +232,33 @@ THEMES["experiment-lab"] = { title: "EXPERIMENT LAB", top: "#e7f5ff", bottom: "#
         const flasks = ["#69db7c", "#ff8787", "#ffd43b", "#b197fc"];
         flasks.forEach((col, i) => { const x = 1210 + i * 85; c.fillStyle = col; c.beginPath(); c.moveTo(x, 200); c.lineTo(x + 14, 200); c.lineTo(x + 34, 258); c.lineTo(x - 20, 258); c.closePath(); c.fill(); c.strokeStyle = "#203040"; c.lineWidth = 3; c.stroke(); });
     } };
+/** Free Build rooms (M23). */
+const T = THEMES;
+T["workshop"] = { title: "WORKSHOP", top: "#fff4e6", bottom: "#ffe8cc", wall: "#f5d0a9", floor: "#a0522d", accent: "#e8590c", motif: c => { c.fillStyle = "#c08f5f55"; for (let x = 0; x < 1600; x += 160)
+        c.fillRect(x, 130, 6, 570); c.fillStyle = "#8d6e63"; c.fillRect(1150, 300, 330, 14); for (let i = 0; i < 5; i++) {
+        c.fillStyle = ["#ff8787", "#74c0fc", "#ffd43b", "#69db7c", "#b197fc"][i];
+        c.fillRect(1170 + i * 62, 250, 40, 50);
+    } } };
+T["toy-city"] = { title: "TOY CITY", top: "#d0ebff", bottom: "#a5d8ff", wall: "#e7f5ff", floor: "#868e96", accent: "#fcc419", motif: c => { const hs = [260, 340, 220, 400, 300, 360, 240, 320]; hs.forEach((h, i) => { c.fillStyle = ["#ffc9c9", "#ffec99", "#b2f2bb", "#d0bfff"][i % 4]; c.fillRect(i * 200 + 10, 700 - h, 160, h); c.fillStyle = "#ffffffaa"; for (let wy = 700 - h + 20; wy < 680; wy += 50)
+        for (let wx = i * 200 + 30; wx < i * 200 + 150; wx += 45)
+            c.fillRect(wx, wy, 25, 28); }); } };
+T["windy-mountain"] = { title: "WINDY MOUNTAIN", top: "#e3fafc", bottom: "#c5f6fa", wall: "#e3fafc", floor: "#74b816", accent: "#1098ad", motif: (c, t) => { c.fillStyle = "#adb5bd"; c.beginPath(); c.moveTo(200, 700); c.lineTo(700, 220); c.lineTo(1200, 700); c.closePath(); c.fill(); c.fillStyle = "#fff"; c.beginPath(); c.moveTo(600, 316); c.lineTo(700, 220); c.lineTo(800, 316); c.closePath(); c.fill(); c.strokeStyle = "#ffffffcc"; c.lineWidth = 4; for (let i = 0; i < 6; i++) {
+        const y = 200 + i * 70, x = ((t * 120 + i * 260) % 1700) - 100;
+        c.beginPath();
+        c.moveTo(x, y);
+        c.quadraticCurveTo(x + 60, y - 20, x + 120, y);
+        c.stroke();
+    } } };
+T["crazy-lab"] = { title: "CRAZY LAB", top: "#f3d9fa", bottom: "#e5dbff", wall: "#fff0f6", floor: "#7048e8", accent: "#f06595", motif: (c, t) => { for (let i = 0; i < 16; i++) {
+        c.fillStyle = i % 2 ? "#ffd8f088" : "#d0bfff88";
+        c.fillRect(i * 100, 130, 100, 570);
+    } c.fillStyle = "#fcc419"; for (let i = 0; i < 8; i++) {
+        const a = t * 2 + i;
+        c.beginPath();
+        c.arc(200 + i * 170, 240 + Math.sin(a) * 30, 14, 0, Math.PI * 2);
+        c.fill();
+    } } };
+T["everything-lab"] = { title: "EVERYTHING LAB", top: "#fff3bf", bottom: "#d3f9d8", wall: "#f8f9fa", floor: "#495057", accent: "#f76707", motif: c => { const cols = ["#ff8787", "#ffa94d", "#ffd43b", "#69db7c", "#4dabf7", "#9775fa", "#f783ac", "#63e6be", "#adb5bd"]; cols.forEach((col, i) => { c.fillStyle = col; c.fillRect(0, 140 + i * 62, 1600, 30); }); c.fillStyle = "#ffffffcc"; c.fillRect(0, 130, 1600, 570); } };
 export function hasLabBackdrop(labId) { return labId in THEMES; }
 export function drawLabBackdrop(c, labId, time) {
     const th = THEMES[labId];

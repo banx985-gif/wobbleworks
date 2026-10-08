@@ -42,6 +42,7 @@ export class FlightSystem {
     crafts = [];
     fans = [];
     gates = [];
+    windZones = [];
     passed = new Map();
     impacts = new Map();
     landed = new Map();
@@ -78,6 +79,8 @@ export class FlightSystem {
             const fan = fanBehaviour(def);
             if (fan)
                 this.fans.push({ part: p, fan });
+            if (def?.behaviours.some(b => b.kind === "WIND_ZONE"))
+                this.windZones.push(p);
             const gh = gateHeight(def);
             if (gh !== undefined)
                 this.gates.push({ part: p, height: Number(p.parameters.height ?? gh) });
@@ -102,11 +105,20 @@ export class FlightSystem {
             this.crafts.push({ id: p.id, body: p, parts: attached, mass, comX, inertia: mass * 0.12, bodyDrag, omega: 0, thrustTime: 0, flying: false, pitchMin: p.rotation, pitchMax: p.rotation, startX: p.position.x, maxX: p.position.x, airborneTicks: 0 });
         }
     }
-    hasFlight() { return this.crafts.length > 0 || this.fans.length > 0 || this.gates.length > 0 || this.parts.some(p => p.definitionId.startsWith("flight.")); }
+    hasFlight() { return this.crafts.length > 0 || this.fans.length > 0 || this.windZones.length > 0 || this.gates.length > 0 || this.parts.some(p => p.definitionId.startsWith("flight.")); }
     isAttached(partId) { return this.crafts.some(c => c.parts.some(a => a.part.id === partId)); }
     /** Wind at a point from every fan (m/s). */
     windAt(x, y) {
         let wx = 0, wy = 0;
+        // A wind zone (sandbox weather): the same steady wind everywhere inside its box.
+        for (const z of this.windZones) {
+            const w = Number(z.parameters.width ?? 6), h = Number(z.parameters.height ?? 4);
+            if (Math.abs(x - z.position.x) <= w / 2 && Math.abs(y - z.position.y) <= h / 2) {
+                const a = Number(z.parameters.angle ?? 0), s = Number(z.parameters.speed ?? 4);
+                wx += Math.cos(a) * s;
+                wy += Math.sin(a) * s;
+            }
+        }
         for (const { part, fan } of this.fans) {
             if (part.parameters.off === true)
                 continue;
@@ -254,7 +266,7 @@ export class FlightSystem {
             }
         }
         // Wind pushes everything else that's in it (drag on its size).
-        if (this.fans.length)
+        if (this.fans.length || this.windZones.length)
             for (const p of this.parts) {
                 // Rockets and rovers feel the wind through the Space Centre's own airflow model.
                 if (this.crafts.some(c => c.id === p.id) || this.isAttached(p.id) || this.definition(p.definitionId)?.behaviours.some(b => b.kind === "VESSEL"))

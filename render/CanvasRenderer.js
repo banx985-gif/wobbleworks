@@ -12,6 +12,7 @@ import { drawGravityReadouts, drawSpacePart, isSpacePart, spaceLayer } from "./S
 import { tiltedPoses } from "../space/SpaceSystem.js";
 import { chainLayer, drawChainEdges, drawChainPart, isChainPart } from "./ChainRenderer.js";
 import { drawExperimentPart, isExperimentPart } from "./ExperimentRenderer.js";
+import { drawSandboxPart, isSandboxPart, sandboxLayer } from "./SandboxRenderer.js";
 import { drawDoorPanel, drawGearGarageBackdrop, drawGearLinks, drawGearPart, drawRotationView, gearBehaviour, gearOutput } from "./GearRenderer.js";
 export class CanvasRenderer {
     canvas;
@@ -120,7 +121,8 @@ export class CanvasRenderer {
     drawParts(parts, registry, runtimeStates, selectedId, gears, time = 0, structures, showStress = false, runtime) {
         const states = new Map(runtimeStates?.map(s => [s.id, s]) ?? []);
         // Draw order only: fixed things first (zones, ramps, pads), then shafts, then gears, then moving things in front.
-        const layer = (p) => { const def = registry.get(p.definitionId); if (isExperimentPart(def))
+        const layer = (p) => { const def = registry.get(p.definitionId); if (isSandboxPart(def))
+            return sandboxLayer(def); if (isExperimentPart(def))
             return def.id === "experiment.test-surface" ? 0 : -1; if (isChainPart(def))
             return chainLayer(def); if (isSpacePart(def))
             return spaceLayer(def); if (isRobotPart(def)) {
@@ -148,6 +150,8 @@ export class CanvasRenderer {
         for (const placed of ordered) {
             const def = registry.get(placed.definitionId);
             const rigid = def.behaviours.find(b => b.kind === "RIGID_BODY");
+            if (isSandboxPart(def) && drawSandboxPart(this.ctx, placed, def, selectedId === placed.id, { states, ...(runtime ? { runtime } : {}), time }))
+                continue;
             if (isExperimentPart(def) && drawExperimentPart(this.ctx, placed, def, selectedId === placed.id))
                 continue;
             if (isChainPart(def) && drawChainPart(this.ctx, placed, def, selectedId === placed.id, chainCtx))

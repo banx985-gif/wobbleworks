@@ -25,7 +25,8 @@ import { OpeningDirector, evaluateOpeningSuccess } from "./opening/OpeningDirect
 import { loadMotionYardLevels } from "./motion/MotionContent.js";
 import { MOTION_PERFORMANCE_BUDGET } from "./motion/MotionPerformanceBudget.js";
 import { evaluateMotionMission, MOTION_REAL_WORLD_CARDS } from "./motion/MotionYard.js";
-import { CHAIN_WORKSHOP, EXPERIMENT_LAB, MAIN_LABS } from "./progression/CampaignData.js";
+import { CHAIN_WORKSHOP, EXPERIMENT_LAB, FREE_BUILD_ROOMS, MAIN_LABS } from "./progression/CampaignData.js";
+import { activeModifiers, sandboxTrayParts, capStatus, CAMPAIGN_PART_CAP, MODIFIER_LABELS, placeTemplate, sandboxById, sandboxOpen, SANDBOX_PART_CAP, SPAWN_CATALOGUE, templateById, withModifier } from "./sandbox/Sandboxes.js";
 import { buildExperimentRig, experimentTemplate, verdict, verdictLine } from "./experiment/ExperimentTemplates.js";
 import { changedOne, experimentDiscoveries, experimentLabOpen, experimentUnlocked, savedExperiments, withSavedExperiment, EXPERIMENT_CONCEPT_EVIDENCE } from "./experiment/ExperimentLab.js";
 import { METRIC_WORDS, MetricRecorder } from "./experiment/MetricRegistry.js";
@@ -267,7 +268,7 @@ function readSettingsForm() {
     return { textScale: Number.isFinite(num) ? Math.max(0.9, Math.min(1.4, num)) : 1, reducedMotion: chk("#setting-reduced-motion"), highContrast: chk("#setting-high-contrast"), narration: chk("#setting-narration"), subtitles: chk("#setting-subtitles"), soundEffects: chk("#setting-sfx"), music: chk("#setting-music"), vibration: chk("#setting-vibration") };
 }
 /** The nine campaign labs plus the creative modes that use the same mission menu (the Chain Reaction Workshop). */
-const PLAY_SETS = [...MAIN_LABS, CHAIN_WORKSHOP, EXPERIMENT_LAB];
+const PLAY_SETS = [...MAIN_LABS, CHAIN_WORKSHOP, EXPERIMENT_LAB, FREE_BUILD_ROOMS];
 function labDef(id = currentLabId) { return PLAY_SETS.find(l => l.id === id); }
 function labOfLevel(levelId) { return PLAY_SETS.find(l => l.missions.some(m => m.id === levelId))?.id ?? "motion-yard"; }
 function completedSet() { return new Set(completedLevelIds(appSave)); }
@@ -291,7 +292,8 @@ function evaluateLevel(level, runtime) {
 /** Remember this run so the next TEST can show whether a change (like a brace) really helped. */
 function rememberRun() { const runtime = tests.active(); if (runtime && activeLevel)
     lastRuns.set(activeLevel.id, runSummary(build, runtime)); }
-function labIsOpen(labId) { if (labId === EXPERIMENT_LAB.id)
+function labIsOpen(labId) { if (labId === FREE_BUILD_ROOMS.id)
+    return labLevels.has(labId) && Boolean(activeProfile(appSave)?.freeBuildUnlocked); if (labId === EXPERIMENT_LAB.id)
     return labLevels.has(labId) && (experimentLabOpen(appSave) || testingLabs.has(labId)); if (labId === CHAIN_WORKSHOP.id)
     return labLevels.has(labId) && (chainWorkshopOpen(appSave) || testingLabs.has(labId)); return labLevels.has(labId) && (routeToRegion(appSave, labId).kind === "ENTER" || testingLabs.has(labId)); }
 function updateOpeningTray(level) {
@@ -350,7 +352,7 @@ function renderLabMenu() {
     document.querySelector("#lab-lead").textContent = `${lab.concepts}. Build, TEST, watch what happens, then change it.`;
     motionProgressLabel.textContent = `${lab.missions.filter(m => completed.has(m.id)).length} / ${lab.missions.length} ${lab.title} experiences completed`;
     for (const meta of lab.missions) {
-        const unlocked = labMissionUnlocked(lab, meta.id, completed) && (lab.id !== EXPERIMENT_LAB.id || experimentUnlocked(appSave, meta.id) || testingLabs.has(lab.id));
+        const unlocked = labMissionUnlocked(lab, meta.id, completed) && (lab.id !== EXPERIMENT_LAB.id || experimentUnlocked(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== FREE_BUILD_ROOMS.id || sandboxOpen(appSave, meta.id) || testingLabs.has(lab.id));
         const button = document.createElement("button");
         button.className = `motion-mission${completed.has(meta.id) ? " done" : ""}${!unlocked ? " locked" : ""}${requiredNext === meta.id ? " required" : ""}`;
         button.disabled = !unlocked;
@@ -361,7 +363,11 @@ function renderLabMenu() {
         title.textContent = completed.has(meta.id) ? `✓ ${meta.title}` : meta.title;
         const objective = document.createElement("span");
         const tpl = lab.id === EXPERIMENT_LAB.id ? experimentTemplate(meta.id) : undefined;
-        objective.textContent = tpl ? (unlocked ? `${tpl.question} ${savedExperiments(appSave, meta.id).length ? `· ${savedExperiments(appSave, meta.id).length} saved` : ""}` : `Opens with the ${regionById(tpl.labId)?.title ?? "lab"}`) : meta.objective;
+        const room = lab.id === FREE_BUILD_ROOMS.id ? sandboxById(meta.id) : undefined;
+        if (room)
+            objective.textContent = unlocked ? `${room.icon} ${room.prompts[0]}` : room.free ? "Finish the opening first." : room.needs === "ALL" ? "Opens when every lab is restored." : `Opens with the ${regionById(room.needs ?? "")?.title ?? "lab"}`;
+        else
+            objective.textContent = tpl ? (unlocked ? `${tpl.question} ${savedExperiments(appSave, meta.id).length ? `· ${savedExperiments(appSave, meta.id).length} saved` : ""}` : `Opens with the ${regionById(tpl.labId)?.title ?? "lab"}`) : meta.objective;
         button.append(slot, title, objective);
         button.addEventListener("click", () => loadMission(meta.id));
         motionMissionGrid.append(button);
@@ -394,6 +400,12 @@ function showLab(labId = currentLabId) {
 function loadMission(id) {
     const labId = labOfLevel(id);
     const lab = labDef(labId);
+    if (labId === FREE_BUILD_ROOMS.id) {
+        const level = labLevels.get(labId)?.get(id);
+        if (level && (sandboxOpen(appSave, id) || testingLabs.has(labId)))
+            startSandbox(level);
+        return;
+    }
     if (!labMissionUnlocked(lab, id, completedSet()))
         return;
     const level = labLevels.get(labId)?.get(id);
@@ -728,7 +740,8 @@ function syncOpeningMetrics(save) {
     });
 }
 async function persistCurrentBuild(markFirstTest = false, immediate = false) {
-    const snapshot = build.snapshot("build.workshop");
+    // A sandbox build remembers which room it belongs to, so going back to that room continues it.
+    const snapshot = build.snapshot(currentRoom && freeBuildActive ? `sandbox:${currentRoom.id}` : "build.workshop");
     const next = markFirstTest ? withFirstTest(appSave, snapshot) : withBuild(appSave, snapshot);
     await commit(syncOpeningMetrics(next), immediate);
 }
@@ -781,6 +794,7 @@ async function loadAppState() {
             labLevels.set(m.labId, await loadLabLevels(registry, m.labId, m.folder));
         labLevels.set(CHAIN_WORKSHOP.id, await loadLabLevels(registry, CHAIN_WORKSHOP.id, "chain"));
         labLevels.set(EXPERIMENT_LAB.id, await loadLabLevels(registry, EXPERIMENT_LAB.id, "experiment"));
+        labLevels.set(FREE_BUILD_ROOMS.id, await loadLabLevels(registry, FREE_BUILD_ROOMS.id, "sandbox"));
         appSave = loaded.payload ?? createDefaultAppSave();
         savingBlocked = loaded.futureVersion;
         applySettings();
@@ -862,6 +876,10 @@ function resumeActiveProfile() {
     showHub();
 }
 function leaveGameplay() {
+    currentRoom = undefined;
+    sandboxBar.classList.add("hidden");
+    sandboxDrawer.classList.add("hidden");
+    sandboxPrompt.classList.add("hidden");
     if (exp) {
         exp = undefined;
         expPanel.classList.add("hidden");
@@ -1020,7 +1038,7 @@ function renderHubScreen() {
         openShelf: () => transition("SHELF"),
         openTrophies: () => transition("TROPHIES"),
         openLocker: () => transition("LOCKER"),
-        openFreeBuild: () => startFreeBuild(),
+        openFreeBuild: () => showLab(FREE_BUILD_ROOMS.id),
         ...(experimentLabOpen(appSave) ? { openExperiments: () => showLab(EXPERIMENT_LAB.id) } : {}),
         ...(chainWorkshopOpen(appSave) ? { openChain: () => showLab(CHAIN_WORKSHOP.id) } : {}),
         pokeBolt: () => { const p = activeProfile(appSave); hubQueue.push({ kind: "BOLT", title: p?.openingComplete ? "Fully charged and ready to wobble!" : "Bzzt… still charging…", body: "Tap the Campus Map to pick where to go next." }); showNextHubMoment(); },
@@ -1868,6 +1886,8 @@ document.querySelector("#setting-snap").addEventListener("change", event => {
 document.querySelectorAll("[data-part]").forEach(button => button.addEventListener("click", () => {
     if (testMode || !gameplayAllowed())
         return;
+    if (!roomForMore(1))
+        return;
     if (openingActive)
         openingDirector.noteInteraction(now());
     const id = button.dataset.part;
@@ -2336,9 +2356,135 @@ expSave.addEventListener("click", () => {
     sfx(900, .07);
     renderExperimentPanel(!expResult.classList.contains("hidden"));
 });
+// ---------------------------------------------------------------- Free Build sandboxes (M23)
+const sandboxBar = document.querySelector("#sandbox-bar"), sandboxDrawer = document.querySelector("#sandbox-drawer"), sandboxPrompt = document.querySelector("#sandbox-prompt");
+const sandboxCap = document.querySelector("#sandbox-cap"), toastEl = document.querySelector("#toast");
+let currentRoom;
+let promptIndex = 0;
+let promptsHidden = false;
+let toastTimer = 0;
+function toast(text) { toastEl.textContent = text; toastEl.classList.remove("hidden"); window.clearTimeout(toastTimer); toastTimer = window.setTimeout(() => toastEl.classList.add("hidden"), 2600); }
+/** Part caps keep big builds smooth: warn near the cap, and stop adding at it (room furniture doesn't count). */
+function partCap() { return currentRoom?.partCap ?? (labActive ? CAMPAIGN_PART_CAP : SANDBOX_PART_CAP); }
+function roomForMore(n) {
+    const st = capStatus(build.allParts(), partCap());
+    if (st.count + n > st.cap) {
+        toast(`Your build is full (${st.cap} parts). That keeps it running smoothly — try removing something first.`);
+        sfx(300, .08);
+        return false;
+    }
+    if (st.count + n >= Math.floor(st.cap * 0.8) && st.count < Math.floor(st.cap * 0.8))
+        toast(`Nearly full: ${st.count + n} of ${st.cap} parts.`);
+    return true;
+}
+function updateSandboxCap() { if (!currentRoom)
+    return; const st = capStatus(build.allParts(), partCap()); sandboxCap.textContent = `${st.count} / ${st.cap}`; sandboxCap.classList.toggle("warn", st.warn && !st.full); sandboxCap.classList.toggle("full", st.full); }
+function drawRoomBackdrop(room) { if (room.theme === "motion")
+    renderer.drawMotionYardBackdrop();
+else if (room.theme === "builder")
+    renderer.drawBuilderBayBackdrop();
+else if (hasLabBackdrop(room.theme))
+    renderer.drawLabBackdrop(room.theme, now() / 1000); }
+function startSandbox(level) {
+    const room = sandboxById(level.id);
+    if (!room)
+        return;
+    leaveGameplay();
+    currentRoom = room;
+    promptIndex = 0;
+    const p = activeProfile(appSave);
+    const saved = p?.lastBuild?.id === `sandbox:${room.id}` ? p.lastBuild : undefined;
+    let parts = saved ? [...saved.parts] : [...(level.staticObjects ?? [])];
+    if (!saved)
+        for (const m of room.defaultModifiers ?? [])
+            parts = withModifier(parts, m, true);
+    build.replaceAll({ parts, connections: saved ? saved.connections : [] });
+    selectedId = undefined;
+    dragStart = undefined;
+    dragPreview = undefined;
+    panStart = undefined;
+    camera.reset();
+    freeBuildActive = true;
+    const allowed = room.robotFloor ? [] : p ? sandboxTrayParts(p.unlockedParts) : [];
+    updateOpeningTray({ ...level, availablePartIds: [...allowed] });
+    motionHud.classList.remove("hidden");
+    motionTitle.textContent = room.title;
+    motionObjective.textContent = "Build anything. TEST it. Change it. TEST again.";
+    document.querySelector(".motion-badge").textContent = "FREE BUILD";
+    resetGuidance(undefined);
+    forceScannerButton.textContent = "Scanner";
+    forceScannerButton.classList.remove("hidden", "force-on");
+    sandboxBar.classList.remove("hidden");
+    showPrompt();
+    updateSandboxCap();
+    enterWorkshop();
+}
+function showPrompt() { if (!currentRoom || promptsHidden) {
+    sandboxPrompt.classList.add("hidden");
+    return;
+} document.querySelector("#sandbox-prompt-text").textContent = `💡 ${currentRoom.prompts[promptIndex % currentRoom.prompts.length]}`; sandboxPrompt.classList.remove("hidden"); }
+document.querySelector("#btn-prompt-next").addEventListener("click", () => { promptIndex++; showPrompt(); });
+document.querySelector("#btn-prompt-close").addEventListener("click", () => { promptsHidden = true; showPrompt(); });
+function openDrawer(kind) {
+    if (!currentRoom || testMode)
+        return;
+    if (!sandboxDrawer.classList.contains("hidden") && sandboxDrawer.dataset.kind === kind) {
+        sandboxDrawer.classList.add("hidden");
+        return;
+    }
+    sandboxDrawer.dataset.kind = kind;
+    sandboxDrawer.replaceChildren();
+    const room = currentRoom;
+    const btn = (icon, label, on, active = false) => { const b = document.createElement("button"); if (active)
+        b.classList.add("on"); const i = document.createElement("span"); i.className = "ico"; i.textContent = icon; const t = document.createElement("span"); t.textContent = label; b.append(i, t); b.addEventListener("click", on); sandboxDrawer.append(b); };
+    const head = (text) => { const h = document.createElement("h3"); h.textContent = text; sandboxDrawer.append(h); };
+    if (kind === "ideas") {
+        promptsHidden = false;
+        showPrompt();
+        sandboxDrawer.classList.add("hidden");
+        return;
+    }
+    if (kind === "spawn") {
+        head("Drop something in");
+        const list = room.robotFloor ? SPAWN_CATALOGUE.filter(s => s.definitionId === "robot.bot") : SPAWN_CATALOGUE.filter(s => s.definitionId !== "robot.bot");
+        for (const s of list)
+            btn(s.icon, s.type, () => { if (!roomForMore(1))
+                return; const placed = build.add(s.definitionId, { x: 6 + Math.random() * 4, y: s.definitionId === "motion.goal-zone" ? 8 : 2 }); selectedId = placed.id; sfx(620, .04); updateSandboxCap(); });
+    }
+    if (kind === "starters") {
+        head("Starter machines");
+        for (const id of room.templates) {
+            const t = templateById(id);
+            if (!t)
+                continue;
+            btn("🧩", t.title, () => { if (!roomForMore(t.parts.length))
+                return; for (const p of placeTemplate(t, 7, 5)) {
+                const placed = build.add(p.definitionId, p.position, p.parameters);
+                if (p.rotation)
+                    build.rotate(placed.id, p.rotation);
+            } sfx(700, .05); updateSandboxCap(); sandboxDrawer.classList.add("hidden"); });
+        }
+    }
+    if (kind === "room") {
+        head("Change the room");
+        const on = new Set(activeModifiers(build.allParts()));
+        for (const m of room.modifiers) {
+            const l = MODIFIER_LABELS[m];
+            btn(l.icon, l.label, () => { const parts = withModifier(build.allParts(), m, !on.has(m)); const connections = build.allConnections(); build.replaceAll({ parts, connections }); sfx(on.has(m) ? 420 : 760, .05); openDrawer("room"); openDrawer("room"); }, on.has(m));
+        }
+        if (!room.modifiers.length) {
+            const p = document.createElement("p");
+            p.textContent = "This room has no extra settings.";
+            sandboxDrawer.append(p);
+        }
+    }
+    sandboxDrawer.classList.remove("hidden");
+}
+document.querySelectorAll("[data-sb]").forEach(b => b.addEventListener("click", () => openDrawer(b.dataset.sb)));
 // ---------------------------------------------------------------- Chain Reaction Workshop (M21)
 const chainHud = document.querySelector("#chain-hud"), chainCount = document.querySelector("#chain-count"), chainLast = document.querySelector("#chain-last");
 let chainShown = -1;
+let capFrame = 0;
 /** The live counter: the longest real cause → effect sequence so far, and the newest step. */
 function updateChainHud(runtime) {
     const on = Boolean(runtime?.chain.active && testMode);
@@ -2377,6 +2523,8 @@ function render() {
     maybeCompleteMotionMission();
     updateProgramPanel();
     renderer.begin(camera);
+    if (freeBuildActive && currentRoom)
+        drawRoomBackdrop(currentRoom);
     if (labActive) {
         if (currentLabId === "gear-garage")
             renderer.drawGearGarageBackdrop(now() / 1000);
@@ -2406,6 +2554,8 @@ function render() {
     if (runtime?.chain.active)
         renderer.drawChainEdges(runtime, shown);
     updateChainHud(runtime);
+    if (currentRoom && !testMode && ++capFrame % 20 === 0)
+        updateSandboxCap();
     if (runtime && runtime.space.zones.length && (forceScanner || runtime.space.zones.length >= 2))
         renderer.drawGravityReadouts(runtime);
     if (!runtime && shown.some(p => fluidBehaviour(registry.get(p.definitionId)) || registry.get(p.definitionId).behaviours.some(b => b.kind === "PIPE")))

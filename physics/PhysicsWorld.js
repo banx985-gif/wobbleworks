@@ -50,6 +50,9 @@ export class PhysicsWorld {
     /** Flight Hangar: a craft weighs its body plus everything attached to it (set once at the start of a TEST). */
     setMass(id, mass) { const b = this.mustBody(id); if (b.type === "DYNAMIC")
         b.mass = Math.max(0.02, mass); }
+    /** Sandbox (M23): move a fixed body (a moving platform), remembering how fast it moved for whatever it carries. */
+    setStaticPose(id, x, y) { const b = this.mustBody(id); if (b.type === "DYNAMIC")
+        return; b.vx = (x - b.x) * 60; b.vy = (y - b.y) * 60; b.x = x; b.y = y; }
     /** Space Centre: gravity can differ per environment (mass never changes). */
     setGravity(g) { this.gravity = g; }
     getGravity() { return this.gravity; }
