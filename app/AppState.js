@@ -8,10 +8,12 @@ import { validateLook } from "../inventor/InventorLook.js";
  * When the first inventor is created, that guest progress moves into the profile.
  * Every later profile owns its own campaign, unlocks, rewards, shelf, settings and assistance.
  */
-export const CURRENT_SAVE_SCHEMA = 3;
+export const CURRENT_SAVE_SCHEMA = 4;
 /** BLUE, PINK and GREEN are the three painted inventors (Aaron's art, 8 Oct). ORANGE/PURPLE remain valid for older saves. */
 export const AVATAR_STYLES = ["ORANGE", "BLUE", "GREEN", "PURPLE", "PINK"];
 export const PAINTED_AVATARS = ["BLUE", "PINK", "GREEN"];
+export const MAX_EXPERIMENTS = 40;
+export const MAX_TRIALS = 12;
 export const DEFAULT_SETTINGS = Object.freeze({ textScale: 1, reducedMotion: false, highContrast: false, subtitles: true, narration: true, soundEffects: true, music: true, vibration: true });
 export const DEFAULT_ASSISTANCE = Object.freeze({ snapAssist: true, boltTips: true });
 export const MAX_PROFILES = 6;
@@ -51,7 +53,7 @@ export function createProfile(name, avatarStyle, nowMs = Date.now(), id = newId(
         id, name: sanitizeProfileName(name), avatarStyle: style, createdAtMs: nowMs, lastPlayedAtMs: nowMs,
         openingStep: 1, openingComplete: false, levels: {}, discoveries: [], unlockedParts: [], unlockedTools: [],
         rewards: [], unseenRewards: [], equipped: {}, shelf: [], records: {}, settings: { ...DEFAULT_SETTINGS },
-        assistance: { ...DEFAULT_ASSISTANCE }, location: "OPENING", freeBuildUnlocked: false, restorationSeen: [], visitorsMet: []
+        assistance: { ...DEFAULT_ASSISTANCE }, location: "OPENING", freeBuildUnlocked: false, restorationSeen: [], visitorsMet: [], experiments: []
     };
 }
 // ------------------------------------------------------------------ validation
@@ -138,6 +140,8 @@ export function validateProfile(p) {
         return false;
     if (!isStringArray(p.restorationSeen, true) || !isStringArray(p.visitorsMet, true))
         return false;
+    if (!Array.isArray(p.experiments) || p.experiments.length > MAX_EXPERIMENTS || !p.experiments.every(validateExperiment))
+        return false;
     if (p.mastery !== undefined) {
         if (!p.mastery || typeof p.mastery !== "object" || Array.isArray(p.mastery))
             return false;
@@ -148,6 +152,14 @@ export function validateProfile(p) {
     if (p.guidance !== undefined && (!p.guidance || !isCount(p.guidance.unaidedSolves) || !isCount(p.guidance.helpedSolves) || !isCount(p.guidance.hintsUsed)))
         return false;
     return true;
+}
+/** A saved experiment: safe ids, a real guess (if any) and 1–12 trials of finite measured numbers. */
+export function validateExperiment(e) {
+    if (!e || typeof e !== "object" || !isSafeId(e.id) || !isSafeId(e.templateId) || !Number.isFinite(e.savedAtMs))
+        return false;
+    if (e.prediction !== undefined && !["A", "B", "SAME"].includes(e.prediction))
+        return false;
+    return Array.isArray(e.trials) && e.trials.length >= 1 && e.trials.length <= MAX_TRIALS && e.trials.every(t => t && Number.isInteger(t.a) && Number.isInteger(t.b) && t.a >= 0 && t.b >= 0 && t.a < 10 && t.b < 10 && Number.isFinite(t.valueA) && Number.isFinite(t.valueB) && ["A", "B", "SAME"].includes(t.verdict));
 }
 export function validateAppSave(value) {
     if (!value || typeof value !== "object" || value.schemaVersion !== CURRENT_SAVE_SCHEMA)

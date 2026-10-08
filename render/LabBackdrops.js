@@ -211,6 +211,27 @@ THEMES["chain-workshop"] = { title: "CHAIN REACTIONS", top: "#fff4e6", bottom: "
         c.quadraticCurveTo(1520, 230, 1560, 330);
         c.stroke();
     } };
+/** Experiment Lab: a bright lab on graph paper, with flasks on the shelf. */
+THEMES["experiment-lab"] = { title: "EXPERIMENT LAB", top: "#e7f5ff", bottom: "#d0ebff", wall: "#e7f5ff", floor: "#868e96", accent: "#1c7ed6", motif: c => {
+        c.strokeStyle = "#a5d8ff88";
+        c.lineWidth = 1;
+        for (let x = 0; x < 1600; x += 40) {
+            c.beginPath();
+            c.moveTo(x, 130);
+            c.lineTo(x, 700);
+            c.stroke();
+        }
+        for (let y = 130; y < 700; y += 40) {
+            c.beginPath();
+            c.moveTo(0, y);
+            c.lineTo(1600, y);
+            c.stroke();
+        }
+        c.fillStyle = "#adb5bd";
+        c.fillRect(1180, 260, 360, 14);
+        const flasks = ["#69db7c", "#ff8787", "#ffd43b", "#b197fc"];
+        flasks.forEach((col, i) => { const x = 1210 + i * 85; c.fillStyle = col; c.beginPath(); c.moveTo(x, 200); c.lineTo(x + 14, 200); c.lineTo(x + 34, 258); c.lineTo(x - 20, 258); c.closePath(); c.fill(); c.strokeStyle = "#203040"; c.lineWidth = 3; c.stroke(); });
+    } };
 export function hasLabBackdrop(labId) { return labId in THEMES; }
 export function drawLabBackdrop(c, labId, time) {
     const th = THEMES[labId];

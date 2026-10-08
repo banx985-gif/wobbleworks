@@ -133,6 +133,11 @@ export const DISCOVERIES = [
     { id: "chain.long-chain", kind: "CONCEPT", title: "Long chain", line: "Fifteen real steps from one push!", art: "level.marble-run", truthContractId: "truth.chain.v1" },
     { id: "secret.chain-duck", kind: "SECRET", title: "Grand Finale Duck", line: "The duck flew through the confetti. Take a bow!", art: "level.duck-bath", truthContractId: "truth.chain.v1" },
     { id: "secret.chain-marathon", kind: "SECRET", title: "Chain Marathon", line: "Twenty seconds of one chain reaction. Phew!", art: "icon.speed", truthContractId: "truth.chain.v1" },
+    // Experiment Lab (M22) — earned from measured trials (truth.experiment.v1)
+    { id: "experiment.fair-test", kind: "CONCEPT", title: "A fair test", line: "Change only ONE thing, and you know what made the difference.", art: "ui.icon.checklist", truthContractId: "truth.experiment.v1" },
+    { id: "experiment.prediction", kind: "CONCEPT", title: "Predict, then test", line: "You guessed first — and the test showed you were right!", art: "ui.icon.star-big", truthContractId: "truth.experiment.v1" },
+    { id: "experiment.change-one", kind: "CONCEPT", title: "Change one thing", line: "One change, then test again: that's how scientists find out.", art: "ui.icon.redo", truthContractId: "truth.experiment.v1" },
+    { id: "experiment.control", kind: "CONCEPT", title: "Same in, same out", line: "Set up A and B the same and they come out the same. A good check!", art: "ui.icon.link", truthContractId: "truth.experiment.v1" },
     { id: "secret.sky-tower", kind: "SECRET", title: "Sky Scraper", line: "A tower so tall it nearly touched the ceiling — and it stood firm!", art: "builder.beam-metal", truthContractId: "truth.structures.v1" }
 ];
 export function discoveryById(id) { return DISCOVERIES.find(d => d.id === id); }

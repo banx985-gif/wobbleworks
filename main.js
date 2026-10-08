@@ -25,7 +25,10 @@ import { OpeningDirector, evaluateOpeningSuccess } from "./opening/OpeningDirect
 import { loadMotionYardLevels } from "./motion/MotionContent.js";
 import { MOTION_PERFORMANCE_BUDGET } from "./motion/MotionPerformanceBudget.js";
 import { evaluateMotionMission, MOTION_REAL_WORLD_CARDS } from "./motion/MotionYard.js";
-import { CHAIN_WORKSHOP, MAIN_LABS } from "./progression/CampaignData.js";
+import { CHAIN_WORKSHOP, EXPERIMENT_LAB, MAIN_LABS } from "./progression/CampaignData.js";
+import { buildExperimentRig, experimentTemplate, verdict, verdictLine } from "./experiment/ExperimentTemplates.js";
+import { changedOne, experimentDiscoveries, experimentLabOpen, experimentUnlocked, savedExperiments, withSavedExperiment, EXPERIMENT_CONCEPT_EVIDENCE } from "./experiment/ExperimentLab.js";
+import { METRIC_WORDS, MetricRecorder } from "./experiment/MetricRegistry.js";
 import { chainStats, chainWorkshopOpen, collectChainDiscoveries, withChainRecords, withChainShelfMeta, CHAIN_REAL_WORLD_CARDS } from "./chain/ChainWorkshop.js";
 import { evaluateLevelOutcome } from "./core/OutcomeEvaluator.js";
 import { labMissionUnlocked, nextRequiredLabMission } from "./progression/LabProgression.js";
@@ -264,7 +267,7 @@ function readSettingsForm() {
     return { textScale: Number.isFinite(num) ? Math.max(0.9, Math.min(1.4, num)) : 1, reducedMotion: chk("#setting-reduced-motion"), highContrast: chk("#setting-high-contrast"), narration: chk("#setting-narration"), subtitles: chk("#setting-subtitles"), soundEffects: chk("#setting-sfx"), music: chk("#setting-music"), vibration: chk("#setting-vibration") };
 }
 /** The nine campaign labs plus the creative modes that use the same mission menu (the Chain Reaction Workshop). */
-const PLAY_SETS = [...MAIN_LABS, CHAIN_WORKSHOP];
+const PLAY_SETS = [...MAIN_LABS, CHAIN_WORKSHOP, EXPERIMENT_LAB];
 function labDef(id = currentLabId) { return PLAY_SETS.find(l => l.id === id); }
 function labOfLevel(levelId) { return PLAY_SETS.find(l => l.missions.some(m => m.id === levelId))?.id ?? "motion-yard"; }
 function completedSet() { return new Set(completedLevelIds(appSave)); }
@@ -276,6 +279,8 @@ function evaluateLevel(level, runtime) {
         const prev = lastRuns.get(level.id);
         return evaluateBuilderMission(level, build, runtime, prev);
     }
+    if (lab === EXPERIMENT_LAB.id)
+        return { levelId: level.id, success: false, discoveries: [] };
     if (lab === CHAIN_WORKSHOP.id)
         return { levelId: level.id, success: runtime ? evaluateLevelOutcome(level, build, runtime).complete : false, discoveries: runtime ? collectChainDiscoveries(build, runtime) : [] };
     const module = labModule(lab);
@@ -286,7 +291,8 @@ function evaluateLevel(level, runtime) {
 /** Remember this run so the next TEST can show whether a change (like a brace) really helped. */
 function rememberRun() { const runtime = tests.active(); if (runtime && activeLevel)
     lastRuns.set(activeLevel.id, runSummary(build, runtime)); }
-function labIsOpen(labId) { if (labId === CHAIN_WORKSHOP.id)
+function labIsOpen(labId) { if (labId === EXPERIMENT_LAB.id)
+    return labLevels.has(labId) && (experimentLabOpen(appSave) || testingLabs.has(labId)); if (labId === CHAIN_WORKSHOP.id)
     return labLevels.has(labId) && (chainWorkshopOpen(appSave) || testingLabs.has(labId)); return labLevels.has(labId) && (routeToRegion(appSave, labId).kind === "ENTER" || testingLabs.has(labId)); }
 function updateOpeningTray(level) {
     const allowed = level ? new Set(level.availablePartIds) : undefined;
@@ -344,7 +350,7 @@ function renderLabMenu() {
     document.querySelector("#lab-lead").textContent = `${lab.concepts}. Build, TEST, watch what happens, then change it.`;
     motionProgressLabel.textContent = `${lab.missions.filter(m => completed.has(m.id)).length} / ${lab.missions.length} ${lab.title} experiences completed`;
     for (const meta of lab.missions) {
-        const unlocked = labMissionUnlocked(lab, meta.id, completed);
+        const unlocked = labMissionUnlocked(lab, meta.id, completed) && (lab.id !== EXPERIMENT_LAB.id || experimentUnlocked(appSave, meta.id) || testingLabs.has(lab.id));
         const button = document.createElement("button");
         button.className = `motion-mission${completed.has(meta.id) ? " done" : ""}${!unlocked ? " locked" : ""}${requiredNext === meta.id ? " required" : ""}`;
         button.disabled = !unlocked;
@@ -354,7 +360,8 @@ function renderLabMenu() {
         const title = document.createElement("strong");
         title.textContent = completed.has(meta.id) ? `✓ ${meta.title}` : meta.title;
         const objective = document.createElement("span");
-        objective.textContent = meta.objective;
+        const tpl = lab.id === EXPERIMENT_LAB.id ? experimentTemplate(meta.id) : undefined;
+        objective.textContent = tpl ? (unlocked ? `${tpl.question} ${savedExperiments(appSave, meta.id).length ? `· ${savedExperiments(appSave, meta.id).length} saved` : ""}` : `Opens with the ${regionById(tpl.labId)?.title ?? "lab"}`) : meta.objective;
         button.append(slot, title, objective);
         button.addEventListener("click", () => loadMission(meta.id));
         motionMissionGrid.append(button);
@@ -423,6 +430,7 @@ function loadMission(id) {
     updateOpeningTray(level);
     resetGuidance(level.id);
     enterWorkshop();
+    startExperiment(labId === EXPERIMENT_LAB.id ? level : undefined);
 }
 function showMotionResult(success, body, stars = [], newStars = [], rewards = []) {
     resultShown = true;
@@ -725,6 +733,9 @@ async function persistCurrentBuild(markFirstTest = false, immediate = false) {
     await commit(syncOpeningMetrics(next), immediate);
 }
 function stopToBuild() {
+    if (exp) {
+        exp.recorder = undefined;
+    }
     if (!testMode)
         return;
     if (activeLevel && labOfLevel(activeLevel.id) === CHAIN_WORKSHOP.id && !resultShown)
@@ -769,6 +780,7 @@ async function loadAppState() {
         for (const m of LAB_MODULES)
             labLevels.set(m.labId, await loadLabLevels(registry, m.labId, m.folder));
         labLevels.set(CHAIN_WORKSHOP.id, await loadLabLevels(registry, CHAIN_WORKSHOP.id, "chain"));
+        labLevels.set(EXPERIMENT_LAB.id, await loadLabLevels(registry, EXPERIMENT_LAB.id, "experiment"));
         appSave = loaded.payload ?? createDefaultAppSave();
         savingBlocked = loaded.futureVersion;
         applySettings();
@@ -850,6 +862,10 @@ function resumeActiveProfile() {
     showHub();
 }
 function leaveGameplay() {
+    if (exp) {
+        exp = undefined;
+        expPanel.classList.add("hidden");
+    }
     stopToBuild();
     openingActive = false;
     labActive = false;
@@ -1005,6 +1021,7 @@ function renderHubScreen() {
         openTrophies: () => transition("TROPHIES"),
         openLocker: () => transition("LOCKER"),
         openFreeBuild: () => startFreeBuild(),
+        ...(experimentLabOpen(appSave) ? { openExperiments: () => showLab(EXPERIMENT_LAB.id) } : {}),
         ...(chainWorkshopOpen(appSave) ? { openChain: () => showLab(CHAIN_WORKSHOP.id) } : {}),
         pokeBolt: () => { const p = activeProfile(appSave); hubQueue.push({ kind: "BOLT", title: p?.openingComplete ? "Fully charged and ready to wobble!" : "Bzzt… still charging…", body: "Tap the Campus Map to pick where to go next." }); showNextHubMoment(); },
         pokeSprocket: () => { sfx(1300, .05); window.setTimeout(() => sfx(1500, .05), 90); hubRoot.querySelector(".station-sprocket")?.classList.add("wiggle"); window.setTimeout(() => hubRoot.querySelector(".station-sprocket")?.classList.remove("wiggle"), 600); },
@@ -1874,6 +1891,8 @@ ui.test.addEventListener("click", () => {
     selectedId = undefined;
     ui.mode.textContent = "TEST";
     sfx(700, 0.06);
+    if (exp)
+        beginTrial();
     void persistCurrentBuild(true).catch(() => undefined);
 });
 ui.stop.addEventListener("click", () => {
@@ -2172,6 +2191,151 @@ function updateProgramPanel() {
         programPanelKey = "";
     }, { ...(running ? { running } : {}), locked: testMode, robotName: robotName.charAt(0).toUpperCase() + robotName.slice(1), close: () => { programRobotId = undefined; selectedId = undefined; programPanelKey = ""; programPanel.classList.add("hidden"); } });
 }
+// ---------------------------------------------------------------- Experiment Lab (M22)
+// Question → Prediction → Build A → Build B → Test → Compare → Change one thing → Retest → Save.
+const expPanel = document.querySelector("#experiment-panel"), expChoiceA = document.querySelector("#exp-choice-a"), expChoiceB = document.querySelector("#exp-choice-b");
+const expNote = document.querySelector("#exp-note"), expResult = document.querySelector("#exp-result"), expTrials = document.querySelector("#exp-trials"), expNumbers = document.querySelector("#exp-numbers"), expSave = document.querySelector("#exp-save");
+let exp;
+function startExperiment(level) {
+    const t = level ? experimentTemplate(level.id) : undefined;
+    exp = t && level ? { t, level, a: 0, b: Math.min(1, t.options.length - 1), trials: [], ticks: 0, numbers: Boolean(currentGuidance().showMeasurements), saved: false } : undefined;
+    expPanel.classList.toggle("hidden", !exp);
+    if (!exp)
+        return;
+    rebuildExperimentRig();
+    renderExperimentPanel();
+}
+function rebuildExperimentRig() { if (!exp)
+    return; stopToBuild(); build.replaceAll({ parts: buildExperimentRig(exp.level.staticObjects ?? [], exp.t, exp.a, exp.b), connections: [] }); }
+function beginTrial() { if (!exp)
+    return; const finish = {}; for (const k of ["a", "b"]) {
+    const lane = exp.t.lanes[k];
+    if (lane.finishX !== undefined)
+        finish[lane.subject] = lane.finishX;
+} exp.recorder = new MetricRecorder([exp.t.lanes.a.subject, exp.t.lanes.b.subject], finish); exp.ticks = 0; expResult.classList.add("hidden"); expNote.textContent = "Testing… watch A and B."; }
+/** Every simulation tick of a trial: measure; finish when both have a result (or the time is up). */
+function experimentTick() {
+    const runtime = tests.active();
+    if (!exp?.recorder || !runtime || !testMode)
+        return;
+    const t = exp.t;
+    exp.recorder.sample(runtime);
+    exp.ticks++;
+    const va = exp.recorder.measure(t.metric, t.lanes.a.subject, runtime, build), vb = exp.recorder.measure(t.metric, t.lanes.b.subject, runtime, build);
+    const early = exp.ticks > 30 && ((["distanceTravelled", "maximumHeight", "peakSpeed"].includes(t.metric) && exp.recorder.settled()) || (["elapsedTime", "supportedLoad"].includes(t.metric) && va !== undefined && vb !== undefined));
+    if (early || exp.ticks >= t.seconds * 60)
+        finishTrial(va, vb);
+}
+function finishTrial(va, vb) {
+    if (!exp)
+        return;
+    exp.recorder = undefined;
+    if (!tests.isPaused())
+        tests.togglePause();
+    if (va === undefined || vb === undefined) {
+        expNote.textContent = "One of them didn't finish, so there's nothing fair to compare. Try again!";
+        return;
+    }
+    const v = verdict(exp.t, va, vb);
+    const trial = { a: exp.a, b: exp.b, valueA: va, valueB: vb, verdict: v };
+    exp.trials = [...exp.trials, trial].slice(-12);
+    exp.saved = false;
+    sfx(v === "SAME" ? 700 : 980, .07);
+    // The trial itself is real evidence: discoveries straight away (the save keeps the whole experiment).
+    const awards = experimentDiscoveries(exp.trials, exp.prediction).map(id => ({ id, evidence: EXPERIMENT_CONCEPT_EVIDENCE[id] ?? "Measured in an experiment." }));
+    const res = recordRunEvidence(appSave, awards, []);
+    if (res.newDiscoveries.length) {
+        void commit(res.save);
+        for (const a of res.newDiscoveries) {
+            const d = discoveryById(a.id);
+            if (d)
+                popQueue.push({ kind: "NEW", title: d.title, line: d.line });
+        }
+        showNextPop();
+    }
+    renderExperimentPanel(true);
+}
+function experimentWords(t) { return METRIC_WORDS[t.metric]; }
+function renderExperimentPanel(showResult = false) {
+    if (!exp)
+        return;
+    const t = exp.t;
+    document.querySelector("#exp-question").textContent = t.question;
+    document.querySelector("#exp-variable").textContent = `The one thing that changes: ${t.variable}.`;
+    document.querySelectorAll("[data-predict]").forEach(b => { b.classList.toggle("on", b.dataset.predict === exp.prediction); b.disabled = exp.trials.length > 0 && exp.prediction !== undefined; });
+    expChoiceA.textContent = `A: ${t.options[exp.a].label} ▸`;
+    expChoiceB.textContent = `B: ${t.options[exp.b].label} ▸`;
+    expChoiceA.disabled = expChoiceB.disabled = testMode && !tests.isPaused();
+    const last = exp.trials[exp.trials.length - 1];
+    if (!exp.prediction && !exp.trials.length)
+        expNote.textContent = "First, guess: which will it be?";
+    else if (last && (exp.a !== last.a || exp.b !== last.b)) {
+        const now = { ...last, a: exp.a, b: exp.b };
+        expNote.textContent = changedOne(last, now) ? "You changed one thing ✓ Press TEST to find out." : "You changed two things — a fair test changes just one.";
+    }
+    else if (!exp.trials.length)
+        expNote.textContent = "Press TEST to try it.";
+    if (showResult && last) {
+        const words = experimentWords(t);
+        expResult.classList.remove("hidden");
+        document.querySelector("#exp-verdict").textContent = verdictLine(t, words, last.verdict);
+        const max = Math.max(Math.abs(last.valueA), Math.abs(last.valueB), 1e-6);
+        document.querySelector("#exp-bar-a").style.width = `${Math.abs(last.valueA) / max * 100}%`;
+        document.querySelector("#exp-bar-b").style.width = `${Math.abs(last.valueB) / max * 100}%`;
+        const fmt = (v) => exp.numbers && words ? `${v.toFixed(words.decimals)} ${words.unit}` : "";
+        document.querySelector("#exp-num-a").textContent = fmt(last.valueA);
+        document.querySelector("#exp-num-b").textContent = fmt(last.valueB);
+        const first = exp.trials.find(x => x.a !== x.b);
+        document.querySelector("#exp-guess").textContent = exp.prediction && first === last ? (last.verdict === exp.prediction ? "Your guess was right!" : "Not what you guessed — that's how we learn!") : last.a === last.b ? "A and B were set up the same: a good check." : "Now change one thing and test again.";
+        expNote.textContent = "";
+    }
+    expNumbers.setAttribute("aria-pressed", String(exp.numbers));
+    expSave.disabled = !exp.trials.length || exp.saved;
+    expSave.textContent = exp.saved ? "Saved ✓" : "💾 Save";
+    expTrials.replaceChildren();
+    exp.trials.forEach((tr, i) => {
+        const li = document.createElement("li");
+        const b = document.createElement("button");
+        const w = experimentWords(t);
+        b.textContent = `Trial ${i + 1}: ${t.options[tr.a].label} vs ${t.options[tr.b].label} → ${tr.verdict === "SAME" ? "same" : `${tr.verdict} ${t.asks === "MORE" ? w?.more ?? "more" : w?.less ?? "less"}`}  ▶ watch again`;
+        b.addEventListener("click", () => { if (!exp)
+            return; exp.a = tr.a; exp.b = tr.b; rebuildExperimentRig(); renderExperimentPanel(); ui.test.click(); });
+        li.append(b);
+        expTrials.append(li);
+    });
+}
+document.querySelectorAll("[data-predict]").forEach(b => b.addEventListener("click", () => { if (!exp)
+    return; exp.prediction = b.dataset.predict; sfx(760, .04); renderExperimentPanel(); }));
+for (const [btn, lane] of [[expChoiceA, "a"], [expChoiceB, "b"]])
+    btn.addEventListener("click", () => { if (!exp)
+        return; const n = exp.t.options.length; if (lane === "a")
+        exp.a = (exp.a + 1) % n;
+    else
+        exp.b = (exp.b + 1) % n; rebuildExperimentRig(); renderExperimentPanel(); sfx(640, .04); });
+expNumbers.addEventListener("click", () => { if (!exp)
+    return; exp.numbers = !exp.numbers; renderExperimentPanel(Boolean(exp.trials.length) && !expResult.classList.contains("hidden")); });
+expSave.addEventListener("click", () => {
+    if (!exp || !exp.trials.length || exp.saved)
+        return;
+    const id = exp.t.id;
+    let out = withSavedExperiment(appSave, id, exp.trials, exp.prediction).save;
+    const discoveries = experimentDiscoveries(exp.trials, exp.prediction);
+    // A saved experiment with a real A-vs-B comparison counts as done (stickers, stars).
+    if (exp.trials.some(t => t.a !== t.b)) {
+        const r = recordMissionSuccess(out, id, { playerPartCount: 0, discoveries });
+        out = r.save;
+        for (const rid of r.newRewards) {
+            const rw = rewardById(rid);
+            if (rw)
+                popQueue.push({ kind: "NEW", title: `${rw.icon} ${rw.title}`, line: rw.description });
+        }
+        showNextPop();
+    }
+    void commit(out, true);
+    exp.saved = true;
+    sfx(900, .07);
+    renderExperimentPanel(!expResult.classList.contains("hidden"));
+});
 // ---------------------------------------------------------------- Chain Reaction Workshop (M21)
 const chainHud = document.querySelector("#chain-hud"), chainCount = document.querySelector("#chain-count"), chainLast = document.querySelector("#chain-last");
 let chainShown = -1;
@@ -2272,7 +2436,7 @@ function render() {
 }
 function frame(frameNow) {
     perf.frame(frameNow);
-    perf.measureSimulation(() => clock.consume(frameNow, dt => tests.step(dt)));
+    perf.measureSimulation(() => clock.consume(frameNow, dt => { tests.step(dt); experimentTick(); }));
     render();
     requestAnimationFrame(frame);
 }

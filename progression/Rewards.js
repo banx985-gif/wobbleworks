@@ -230,6 +230,12 @@ export const REWARDS = [
     { id: "prop.domino-tower", kind: "PROP", title: "Domino Tower", icon: "🁢", description: "Don't breathe on it." },
     { id: "sprocket.party-hat", kind: "SPROCKET_ACCESSORY", title: "Party Hat", icon: "🎉", description: "Sprocket loves a grand finale." },
     { id: "badge.chain-master", kind: "BADGE", title: "Chain Reaction Master", icon: "⛓️", description: "The Duck Finale — fifteen steps and a flying duck!" },
+    // Experiment Lab (M22)
+    { id: "tool.lab-notebook", kind: "TOOL", title: "Lab Notebook", icon: "📓", description: "Keeps your saved experiments." },
+    ...[["ramp", "📐", "Ramp Scientist"], ["grip", "🧤", "Grip Scientist"], ["gear", "⚙️", "Gear Scientist"], ["bridge", "🌉", "Bridge Scientist"], ["battery", "🔋", "Battery Scientist"], ["magnet", "🧲", "Magnet Scientist"], ["pipe", "💧", "Pipe Scientist"], ["wing", "🪽", "Wing Scientist"], ["route", "🤖", "Route Scientist"], ["bounce", "🏀", "Bounce Scientist"], ["gravity", "🌙", "Gravity Scientist"]].map(([k, icon, title]) => ({ id: `sticker.exp-${k}`, kind: "STICKER", title, icon, description: "Saved a fair-test experiment." })),
+    { id: "avatar.lab-coat", kind: "AVATAR", title: "Lab Coat", icon: "🥼", description: "Every good scientist needs one." },
+    { id: "prop.lab-flask", kind: "PROP", title: "Bubbling Flask", icon: "⚗️", description: "Bubbles. Doesn't do anything else." },
+    { id: "badge.fair-tester", kind: "BADGE", title: "Fair Tester", icon: "🔬", description: "Saved an experiment that changed just one thing." },
     { id: "badge.power-lab", kind: "BADGE", title: "Power Lab Restored", icon: "🏅", description: "The lights are on in the Power Lab!" },
     // hidden prototype lab key pieces — one from a silly mission in each of the first three labs (exploration, never stars)
     { id: "key.prototype-1", kind: "KEY_PIECE", title: "Strange Key Piece", icon: "🗝️", description: "A piece of something. It hums." },
@@ -358,7 +364,18 @@ export const MISSION_REWARDS = Object.freeze({
     "chain.three-domains": { onComplete: ["sticker.three-domains", "prop.domino-tower"] },
     "chain.no-repeats": { onComplete: ["sticker.no-repeats", "part.chain.trapdoor"] },
     "chain.long-haul": { onComplete: ["sticker.long-haul"] },
-    "chain.duck-finale": { onComplete: ["badge.chain-master"], onAllStars: ["sprocket.party-hat"] }
+    "chain.duck-finale": { onComplete: ["badge.chain-master"], onAllStars: ["sprocket.party-hat"] },
+    "exp.which-ramp-wins": { onComplete: ["sticker.exp-ramp", "tool.lab-notebook", "avatar.lab-coat"] },
+    "exp.grip-test": { onComplete: ["sticker.exp-grip"] },
+    "exp.big-gear-vs-small-gear": { onComplete: ["sticker.exp-gear", "badge.fair-tester"] },
+    "exp.which-bridge-holds-more": { onComplete: ["sticker.exp-bridge"] },
+    "exp.one-battery-or-two": { onComplete: ["sticker.exp-battery"] },
+    "exp.which-materials-move": { onComplete: ["sticker.exp-magnet"] },
+    "exp.which-pipe-fills-faster": { onComplete: ["sticker.exp-pipe"] },
+    "exp.which-wing-flies-farther": { onComplete: ["sticker.exp-wing"] },
+    "exp.which-route-is-faster": { onComplete: ["sticker.exp-route"] },
+    "exp.bounce-grip-or-slide": { onComplete: ["sticker.exp-bounce", "prop.lab-flask"] },
+    "exp.earth-gravity-vs-moon-gravity": { onComplete: ["sticker.exp-gravity"] }
 });
 /** Rewards owed for missions already completed (used when old saves or guest progress move into a profile). */
 export function completionRewardIds(levelIds) {
@@ -497,7 +514,8 @@ export const MISSION_STARS = Object.freeze({
     "chain.three-domains": { efficient: budget(1), advanced: { kind: "DISCOVERY", discoveryId: "chain.many-systems", label: "MIX — three kinds of machine" } },
     "chain.no-repeats": { efficient: budget(1), advanced: wild(2) },
     "chain.long-haul": { efficient: nothingAdded, advanced: { kind: "DISCOVERY", discoveryId: "secret.chain-marathon", label: "MARATHON — twenty seconds" } },
-    "chain.duck-finale": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "chain.long-chain", label: "LONG CHAIN — fifteen steps" } }
+    "chain.duck-finale": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "chain.long-chain", label: "LONG CHAIN — fifteen steps" } },
+    ...Object.fromEntries(["exp.which-ramp-wins", "exp.grip-test", "exp.big-gear-vs-small-gear", "exp.which-bridge-holds-more", "exp.one-battery-or-two", "exp.which-materials-move", "exp.which-pipe-fills-faster", "exp.which-wing-flies-farther", "exp.which-route-is-faster", "exp.bounce-grip-or-slide", "exp.earth-gravity-vs-moon-gravity"].map(id => [id, { efficient: { kind: "DISCOVERY", discoveryId: "experiment.prediction", label: "GOOD GUESS — your prediction matched the result" }, advanced: { kind: "DISCOVERY", discoveryId: "experiment.change-one", label: "CHANGE ONE THING — then test again" } }]))
 });
 export function evaluateStars(levelId, evidence) {
     const stars = ["solve"];

@@ -22,6 +22,15 @@
     <section class="stage">
       <canvas id="game" aria-label="WobbleWorks build and test playfield"></canvas>
       <div id="debug" class="debug" aria-live="polite"></div>
+      <aside id="experiment-panel" class="experiment-panel hidden" aria-live="polite">
+        <div class="exp-q"><span class="exp-kicker">EXPERIMENT</span><strong id="exp-question"></strong><span id="exp-variable" class="muted"></span></div>
+        <div class="exp-row exp-predict"><span>I think…</span><button data-predict="A">A</button><button data-predict="B">B</button><button data-predict="SAME">Same</button></div>
+        <div class="exp-row exp-choices"><button id="exp-choice-a" class="lane-a"></button><button id="exp-choice-b" class="lane-b"></button></div>
+        <p id="exp-note" class="exp-note"></p>
+        <div id="exp-result" class="exp-result hidden"><strong id="exp-verdict"></strong><div class="exp-bars"><div class="exp-bar lane-a"><b>A</b><span id="exp-bar-a"></span><em id="exp-num-a"></em></div><div class="exp-bar lane-b"><b>B</b><span id="exp-bar-b"></span><em id="exp-num-b"></em></div></div><span id="exp-guess"></span></div>
+        <div class="exp-row exp-actions"><button id="exp-numbers" aria-pressed="false">123 Numbers</button><button id="exp-save" class="primary">💾 Save</button></div>
+        <ol id="exp-trials" class="exp-trials"></ol>
+      </aside>
       <div id="chain-hud" class="chain-hud hidden" aria-live="polite"><span class="chain-label">CHAIN</span><strong id="chain-count">0</strong><span id="chain-last"></span></div>
       <aside id="program-panel" class="program-panel hidden" aria-label="Robot program"></aside>
       <aside id="opening-hud" class="opening-hud hidden" aria-live="polite">

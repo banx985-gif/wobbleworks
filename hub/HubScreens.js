@@ -207,6 +207,8 @@ export function renderHub(root, save, cb) {
         { id: "door", label: visitors[0] ? visitors[0].name : "Visitor Door", x: 87, y: 44, w: 12, h: 40, onTap: () => { if (visitors[0])
                 cb.meetVisitor(visitors[0].id); }, ...(visitors[0] ? { badge: "!" } : {}), art: () => svg(`<rect x="6" y="4" width="72" height="128" rx="10" fill="#a0522d" stroke="#18323f" stroke-width="6"/><circle cx="62" cy="70" r="5" fill="#ffd43b" stroke="#18323f" stroke-width="3"/><rect x="18" y="18" width="48" height="30" rx="6" fill="#a5d8ff" stroke="#18323f" stroke-width="4"/>${visitors[0] ? `<text x="42" y="42" text-anchor="middle" font-size="22">${visitors[0].icon}</text>` : ""}`, "0 0 84 136") }
     ];
+    if (cb.openExperiments)
+        stations.push({ id: "experiments", label: "Experiment Lab", x: 52, y: 22, w: 9, h: 18, onTap: cb.openExperiments, art: () => { const img = el("img", "hub-prop"); img.src = "./assets/icons/icon.energy-flask.webp"; img.alt = ""; img.draggable = false; return img; } });
     if (cb.openChain)
         stations.push({ id: "chain", label: "Chain Reactions", x: 27, y: 64, w: 12, h: 22, onTap: cb.openChain, art: () => { const img = el("img", "hub-prop"); img.src = "./assets/level/level.marble-run.webp"; img.alt = ""; img.draggable = false; return img; } });
     if (p.freeBuildUnlocked)

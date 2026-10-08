@@ -144,4 +144,18 @@ export const CHAIN_WORKSHOP = { id: "chain-workshop", title: "Chain Reaction Wor
         { id: "chain.long-haul", title: "Long Haul", slot: "CHALLENGE", objective: "Keep one causal sequence alive for at least 20 seconds without loop farming.", requiredForProgression: false },
         { id: "chain.duck-finale", title: "Duck Finale", slot: "CHALLENGE", objective: "Reach 15 valid edges and make the final event launch a duck through confetti.", requiredForProgression: false }
     ] };
-export const CREATIVE_MODES = [CHAIN_WORKSHOP];
+/** Experiment Lab (M22): the 11 locked experiment templates, opened by the lab each one belongs to. */
+export const EXPERIMENT_LAB = { id: "experiment-lab", title: "Experiment Lab", concepts: "Fair tests", colour: "#74c0fc", icon: "🔬", missions: [
+        { id: "exp.which-ramp-wins", title: "Which Ramp Wins?", slot: "CHALLENGE", objective: "ramp angle vs distance/time", requiredForProgression: false },
+        { id: "exp.grip-test", title: "Grip Test", slot: "CHALLENGE", objective: "surface preset vs distance/stopping time", requiredForProgression: false },
+        { id: "exp.big-gear-vs-small-gear", title: "Big Gear vs Small Gear", slot: "CHALLENGE", objective: "ratio vs relative speed/turning effect", requiredForProgression: false },
+        { id: "exp.which-bridge-holds-more", title: "Which Bridge Holds More?", slot: "CHALLENGE", objective: "bracing design vs supportedLoad", requiredForProgression: false },
+        { id: "exp.one-battery-or-two", title: "One Battery or Two?", slot: "CHALLENGE", objective: "supported source arrangement vs load behaviour/energyUsed", requiredForProgression: false },
+        { id: "exp.which-materials-move", title: "Which Materials Move?", slot: "CHALLENGE", objective: "material tag vs magnetic response", requiredForProgression: false },
+        { id: "exp.which-pipe-fills-faster", title: "Which Pipe Fills Faster?", slot: "CHALLENGE", objective: "route/restriction vs elapsedTime", requiredForProgression: false },
+        { id: "exp.which-wing-flies-farther", title: "Which Wing Flies Farther?", slot: "CHALLENGE", objective: "wing preset/angle vs distanceTravelled", requiredForProgression: false },
+        { id: "exp.which-route-is-faster", title: "Which Route Is Faster?", slot: "CHALLENGE", objective: "program sequence vs elapsedTime/programBlockCount", requiredForProgression: false },
+        { id: "exp.bounce-grip-or-slide", title: "Bounce, Grip or Slide?", slot: "CHALLENGE", objective: "material preset vs restitution/friction outcome", requiredForProgression: false },
+        { id: "exp.earth-gravity-vs-moon-gravity", title: "Earth Gravity vs Moon Gravity", slot: "CHALLENGE", objective: "gravity setting vs weight/trajectory", requiredForProgression: false }
+    ] };
+export const CREATIVE_MODES = [CHAIN_WORKSHOP, EXPERIMENT_LAB];

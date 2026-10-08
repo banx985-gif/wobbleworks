@@ -470,3 +470,20 @@ html.high-contrast { --ink:#000; --panel:#fff; --accent:#006b1b; --danger:#a0000
 .chain-hud #chain-last { font-weight: 700; max-width: 40vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chain-hud.bump strong { animation: chain-bump .3s ease-out; }
 @keyframes chain-bump { from { transform: scale(1.5); } to { transform: none; } }
+
+/* Experiment Lab (M22) */
+.experiment-panel { position: absolute; right: 10px; top: 10px; max-height: calc(100% - 20px); width: min(340px, 42vw); overflow-y: auto; z-index: 6; background: #f8fbfff2; border: 4px solid #203040; border-radius: 20px; padding: 10px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 8px 24px #0004; background-image: linear-gradient(#d0ebff66 1px, transparent 1px), linear-gradient(90deg, #d0ebff66 1px, transparent 1px); background-size: 20px 20px; }
+.experiment-panel.hidden { display: none; }
+.exp-q { display: flex; flex-direction: column; gap: 2px; } .exp-kicker { font-weight: 900; font-size: 12px; letter-spacing: .12em; color: #1c7ed6; } .exp-q strong { font-size: 18px; }
+.exp-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; } .exp-row > span { font-weight: 800; }
+.exp-row button { min-height: 56px; min-width: 56px; border-radius: 14px; font-weight: 900; font-size: 16px; padding: 0 10px; }
+.exp-predict button.on { background: #ffd43b; outline: 3px solid #203040; }
+.exp-choices button { flex: 1; } .lane-a { border-color: #4dabf7 !important; } .lane-b { border-color: #ff922b !important; }
+.exp-choices button.lane-a { background: #e7f5ff; } .exp-choices button.lane-b { background: #fff4e6; }
+.exp-note { margin: 0; font-weight: 700; color: #495057; min-height: 1.2em; }
+.exp-result { background: #fff; border: 3px solid #203040; border-radius: 14px; padding: 8px; display: flex; flex-direction: column; gap: 6px; } .exp-result.hidden { display: none; }
+.exp-result strong { font-size: 20px; }
+.exp-bars { display: flex; flex-direction: column; gap: 4px; } .exp-bar { display: grid; grid-template-columns: 22px 1fr auto; align-items: center; gap: 6px; }
+.exp-bar span { display: block; height: 18px; border-radius: 9px; background: #4dabf7; width: 0; transition: width .4s; } .exp-bar.lane-b span { background: #ff922b; }
+.exp-bar em { font-style: normal; font-weight: 800; font-size: 13px; }
+.exp-trials { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; } .exp-trials li button { min-height: 56px; width: 100%; text-align: left; border-radius: 12px; font-weight: 700; }

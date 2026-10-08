@@ -1,5 +1,5 @@
 import { completionRewardIds, grantRewardsTo } from "../progression/Rewards.js";
-import { CURRENT_SAVE_SCHEMA, DEFAULT_ASSISTANCE, DEFAULT_SETTINGS, OPENING_STARTER_PARTS, PAINTED_AVATARS, sanitizeProfileName } from "../app/AppState.js";
+import { CURRENT_SAVE_SCHEMA, DEFAULT_ASSISTANCE, DEFAULT_SETTINGS, MAX_EXPERIMENTS, OPENING_STARTER_PARTS, PAINTED_AVATARS, sanitizeProfileName, validateExperiment } from "../app/AppState.js";
 import { DEFAULT_LOOK, validateLook } from "../inventor/InventorLook.js";
 function asArray(v) { return Array.isArray(v) ? v : []; }
 function asStrings(v) { return asArray(v).filter((x) => typeof x === "string"); }
@@ -30,7 +30,7 @@ const v1ToV2 = (v1) => {
             settings: { ...DEFAULT_SETTINGS }, assistance: { ...DEFAULT_ASSISTANCE },
             location: isOwner && openingComplete ? "HUB" : "OPENING",
             freeBuildUnlocked: isOwner ? v1.freeBuildUnlocked === true || openingComplete : false,
-            restorationSeen: [], visitorsMet: []
+            restorationSeen: [], visitorsMet: [], experiments: []
         };
         // Missions finished before rewards existed still earn their completion rewards (parts, tools, badges…).
         const rewarded = isOwner ? grantRewardsTo(base, completionRewardIds(motionDone)).profile : base;
@@ -81,7 +81,22 @@ const v2ToV3 = (v2) => {
     });
     return { ...v2, schemaVersion: 3, profiles };
 };
-export const SAVE_MIGRATIONS = Object.freeze({ 1: v1ToV2, 2: v2ToV3 });
+/**
+ * v3 (M12–M21) → v4: the Experiment Lab (M22). Every inventor gets an empty list of saved experiments.
+ * Nothing else changes; an `experiments` field that somehow already exists is kept only if every entry is valid.
+ */
+const v3ToV4 = (v3) => {
+    const profiles = asArray(v3.profiles).map(raw => {
+        if (!raw || typeof raw !== "object")
+            return raw;
+        const p = { ...raw };
+        const list = asArray(p.experiments);
+        p.experiments = list.length <= MAX_EXPERIMENTS && list.every(e => validateExperiment(e)) ? list : [];
+        return p;
+    });
+    return { ...v3, schemaVersion: 4, profiles };
+};
+export const SAVE_MIGRATIONS = Object.freeze({ 1: v1ToV2, 2: v2ToV3, 3: v3ToV4 });
 export function migrateAppSave(input) {
     if (!input || typeof input !== "object" || Array.isArray(input))
         return { ok: false, reason: "NOT_A_SAVE" };
