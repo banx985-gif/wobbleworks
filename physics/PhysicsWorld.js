@@ -41,6 +41,15 @@ export class PhysicsWorld {
     } }
     setAngularVelocity(id, speed) { const b = this.mustBody(id); if (b.type === "DYNAMIC")
         b.angularVelocity = speed; }
+    /** Constraint helpers (Magnet Factory guides and crane hooks): place a dynamic body exactly. */
+    setPose(id, x, y, angle) { const b = this.mustBody(id); if (b.type !== "DYNAMIC")
+        return; b.x = x; b.y = y; if (angle !== undefined) {
+        b.angle = angle;
+        b.angularVelocity = 0;
+    } }
+    /** Space Centre: gravity can differ per environment (mass never changes). */
+    setGravity(g) { this.gravity = g; }
+    getGravity() { return this.gravity; }
     setLinearVelocity(id, velocity) { const b = this.mustBody(id); if (b.type === "DYNAMIC") {
         b.vx = velocity.x;
         b.vy = velocity.y;

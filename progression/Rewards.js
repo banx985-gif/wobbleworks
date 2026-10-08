@@ -103,6 +103,27 @@ export const REWARDS = [
     { id: "sprocket.glow-collar", kind: "SPROCKET_ACCESSORY", title: "Glow Collar", icon: "💡", description: "Sprocket lights up the dark." },
     { id: "avatar.spark-visor", kind: "AVATAR", title: "Spark Visor", icon: "🕶️", description: "For looking cool near lightning." },
     { id: "badge.power-grid", kind: "BADGE", title: "Grid Restorer", icon: "🔌", description: "You reconnected the campus power grid." },
+    // Magnet Factory (M15)
+    { id: "part.magnetic.bar", kind: "PART", title: "Bar Magnet", icon: "🧲", description: "N at one end, S at the other. Tap to turn it." },
+    { id: "part.magnetic.puck", kind: "PART", title: "Magnet Puck", icon: "🧲", description: "A small magnet that can ride on things." },
+    { id: "part.magnetic.floater", kind: "PART", title: "Ring Magnet", icon: "⭕", description: "A ring magnet for guide rods." },
+    { id: "part.magnetic.electromagnet", kind: "PART", title: "Electromagnet", icon: "⚡", description: "A magnet you switch on with electricity." },
+    { id: "part.scrap.iron-block", kind: "PART", title: "Iron Block", icon: "⬛", description: "Magnets love it." },
+    { id: "tool.magnet-scanner", kind: "TOOL", title: "Magnet Scanner", icon: "🧲", description: "Shows magnetic fields and every magnetic push and pull — now in Free Build too." },
+    { id: "sticker.magnet-pull", kind: "STICKER", title: "Opposites Attract", icon: "🧲", description: "N met S." },
+    { id: "sticker.magnet-push", kind: "STICKER", title: "Hands Off!", icon: "🙌", description: "Pushed without touching." },
+    { id: "sticker.metal-sorter", kind: "STICKER", title: "Metal Detector", icon: "🔩", description: "Only the magnetic ones." },
+    { id: "sticker.no-touch", kind: "STICKER", title: "Magnet Parking", icon: "🅿️", description: "Parked between two pushes." },
+    { id: "sticker.scrap-sorter", kind: "STICKER", title: "Scrap Sorter", icon: "♻️", description: "The old conveyor sorts scrap again." },
+    { id: "sticker.magnet-train", kind: "STICKER", title: "Magnet Express", icon: "🚂", description: "Cargo moved by a riding magnet." },
+    { id: "sticker.floating", kind: "STICKER", title: "Float!", icon: "🪄", description: "A magnet floated on its rod." },
+    { id: "sticker.crane-magnet", kind: "STICKER", title: "Crane Operator", icon: "🏗️", description: "Grab, carry, drop." },
+    { id: "sticker.material-scientist", kind: "STICKER", title: "Material Scientist", icon: "🔬", description: "You tested every sample fairly." },
+    { id: "prop.magnet-sandwich", kind: "PROP", title: "Floating Sandwich", icon: "🥪", description: "Still floating. Still not edible." },
+    { id: "sprocket.magnet-tag", kind: "SPROCKET_ACCESSORY", title: "Magnet Tag", icon: "🧲", description: "Sprocket's collar sticks to the fridge now." },
+    { id: "avatar.magnet-headband", kind: "AVATAR", title: "Magnet Headband", icon: "🧲", description: "Attracts attention." },
+    { id: "badge.scrap-sorter", kind: "BADGE", title: "Giant Sorter Restorer", icon: "♻️", description: "The Giant Scrap Sorter runs again." },
+    { id: "badge.magnet-factory", kind: "BADGE", title: "Magnet Factory Restored", icon: "🏅", description: "The Magnet Factory is humming again!" },
     { id: "badge.power-lab", kind: "BADGE", title: "Power Lab Restored", icon: "🏅", description: "The lights are on in the Power Lab!" },
     // hidden prototype lab key pieces — one from a silly mission in each of the first three labs (exploration, never stars)
     { id: "key.prototype-1", kind: "KEY_PIECE", title: "Strange Key Piece", icon: "🗝️", description: "A piece of something. It hums." },
@@ -159,7 +180,19 @@ export const MISSION_REWARDS = Object.freeze({
     "power.one-battery-or-two": { onComplete: ["sticker.battery-scientist"] },
     "power.buzz-the-duck": { onComplete: ["part.circuit.buzzer", "prop.duck-alarm"], onAllStars: ["sprocket.glow-collar"] },
     "power.restore-the-power-grid": { onComplete: ["badge.power-grid", "avatar.spark-visor"] },
-    "power.blackout": { onComplete: ["badge.power-lab"] }
+    "power.blackout": { onComplete: ["badge.power-lab"] },
+    "magnet.pull-it-in": { onComplete: ["sticker.magnet-pull", "part.magnetic.bar"] },
+    "magnet.push-it-away": { onComplete: ["sticker.magnet-push"] },
+    "magnet.metal-only": { onComplete: ["sticker.metal-sorter", "tool.magnet-scanner", "part.scrap.iron-block"] },
+    "magnet.no-touching": { onComplete: ["sticker.no-touch"] },
+    "magnet.scrap-sorter": { onComplete: ["sticker.scrap-sorter"] },
+    "magnet.magnet-transport": { onComplete: ["sticker.magnet-train", "part.magnetic.puck"] },
+    "magnet.floating-trick": { onComplete: ["sticker.floating", "part.magnetic.floater"] },
+    "magnet.electromagnet-crane": { onComplete: ["sticker.crane-magnet", "part.magnetic.electromagnet"] },
+    "magnet.which-materials-move": { onComplete: ["sticker.material-scientist"] },
+    "magnet.magnetic-sandwich": { onComplete: ["prop.magnet-sandwich"], onAllStars: ["sprocket.magnet-tag"] },
+    "magnet.the-giant-scrap-sorter": { onComplete: ["badge.scrap-sorter", "avatar.magnet-headband"] },
+    "magnet.scrap-avalanche": { onComplete: ["badge.magnet-factory"] }
 });
 /** Rewards owed for missions already completed (used when old saves or guest progress move into a profile). */
 export function completionRewardIds(levelIds) {
@@ -226,7 +259,19 @@ export const MISSION_STARS = Object.freeze({
     "power.one-battery-or-two": { efficient: budget(4), advanced: { kind: "DISCOVERY", discoveryId: "power.more-batteries", label: "DOUBLE PUSH — two batteries, brighter bulb" } },
     "power.buzz-the-duck": { efficient: budget(5), advanced: { kind: "DISCOVERY", discoveryId: "secret.power-duck-alarm", label: "QUACK ATTACK — the duck sets it off" } },
     "power.restore-the-power-grid": { efficient: budget(8), advanced: wild(3) },
-    "power.blackout": { efficient: nothingAdded, advanced: wild(2) }
+    "power.blackout": { efficient: nothingAdded, advanced: wild(2) },
+    "magnet.pull-it-in": { efficient: budget(1), advanced: { kind: "DISCOVERY", discoveryId: "magnet.unlike-attract", label: "OPPOSITES ATTRACT — N meets S" } },
+    "magnet.push-it-away": { efficient: budget(1), advanced: { kind: "DISCOVERY", discoveryId: "magnet.like-repel", label: "SAME ENDS — push it with a matching pole" } },
+    "magnet.metal-only": { efficient: budget(1), advanced: { kind: "DISCOVERY", discoveryId: "magnet.materials", label: "PICKY MAGNET — metal moves, the rest stays" } },
+    "magnet.no-touching": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "magnet.no-contact", label: "HANDS OFF — magnetic force only" } },
+    "magnet.scrap-sorter": { efficient: budget(3), advanced: { kind: "DISCOVERY", discoveryId: "combo.magnet-conveyor", label: "OLD MEETS NEW — magnet + Motion conveyor" } },
+    "magnet.magnet-transport": { efficient: budget(1), advanced: { kind: "DISCOVERY", discoveryId: "magnet.no-contact", label: "INVISIBLE ROPE — carried without touching" } },
+    "magnet.floating-trick": { efficient: nothingAdded, advanced: { kind: "DISCOVERY", discoveryId: "magnet.float", label: "FLOAT — repulsion holds it up" } },
+    "magnet.electromagnet-crane": { efficient: budget(3), advanced: { kind: "DISCOVERY", discoveryId: "combo.magnet-circuit", label: "GRAB & DROP — electricity on, then off" } },
+    "magnet.which-materials-move": { efficient: budget(3), advanced: { kind: "DISCOVERY", discoveryId: "magnet.not-all-metal", label: "NOT EVERY METAL — find the ones that don't move" } },
+    "magnet.magnetic-sandwich": { efficient: nothingAdded, advanced: { kind: "DISCOVERY", discoveryId: "secret.magnet-sandwich", label: "DOUBLE DECKER — both rings floating" } },
+    "magnet.the-giant-scrap-sorter": { efficient: budget(5), advanced: wild(3) },
+    "magnet.scrap-avalanche": { efficient: budget(1), advanced: wild(2) }
 });
 export function evaluateStars(levelId, evidence) {
     const stars = ["solve"];

@@ -31,6 +31,7 @@ import { analyzeGears, gearNodeFrom, gearSnapPosition } from "./gears/GearSystem
 import { evaluateBuilderMission, loadBuilderBayLevels, runSummary, STRUCTURE_REAL_WORLD_CARDS } from "./structures/BuilderBay.js";
 import { analyzeStructure, beamEndpoints as structureBeamEndpoints, beamEndSnap } from "./structures/StructureSystem.js";
 import { analyzeCircuit, circuitBehaviour, wireEnds, wireEndSnap } from "./power/CircuitSystem.js";
+import { magnetBehaviour } from "./magnets/MagnetSystem.js";
 import { LAB_MODULES, evaluateLabMission, labModule } from "./labs/Labs.js";
 import { loadLabLevels } from "./labs/LabModule.js";
 import { hasLabBackdrop } from "./render/LabBackdrops.js";
@@ -966,7 +967,7 @@ function startFreeBuild(from) {
     motionObjective.textContent = "Build anything. TEST it. Change it. TEST again.";
     document.querySelector(".motion-badge").textContent = "WORKSHOP";
     resetGuidance(undefined);
-    const scanner = (p?.unlockedTools.includes("tool.force-scanner") || p?.unlockedTools.includes("tool.spin-scanner") || p?.unlockedTools.includes("tool.stress-scanner") || p?.unlockedTools.includes("tool.circuit-scanner")) ?? false;
+    const scanner = (p?.unlockedTools.includes("tool.force-scanner") || p?.unlockedTools.includes("tool.spin-scanner") || p?.unlockedTools.includes("tool.stress-scanner") || p?.unlockedTools.includes("tool.circuit-scanner") || p?.unlockedTools.includes("tool.magnet-scanner")) ?? false;
     forceScannerButton.textContent = "Scanner";
     forceScannerButton.classList.toggle("hidden", !scanner);
     forceScannerButton.classList.remove("force-on");
@@ -1797,8 +1798,17 @@ canvas.addEventListener("wheel", event => { if (!gameplayAllowed())
     return; event.preventDefault(); camera.setZoom(camera.zoom * (event.deltaY > 0 ? 0.92 : 1.08)); }, { passive: false });
 window.addEventListener("pointerdown", () => void audio.unlock(), { once: true });
 function pointerWorld(sample) { const logical = renderer.viewport.screenToLogical(sample.x, sample.y); const worldLogical = camera.logicalToWorld(logical); return { x: worldLogical.x / 100, y: worldLogical.y / 100 }; }
-/** Locked switches in a level can still be flipped (they can't be moved). */
-function lockedSwitchAt(x, y) { return build.allParts().find(p => p.parameters.locked === true && circuitBehaviour(registry.get(p.definitionId))?.role === "SWITCH" && Math.abs(p.position.x - x) <= 0.5 && Math.abs(p.position.y - y) <= 0.45)?.id; }
+/** Things you can tap while building: switches flip, magnets turn. Locked ones in a level can still be tapped (never moved). */
+function tapAction(p) {
+    const def = registry.get(p.definitionId);
+    if (circuitBehaviour(def)?.role === "SWITCH")
+        return "FLIP";
+    const bar = magnetBehaviour(def);
+    if (!bar || bar.electric)
+        return undefined;
+    return def.id === "magnetic.bar" ? "QUARTER" : "HALF";
+}
+function lockedSwitchAt(x, y) { return build.allParts().find(p => p.parameters.locked === true && tapAction(p) && Math.abs(p.position.x - x) <= 0.55 && Math.abs(p.position.y - y) <= 0.55)?.id; }
 function hitPart(x, y, padding = (labActive || freeBuildActive) ? currentGuidance().touchPadding : 0.18) {
     const parts = [...build.allParts()].reverse();
     return parts.find(p => {
@@ -1896,9 +1906,13 @@ input.on((event, sample) => {
             const openingRamp = openingActive && dropped?.definitionId === "motion.ramp" && [2, 5].includes(openingDirector.currentStep());
             const surfacePart = dropped && ["motion.friction-high", "motion.friction-low", "motion.bounce-pad"].includes(dropped.definitionId);
             // A tap (no real drag) on a switch flips it on or off.
-            if (dropped && Math.hypot(dragPreview.x - dragStart.originalX, dragPreview.y - dragStart.originalY) < 0.06 && circuitBehaviour(registry.get(dropped.definitionId))?.role === "SWITCH") {
-                build.reshape(droppedId, { parameters: { closed: dropped.parameters.closed !== true } });
-                sfx(dropped.parameters.closed === true ? 420 : 760, .05);
+            const tap = dropped && Math.hypot(dragPreview.x - dragStart.originalX, dragPreview.y - dragStart.originalY) < 0.06 ? tapAction(dropped) : undefined;
+            if (dropped && tap) {
+                if (tap === "FLIP")
+                    build.reshape(droppedId, { parameters: { closed: dropped.parameters.closed !== true } });
+                else
+                    build.reshape(droppedId, { rotation: ((dropped.rotation + (tap === "QUARTER" ? Math.PI / 2 : Math.PI)) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) });
+                sfx(tap === "FLIP" && dropped.parameters.closed === true ? 420 : 760, .05);
                 dragStart = undefined;
                 dragPreview = undefined;
                 panStart = undefined;
@@ -1947,6 +1961,8 @@ function render() {
         renderer.drawCircuitTerminals(analyzeCircuit(shown, id => registry.has(id) ? registry.get(id) : undefined));
     if (runtime && forceScanner && runtime.circuits.layout.elements.length)
         renderer.drawCircuitScanner(shown, registry, runtime.circuits);
+    if (runtime && forceScanner && runtime.magnets.hasMagnets())
+        renderer.drawMagnetForces(runtime);
     if (!runtime && shown.some(p => registry.get(p.definitionId).behaviours.some(b => b.kind === "BEAM")))
         renderer.drawJoints(analyzeStructure(shown, id => registry.has(id) ? registry.get(id) : undefined));
     if (runtime) {

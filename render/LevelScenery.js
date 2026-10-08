@@ -27,7 +27,14 @@ export const LEVEL_SCENERY = {
     "power.push-the-button": [S("button-target", 14, 8.2, 1.2)],
     "power.two-lights": [S("three-bulbs", 14.4, 8.2, 1.8)],
     "power.restore-the-power-grid": [S("power-grid", 14.6, 8.2, 2)],
-    "power.blackout": [S("hazard-sign", 15, 8.2, 1.1)]
+    "power.blackout": [S("hazard-sign", 15, 8.2, 1.1)],
+    // Magnet Factory
+    "magnet.pull-it-in": [S("magnet-targets", 13.6, 8.2, 2)],
+    "magnet.metal-only": [S("scrap-pile", 11.4, 8.2, 2)],
+    "magnet.scrap-sorter": [S("sorter-chutes", 13.8, 8.2, 2.4)],
+    "magnet.which-materials-move": [S("magnet-targets", 14, 8.2, 1.8)],
+    "magnet.the-giant-scrap-sorter": [S("sorter-chutes", 2.0, 8.2, 2.2)],
+    "magnet.scrap-avalanche": [S("scrap-pile", 12.6, 8.2, 2.2), S("hazard-sign", 3, 8.2, 1.1)]
 };
 /** Picture aspect ratios (width / height), so the layout can be checked without loading pictures. */
 export const SCENERY_ASPECT = {

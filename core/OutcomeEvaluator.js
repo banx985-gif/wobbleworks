@@ -1,3 +1,4 @@
+import { isMagnetic } from "../magnets/MagnetSystem.js";
 function tagged(build, tag) {
     return build.allParts().filter(part => part.tags?.includes(tag));
 }
@@ -147,6 +148,39 @@ export function evaluateOutcomeRule(rule, build, runtime) {
         return runtime.circuits.energyUsed() <= rule.maxEnergy;
     if (rule.kind === "NO_OVERLOAD")
         return !runtime.circuits.sources().some(s => s.tripped);
+    if (rule.kind === "ALL_IN_ZONE" || rule.kind === "NONE_IN_ZONE") {
+        const objects = tagged(build, rule.objectTag), zones = tagged(build, rule.zoneTag);
+        if (!objects.length || !zones.length)
+            return false;
+        const inside = (o) => zones.some(z => { const a = position(runtime, o), b = position(runtime, z); return Math.hypot(a.x - b.x, a.y - b.y) <= rule.radius; });
+        if (rule.kind === "NONE_IN_ZONE")
+            return runtime.elapsedTime >= (rule.minElapsed ?? 0) && !objects.some(inside);
+        return objects.every(o => inside(o) && (rule.maxSpeed === undefined || speed(runtime, o.id) <= rule.maxSpeed));
+    }
+    if (rule.kind === "STAYS_PUT")
+        return tagged(build, rule.objectTag).every(o => { const p = position(runtime, o); return Math.hypot(p.x - o.position.x, p.y - o.position.y) <= rule.maxMove; });
+    if (rule.kind === "NO_PUSHING") {
+        const objects = new Set(tagged(build, rule.objectTag).map(p => p.id));
+        return !runtime.causalEvents.some(e => {
+            if (e.kind !== "PHYSICS_CONTACT" || !e.targetId)
+                return false;
+            const other = objects.has(e.sourceId) ? e.targetId : objects.has(e.targetId) ? e.sourceId : undefined;
+            if (!other || objects.has(other))
+                return false;
+            return runtime.isDynamicBody(other) || Boolean(runtime.partDefinition(other)?.behaviours.some(b => b.kind === "MAGNET_BAR"));
+        });
+    }
+    if (rule.kind === "FLOAT_STABLE") {
+        const objects = tagged(build, rule.objectTag);
+        const need = Math.round(rule.sustainSeconds * 60);
+        return objects.length > 0 && objects.every(o => runtime.magnets.floatingTicks(o.id) >= need && position(runtime, o).y <= rule.aboveY);
+    }
+    if (rule.kind === "MATERIALS_SORTED") {
+        const samples = tagged(build, rule.sampleTag);
+        if (!samples.length)
+            return false;
+        return samples.every(o => { const p = position(runtime, o); const moved = Math.hypot(p.x - o.position.x, p.y - o.position.y); return isMagnetic(runtime.partDefinition(o.id)) ? moved >= rule.minMove : moved <= rule.maxStill; });
+    }
     if (rule.kind === "MECHANISM_FAMILY_COUNT") {
         const present = new Set(build.allParts().filter(part => rule.definitionIds.includes(part.definitionId)).map(part => part.definitionId));
         return present.size >= rule.minimum;

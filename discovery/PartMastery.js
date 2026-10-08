@@ -19,7 +19,8 @@ export const PART_CARDS = [
     { partId: "builder.rope", title: "Rope", uses: [{ id: "tie", label: "Pull tight" }, { id: "net", label: "Catch softly" }] },
     { partId: "circuit.wire", title: "Wire", uses: [{ id: "loop", label: "Close a loop" }, { id: "branch", label: "Make a second path" }] },
     { partId: "circuit.switch", title: "Switch", uses: [{ id: "control", label: "Turn something on and off" }] },
-    { partId: "circuit.motor", title: "Electric Motor", uses: [{ id: "turn", label: "Turn gears with electricity" }] }
+    { partId: "circuit.motor", title: "Electric Motor", uses: [{ id: "turn", label: "Turn gears with electricity" }] },
+    { partId: "magnetic.bar", title: "Bar Magnet", uses: [{ id: "pull", label: "Pull without touching" }, { id: "push", label: "Push without touching" }, { id: "lift", label: "Lift metal up" }] }
 ];
 const HEAVY = new Set(["motion.cart", "motion.parcel", "silly.bolt"]);
 function speed(runtime, id) { try {
@@ -212,6 +213,28 @@ export function observePartUses(build, runtime) {
                 add(part.definitionId, "tie");
             if (st.eggStates().some(e => e.onMember === m.id))
                 add(part.definitionId, "net");
+        }
+    }
+    // Magnets: uses from what the MagnetSystem measured.
+    for (const e of runtime.causalEvents) {
+        const mag = build.getPart(e.sourceId);
+        const other = e.targetId ? build.getPart(e.targetId) : undefined;
+        for (const [p, q] of [[mag, other], [other, mag]]) {
+            if (p?.definitionId !== "magnetic.bar")
+                continue;
+            if (e.kind === "MAGNET_ATTRACT" || e.kind === "MAGNET_PULL_MATERIAL") {
+                add(p.definitionId, "pull");
+                if (q && e.kind === "MAGNET_PULL_MATERIAL") {
+                    try {
+                        const s = runtime.physics.state(q.id);
+                        if (q.position.y - s.y > 0.3)
+                            add(p.definitionId, "lift");
+                    }
+                    catch { /* not simulated */ }
+                }
+            }
+            if (e.kind === "MAGNET_REPEL")
+                add(p.definitionId, "push");
         }
     }
     // Circuits: uses from what the CircuitSystem measured.

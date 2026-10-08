@@ -1,6 +1,7 @@
 import { PartRegistry } from "../data/PartRegistry.js";
 import { POWER_PARTS } from "./powerParts.js";
-export { POWER_PARTS };
+import { MAGNET_PARTS } from "./magnetParts.js";
+export { POWER_PARTS, MAGNET_PARTS };
 const mechanicalPort = (id) => ({ id, family: "ROTATIONAL", capabilities: ["ROTATE"], direction: "BIDIRECTIONAL", offset: { x: 0, y: 0 }, angle: 0, snapRadius: 0.35, multiplicity: "ONE" });
 const electricalPort = (id, direction) => ({ id, family: "ELECTRICAL", capabilities: ["POWER"], direction, offset: { x: 0, y: 0 }, angle: 0, snapRadius: 0.35, multiplicity: "MANY" });
 const fluidPort = (id, direction) => ({ id, family: "FLUID", capabilities: ["WATER"], direction, offset: { x: 0, y: 0 }, angle: 0, snapRadius: 0.35, multiplicity: "MANY" });
@@ -89,6 +90,6 @@ export const STRUCTURE_PARTS = [
     marker("builder.wind", "Wind", "AIR", [{ kind: "WIND", force: 1.5 }])
 ];
 /** Parts added by the labs from M14 on (Power Lab, …), in campaign order. */
-export const LAB_PARTS = [...POWER_PARTS];
+export const LAB_PARTS = [...POWER_PARTS, ...MAGNET_PARTS];
 export function createDefaultRegistry() { const r = new PartRegistry(); for (const p of [...DEFAULT_PARTS, ...GEAR_PARTS, ...STRUCTURE_PARTS, ...LAB_PARTS])
     r.register(p); return r; }

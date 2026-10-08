@@ -57,6 +57,19 @@ export const DISCOVERIES = [
     { id: "secret.power-overload", kind: "SECRET", title: "Overload!", line: "Too much at once — the power station switched itself off to stay safe.", art: "icon.power-burst", truthContractId: "truth.electricity.v1" },
     { id: "secret.power-light-show", kind: "SECRET", title: "Light Show", line: "Five bulbs glowing at once!", art: "icon.lightning", truthContractId: "truth.electricity.v1" },
     { id: "secret.power-duck-alarm", kind: "SECRET", title: "Quack Attack Alarm", line: "A duck set off your alarm. Security is tight.", art: "icon.button", truthContractId: "truth.electricity.v1" },
+    // Magnet Factory (M15) — every one measured by the MagnetSystem (truth.magnetism.v1)
+    { id: "magnet.unlike-attract", kind: "CONCEPT", title: "Opposites attract", line: "An N end and an S end pull together.", art: "icon.magnet-pull", truthContractId: "truth.magnetism.v1" },
+    { id: "magnet.like-repel", kind: "CONCEPT", title: "Same ends push apart", line: "N and N push apart. So do S and S.", art: "icon.magnet-poles", truthContractId: "truth.magnetism.v1" },
+    { id: "magnet.two-poles", kind: "CONCEPT", title: "Every magnet has two ends", line: "One magnet pulled with one end and pushed with the other.", art: "icon.magnet-poles", truthContractId: "truth.magnetism.v1" },
+    { id: "magnet.materials", kind: "CONCEPT", title: "Magnets are picky", line: "Magnets pull iron and steel, but not wood or plastic.", art: "icon.magnet", truthContractId: "truth.magnetism.v1" },
+    { id: "magnet.not-all-metal", kind: "CONCEPT", title: "Not every metal", line: "Aluminium and copper are metals, but magnets don't pull them.", art: "icon.magnet-coins", truthContractId: "truth.magnetism.v1" },
+    { id: "magnet.electromagnet", kind: "CONCEPT", title: "Electricity makes a magnet", line: "An electromagnet is only a magnet while electricity flows.", art: "icon.magnet-zap", truthContractId: "truth.magnetism.v1" },
+    { id: "magnet.no-contact", kind: "CONCEPT", title: "Pushing without touching", line: "Magnets moved something without anything touching it.", art: "icon.magnet-pull", truthContractId: "truth.magnetism.v1" },
+    { id: "magnet.float", kind: "CONCEPT", title: "Floating on a push", line: "Same ends pushing apart held a ring magnet up on its rod.", art: "icon.magnet-poles", truthContractId: "truth.magnetism.v1" },
+    { id: "combo.magnet-conveyor", kind: "COMBINATION", title: "Magnet + conveyor", line: "A magnet picked metal out of the conveyor's load.", art: "icon.magnet", truthContractId: "truth.magnetism.v1" },
+    { id: "combo.magnet-circuit", kind: "COMBINATION", title: "Switchable magnet", line: "Electricity on: grab. Electricity off: drop.", art: "icon.magnet-zap", truthContractId: "truth.magnetism.v1" },
+    { id: "secret.magnet-sandwich", kind: "SECRET", title: "Floating Sandwich", line: "Two magnets floating in a stack. Delicious. (Not edible.)", art: "icon.magnet-poles", truthContractId: "truth.magnetism.v1" },
+    { id: "secret.magnet-rocket", kind: "SECRET", title: "Magnet Rocket", line: "WHOOSH! A magnet cart pushed faster than 5 m/s.", art: "icon.speed", truthContractId: "truth.magnetism.v1" },
     { id: "secret.sky-tower", kind: "SECRET", title: "Sky Scraper", line: "A tower so tall it nearly touched the ceiling — and it stood firm!", art: "builder.beam-metal", truthContractId: "truth.structures.v1" }
 ];
 export function discoveryById(id) { return DISCOVERIES.find(d => d.id === id); }

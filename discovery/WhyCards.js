@@ -15,7 +15,10 @@ export const WHY_CHOICES = {
     SHORTCUT: { label: "Took a shortcut", icon: "⚡" },
     ALWAYS_ON: { label: "Always on", icon: "💡" },
     USED_TOO_MUCH: { label: "Used too much power", icon: "🔋" },
-    OVERLOAD: { label: "Too much at once", icon: "🔌" }
+    OVERLOAD: { label: "Too much at once", icon: "🔌" },
+    WRONG_POLE: { label: "Wrong end facing", icon: "🧲" },
+    TOUCHED: { label: "Something touched it", icon: "✋" },
+    NOT_MAGNETIC: { label: "Not magnetic", icon: "🪵" }
 };
 function tagged(build, tag) { return build.allParts().find(p => p.tags?.includes(tag)); }
 function state(runtime, id) { try {
@@ -31,9 +34,10 @@ function nameOf(part) {
 const m = (v) => `${v.toFixed(1)} m`;
 /** Picks two other answers deterministically so the same failure shows the same card. */
 function choicesFor(reason) {
-    const power = ["SHORTCUT", "ALWAYS_ON", "USED_TOO_MUCH", "OVERLOAD"].includes(reason);
+    const power = ["SHORTCUT", "ALWAYS_ON", "USED_TOO_MUCH", "OVERLOAD", "WRONG_POLE", "TOUCHED", "NOT_MAGNETIC"].includes(reason);
+    const magnetPool = ["WRONG_POLE", "TOUCHED", "NOT_MAGNETIC", "NOT_ENOUGH_FORCE", "UNSTABLE", "TOO_MUCH_FORCE"];
     if (power) {
-        const pool = ["NOT_CONNECTED", "SHORTCUT", "ALWAYS_ON", "OVERLOAD", "NOT_ENOUGH_FORCE", "USED_TOO_MUCH"].filter(r => r !== reason);
+        const pool = (["WRONG_POLE", "TOUCHED", "NOT_MAGNETIC"].includes(reason) ? magnetPool : ["NOT_CONNECTED", "SHORTCUT", "ALWAYS_ON", "OVERLOAD", "NOT_ENOUGH_FORCE", "USED_TOO_MUCH"]).filter(r => r !== reason);
         const seed = reason.length;
         const three = [reason, pool[seed % pool.length], pool[(seed + 2) % pool.length]];
         return [three[seed % 3], three[(seed + 1) % 3], three[(seed + 2) % 3]];
@@ -59,6 +63,9 @@ export function diagnoseRun(level, build, runtime) {
     const powerCard = diagnosePower(rules, build, runtime, card);
     if (powerCard)
         return powerCard;
+    const magnetCard = diagnoseMagnets(rules, build, runtime, card);
+    if (magnetCard)
+        return magnetCard;
     // Builder Bay: the structure's own measurements.
     const structureCard = diagnoseStructures(rules, build, runtime, card);
     if (structureCard)
@@ -331,3 +338,73 @@ function diagnosePower(rules, build, runtime, card) {
     }
     return undefined;
 }
+function diagnoseMagnets(rules, build, runtime, card) {
+    const m = runtime.magnets;
+    if (!m.hasMagnets())
+        return undefined;
+    const events = runtime.causalEvents;
+    const tag = (t) => build.allParts().filter(p => p.tags?.includes(t));
+    const pos = (id, fallback) => { try {
+        const s = runtime.physics.state(id);
+        return { x: s.x, y: s.y };
+    }
+    catch {
+        return fallback;
+    } };
+    for (const r of rules)
+        if (r.kind === "STAYS_PUT")
+            for (const p of tag(r.objectTag)) {
+                const q = pos(p.id, p.position);
+                const d = Math.hypot(q.x - p.position.x, q.y - p.position.y);
+                if (d > r.maxMove)
+                    return card("UNSTABLE", `${nameOf(p)} got knocked ${m2(d)} — the scrap slid sideways into it.`);
+            }
+    if (build.allParts().some(p => p.definitionId === "magnetic.electromagnet") && !events.some(e => e.kind === "ELECTROMAGNET_ON"))
+        return card("NOT_CONNECTED", "The electromagnet never switched on — no electricity reached it.");
+    for (const r of rules)
+        if (r.kind === "FLOAT_STABLE")
+            for (const p of tag(r.objectTag))
+                if (m.floatingTicks(p.id) < 30) {
+                    if (events.some(e => e.kind === "MAGNET_ATTRACT" && (e.sourceId === p.id || e.targetId === p.id)))
+                        return card("WRONG_POLE", `Opposite ends were facing, so ${nameOf(p)} was pulled down instead of pushed up.`);
+                    return card("NOT_ENOUGH_FORCE", `${nameOf(p)} never got enough push to float.`);
+                }
+    for (const r of rules)
+        if (r.kind === "NO_PUSHING")
+            for (const p of tag(r.objectTag)) {
+                const touch = events.find(e => e.kind === "PHYSICS_CONTACT" && (e.sourceId === p.id || e.targetId === p.id) && [e.sourceId, e.targetId].some(o => o && o !== p.id && (runtime.isDynamicBody(o) || runtime.partDefinition(o)?.behaviours.some(b => b.kind === "MAGNET_BAR"))));
+                if (touch) {
+                    const other = build.getPart(touch.sourceId === p.id ? touch.targetId : touch.sourceId);
+                    const attracted = events.some(e => e.kind === "MAGNET_ATTRACT" && (e.sourceId === p.id || e.targetId === p.id));
+                    return attracted ? card("WRONG_POLE", `Opposite ends were facing, so ${nameOf(p)} was pulled in until it bumped ${other ? nameOf(other) : "the magnet"}.`) : card("TOUCHED", `${other ? nameOf(other) : "Something"} touched ${nameOf(p)} — it has to move by magnetic force only.`);
+                }
+            }
+    for (const r of rules)
+        if (r.kind === "OBJECT_ENTERS_ZONE")
+            for (const p of tag(r.objectTag)) {
+                const zone = tag(r.zoneTag)[0];
+                if (!zone)
+                    continue;
+                const q = pos(p.id, p.position);
+                const away = Math.hypot(q.x - zone.position.x, q.y - zone.position.y) > Math.hypot(p.position.x - zone.position.x, p.position.y - zone.position.y) + 0.3;
+                if (away && events.some(e => e.kind === "MAGNET_REPEL" && (e.sourceId === p.id || e.targetId === p.id)))
+                    return card("WRONG_POLE", `The ends facing each other were the same, so they pushed ${nameOf(p)} away from the target.`);
+                if (away && events.some(e => e.kind === "MAGNET_ATTRACT" && (e.sourceId === p.id || e.targetId === p.id)))
+                    return card("WRONG_POLE", `Opposite ends were facing, so ${nameOf(p)} was pulled the wrong way.`);
+            }
+    const magnetic = (id) => ["IRON", "STEEL", "NICKEL"].includes(String(runtime.partDefinition(id)?.behaviours.find(b => b.kind === "MATERIAL")?.kind === "MATERIAL" ? runtime.partDefinition(id).behaviours.find(b => b.kind === "MATERIAL").material : ""));
+    for (const r of rules)
+        if (r.kind === "ALL_IN_ZONE" || r.kind === "MATERIALS_SORTED") {
+            const items = tag(r.kind === "ALL_IN_ZONE" ? r.objectTag : r.sampleTag);
+            for (const p of items) {
+                const q = pos(p.id, p.position);
+                const moved = Math.hypot(q.x - p.position.x, q.y - p.position.y);
+                if (magnetic(p.id) && moved < 0.2 && !events.some(e => e.kind === "MAGNET_PULL_MATERIAL" && e.targetId === p.id))
+                    return card("NOT_ENOUGH_FORCE", `${nameOf(p)} didn't move: no magnet was close enough to pull it (magnets only reach about 3 m).`);
+            }
+            if (r.kind === "ALL_IN_ZONE" && items.some(p => !magnetic(p.id)) && events.some(e => e.kind === "MAGNET_NO_EFFECT"))
+                return card("NOT_MAGNETIC", "The magnet didn't pull those things at all — they aren't made of a magnetic material.");
+        }
+    return undefined;
+}
+function m2(v) { return `${v.toFixed(1)} m`; }

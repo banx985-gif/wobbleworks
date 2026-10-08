@@ -5,6 +5,7 @@ import { PhysicsWorld } from "./PhysicsWorld.js";
 import { GearSystem } from "../gears/GearSystem.js";
 import { StructureSystem } from "../structures/StructureSystem.js";
 import { CircuitSystem } from "../power/CircuitSystem.js";
+import { MagnetSystem } from "../magnets/MagnetSystem.js";
 export class RuntimeWorld {
     snapshotSignature;
     physics = new PhysicsWorld();
@@ -14,6 +15,8 @@ export class RuntimeWorld {
     structures;
     /** Power Lab circuits (M14): batteries, wires, switches and loads, solved every tick. */
     circuits;
+    /** Magnet Factory (M15): bar magnets, electromagnets and magnetic materials. */
+    magnets;
     /** Buttons held down by a finger during this TEST, and switches flipped since the last tick. */
     fingerPressed = new Set();
     flips = new Set();
@@ -55,6 +58,7 @@ export class RuntimeWorld {
         this.structures = new StructureSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.gears = new GearSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined, this.snapshot.connections, extraLoads);
         this.circuits = new CircuitSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
+        this.magnets = new MagnetSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.installPipeline();
     }
     constructPhysics() {
@@ -66,7 +70,9 @@ export class RuntimeWorld {
             const density = Number(part.parameters.density ?? rigid.density);
             const friction = Number(part.parameters.friction ?? rigid.friction);
             const restitution = Number(part.parameters.restitution ?? rigid.restitution);
-            this.physics.addBody({ id: part.id, type: rigid.bodyType, shape: rigid.shape, position: part.position, angle: part.rotation, width: rigid.width, height: rigid.height, density, friction, restitution });
+            // Boxes collide as upright rectangles, so a magnet turned a quarter turn gets its width and height swapped instead of an angle.
+            const quarter = rigid.shape === "BOX" && def.behaviours.some(b => b.kind === "MAGNET_BAR") && Math.abs(Math.sin(part.rotation)) > 0.99;
+            this.physics.addBody({ id: part.id, type: rigid.bodyType, shape: rigid.shape, position: part.position, angle: quarter ? 0 : part.rotation, width: quarter ? rigid.height : rigid.width, height: quarter ? rigid.width : rigid.height, density, friction, restitution });
             const initialVx = Number(part.parameters.initialVx ?? 0), initialVy = Number(part.parameters.initialVy ?? 0);
             if ((initialVx !== 0 || initialVy !== 0) && rigid.bodyType === "DYNAMIC")
                 this.physics.setLinearVelocity(part.id, { x: initialVx, y: initialVy });
@@ -89,9 +95,9 @@ export class RuntimeWorld {
         this.pipeline.on("PRE_PHYSICS_SENSORS", () => this.sampleSensors());
         this.pipeline.on("LOGIC_EVALUATION", () => this.evaluateLogic());
         this.pipeline.on("ACTUATOR_RESOLUTION", () => this.resolveActuators());
-        this.pipeline.on("FORCE_AND_COUPLING", ({ dt }) => { this.applyCouplings(); this.gears.step(dt); this.applyGearCouplings(); this.stepStructures(dt); });
+        this.pipeline.on("FORCE_AND_COUPLING", ({ dt }) => { this.stepMagnets(dt); this.applyCouplings(); this.gears.step(dt); this.applyGearCouplings(); this.stepStructures(dt); });
         this.pipeline.on("PHYSICS_STEP", ({ dt }) => this.physics.step(dt));
-        this.pipeline.on("POST_PHYSICS_CONTACTS", () => this.collectPhysicsEvents());
+        this.pipeline.on("POST_PHYSICS_CONTACTS", () => { this.magnets.applyGuides(this.physics); this.collectPhysicsEvents(); });
         this.pipeline.on("DOMAIN_TRANSFER", ({ dt }) => this.transferDomains(dt));
         this.pipeline.on("CAUSAL_EVENT_RECORDING", () => { this.causalEvents.push(...this.pendingEvents); });
         this.pipeline.on("GOAL_AND_CONCEPT_EVIDENCE", () => undefined);
@@ -147,6 +153,13 @@ export class RuntimeWorld {
             const bottom = st.y + r.height / 2;
             return Math.abs(st.x - part.position.x) <= rigid.width / 2 + 0.1 && bottom >= top - 0.15 && bottom <= top + 0.25;
         });
+    }
+    stepMagnets(dt) {
+        if (!this.magnets.hasMagnets())
+            return;
+        this.magnets.step(dt, this.physics, id => this.circuits.motorDrive(id));
+        for (const e of this.magnets.drainEvents())
+            this.event(e.kind, e.sourceId, e.targetId, e.data);
     }
     /** Circuits first in the tick (network topology): then electric motors drive their gear trains at the current they get. */
     stepCircuits(dt) {
@@ -461,6 +474,14 @@ export class RuntimeWorld {
     }
     catch {
         return undefined;
+    } }
+    /** Read-only lookups for goals and evidence. */
+    partDefinition(instanceId) { return this.safeDefinition(instanceId); }
+    isDynamicBody(id) { try {
+        return Number.isFinite(this.physics.mass(id));
+    }
+    catch {
+        return false;
     } }
     phaseTrace() { return [...this.pipeline.trace]; }
     destroy() { this.destroyed = true; this.physics.destroy(); this.signals.clear(); this.power.clear(); this.fluids.clear(); this.actuatorCommands.clear(); }

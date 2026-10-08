@@ -36,6 +36,34 @@ const THEMES = {
             c.globalAlpha = 1;
         } }
 };
+/** Magnet Factory: steel walls, a scrap conveyor line and a giant horseshoe magnet. */
+THEMES["magnet-factory"] = { title: "MAGNET FACTORY", top: "#5f3dc4", bottom: "#9775fa", wall: "#7950f2", floor: "#495057", accent: "#e599f7", motif: (c, t) => {
+        c.fillStyle = "#6741d9";
+        for (let x = 0; x < 1600; x += 200)
+            c.fillRect(x + 10, 140, 8, 560);
+        c.globalAlpha = 0.25;
+        c.lineWidth = 46;
+        c.lineCap = "butt";
+        c.strokeStyle = "#e03131";
+        c.beginPath();
+        c.arc(1380, 360, 120, Math.PI, Math.PI * 1.5);
+        c.stroke();
+        c.strokeStyle = "#1c7ed6";
+        c.beginPath();
+        c.arc(1380, 360, 120, Math.PI * 1.5, Math.PI * 2);
+        c.stroke();
+        c.fillStyle = "#e03131";
+        c.fillRect(1237, 360, 46, 120);
+        c.fillStyle = "#1c7ed6";
+        c.fillRect(1477, 360, 46, 120);
+        c.globalAlpha = 1;
+        c.strokeStyle = "#5f3dc4";
+        c.lineWidth = 4;
+        for (let k = 0; k < 12; k++) {
+            const x = ((t * 40 + k * 140) % 1700) - 50;
+            c.strokeRect(x, 230, 40, 26);
+        }
+    } };
 export function hasLabBackdrop(labId) { return labId in THEMES; }
 export function drawLabBackdrop(c, labId, time) {
     const th = THEMES[labId];
@@ -67,9 +95,14 @@ export function drawLabBackdrop(c, labId, time) {
     c.fill();
     c.stroke();
     c.fillStyle = INK;
-    c.font = "900 40px system-ui";
     c.textAlign = "center";
-    c.fillText(th.title, 225, 95);
+    let size = 40;
+    c.font = `900 ${size}px system-ui`;
+    while (c.measureText(th.title).width > 300 && size > 22) {
+        size -= 2;
+        c.font = `900 ${size}px system-ui`;
+    }
+    c.fillText(th.title, 225, 85 + size / 4);
 }
 /** Labs register their room theme here as they are built. */
 export function registerLabTheme(labId, theme) { THEMES[labId] = theme; }
