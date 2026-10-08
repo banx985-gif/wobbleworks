@@ -1,5 +1,6 @@
 import { MOTION_PARENT_MAPPINGS } from "../motion/MotionYard.js";
 import { GEAR_PARENT_MAPPINGS } from "../gears/GearGarage.js";
+import { STRUCTURE_PARENT_MAPPINGS } from "../structures/BuilderBay.js";
 import { MAIN_LABS } from "../progression/CampaignData.js";
 import { labCleared } from "../progression/LabProgression.js";
 import { ownsFullGame } from "../progression/Campus.js";
@@ -80,6 +81,9 @@ export function renderParentDashboard(root, save, storage, notice, cb) {
         const gearLines = conceptLines(p, GEAR_PARENT_MAPPINGS);
         if (gearLines.length)
             card.append(el("span", "", `Gears & Mechanisms explored: ${gearLines.join(", ")}`));
+        const structureLines = conceptLines(p, STRUCTURE_PARENT_MAPPINGS);
+        if (structureLines.length)
+            card.append(el("span", "", `Structures & Forces explored: ${structureLines.join(", ")}`));
         const del = el("button", "danger small", "Remove inventor…");
         del.addEventListener("click", () => { if (window.confirm(`Remove ${p.name} and all of their progress from this device? This can't be undone unless you have a backup.`))
             cb.deleteProfile(p.id); });
@@ -117,9 +121,12 @@ export function renderParentDashboard(root, save, storage, notice, cb) {
     toggle.addEventListener("click", () => cb.setFullGameForTesting(!ownsFullGame(save.entitlement)));
     own.append(toggle);
     if (ownsFullGame(save.entitlement) && cb.openLabForTesting) {
-        const peek = el("button", "", "Test tool: open the Gear Garage now");
-        peek.addEventListener("click", () => cb.openLabForTesting("gear-garage"));
-        own.append(peek, el("p", "muted", "For testing: skips finishing the Motion Yard first. Nothing in the save is changed by opening it."));
+        for (const [labId, title] of [["gear-garage", "Gear Garage"], ["builder-bay", "Builder Bay"]]) {
+            const peek = el("button", "", `Test tool: open the ${title} now`);
+            peek.addEventListener("click", () => cb.openLabForTesting(labId));
+            own.append(peek);
+        }
+        own.append(el("p", "muted", "For testing: skips finishing the earlier labs first. Nothing in the save is changed by opening one."));
     }
     const close = el("button", "primary", "Done");
     close.addEventListener("click", cb.close);

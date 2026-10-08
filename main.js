@@ -28,6 +28,8 @@ import { MAIN_LABS } from "./progression/CampaignData.js";
 import { labMissionUnlocked, nextRequiredLabMission } from "./progression/LabProgression.js";
 import { evaluateGearMission, GEAR_REAL_WORLD_CARDS, loadGearGarageLevels } from "./gears/GearGarage.js";
 import { analyzeGears, gearNodeFrom, gearSnapPosition } from "./gears/GearSystem.js";
+import { evaluateBuilderMission, loadBuilderBayLevels, runSummary, STRUCTURE_REAL_WORLD_CARDS } from "./structures/BuilderBay.js";
+import { analyzeStructure, beamEndpoints, beamEndSnap } from "./structures/StructureSystem.js";
 import { InputManager } from "./input/InputManager.js";
 import { CanvasRenderer } from "./render/CanvasRenderer.js";
 import { CameraController } from "./render/CameraController.js";
@@ -81,7 +83,7 @@ async function loadArt() {
     catch {
         return;
     }
-    const wanted = Object.keys(artManifest).filter(id => /^(motion|structure|air|level|fx|ui.hint)./.test(id));
+    const wanted = Object.keys(artManifest).filter(id => /^(motion|structure|air|level|fx|ui\.hint|duck|toy|char\.bolt)\./.test(id));
     await Promise.allSettled(wanted.map(id => assets.loadImage(id, artManifest[id])));
 }
 let appSave = createDefaultAppSave();
@@ -113,6 +115,10 @@ let currentNarration = "";
 const labLevels = new Map();
 /** The lab whose menu/missions are showing (Motion Yard, Gear Garage, …). */
 let currentLabId = "motion-yard";
+/** What the last TEST of each challenge measured (this session only) — evidence that bracing improved a structure. */
+const lastRuns = new Map();
+/** Dragging one end of a beam (stretch/turn it) instead of the whole beam. */
+let beamEndDrag;
 /** Labs a grown-up opened with the test tool this session (progress gate skipped, nothing saved). */
 const testingLabs = new Set();
 let labActive = false;
@@ -244,7 +250,17 @@ function labOfLevel(levelId) { return MAIN_LABS.find(l => l.missions.some(m => m
 function completedSet() { return new Set(completedLevelIds(appSave)); }
 function missionMeta(levelId) { return MAIN_LABS.flatMap(l => l.missions).find(m => m.id === levelId); }
 /** The lab's own evaluator: same success rules as the level file, plus that lab's evidence-backed discoveries. */
-function evaluateLevel(level, runtime) { return labOfLevel(level.id) === "gear-garage" ? evaluateGearMission(level, build, runtime) : evaluateMotionMission(level, build, runtime); }
+function evaluateLevel(level, runtime) {
+    const lab = labOfLevel(level.id);
+    if (lab === "builder-bay") {
+        const prev = lastRuns.get(level.id);
+        return evaluateBuilderMission(level, build, runtime, prev);
+    }
+    return lab === "gear-garage" ? evaluateGearMission(level, build, runtime) : evaluateMotionMission(level, build, runtime);
+}
+/** Remember this run so the next TEST can show whether a change (like a brace) really helped. */
+function rememberRun() { const runtime = tests.active(); if (runtime && activeLevel)
+    lastRuns.set(activeLevel.id, runSummary(build, runtime)); }
 function labIsOpen(labId) { return labLevels.has(labId) && (routeToRegion(appSave, labId).kind === "ENTER" || testingLabs.has(labId)); }
 function updateOpeningTray(level) {
     const allowed = level ? new Set(level.availablePartIds) : undefined;
@@ -265,7 +281,14 @@ function speakCurrentLine(force = false) {
     utterance.pitch = 1.08;
     window.speechSynthesis.speak(utterance);
 }
-function presentBolt(line, reaction = false) {
+/** Put a painted Bolt pose (wearing the equipped costume) into a slot on screen. */
+function showBolt(slot, pose) {
+    const el = document.querySelector(slot);
+    if (el)
+        el.replaceChildren(boltArt(activeProfile(appSave)?.equipped.bolt, pose));
+}
+function presentBolt(line, reaction = false, pose = reaction ? "cheer" : "point") {
+    showBolt("#bolt-avatar", pose);
     currentNarration = line;
     openingSubtitle.textContent = line;
     if (reaction) {
@@ -366,7 +389,7 @@ function loadMission(id) {
     forceScannerButton.classList.remove("hidden", "force-on");
     forceScannerButton.setAttribute("aria-pressed", "false");
     document.querySelector(".motion-hud .motion-badge").textContent = lab.title.toUpperCase();
-    forceScannerButton.textContent = labId === "gear-garage" ? "Spin Scanner" : "Force Scanner";
+    forceScannerButton.textContent = labId === "gear-garage" ? "Spin Scanner" : labId === "builder-bay" ? "Stress Scanner" : "Force Scanner";
     updateOpeningTray(level);
     resetGuidance(level.id);
     enterWorkshop();
@@ -377,6 +400,7 @@ function showMotionResult(success, body, stars = [], newStars = [], rewards = []
     motionResult.classList.toggle("success", success);
     motionResultTitle.textContent = success ? "IT WORKED!" : "GOOD TEST!";
     motionResultBody.textContent = body;
+    showBolt("#result-bolt", success ? "cheer" : "panic");
     resultStars.replaceChildren();
     resultRewards.replaceChildren();
     resultStars.classList.toggle("hidden", !success);
@@ -432,7 +456,8 @@ function maybeCompleteMotionMission() {
     setHint(undefined);
     hideBoltTip();
     hintButton.classList.remove("offer");
-    const card = result.discoveries.map(id => [...MOTION_REAL_WORLD_CARDS, ...GEAR_REAL_WORLD_CARDS].find(c => c.discoveryId === id)).find(Boolean);
+    const card = result.discoveries.map(id => [...MOTION_REAL_WORLD_CARDS, ...GEAR_REAL_WORLD_CARDS, ...STRUCTURE_REAL_WORLD_CARDS].find(c => c.discoveryId === id)).find(Boolean);
+    rememberRun();
     const discovered = card ? ` ${card.title}: ${card.example}` : result.discoveries.length ? ` You discovered ${result.discoveries[0].replace("motion.", "").replaceAll("-", " ")}.` : "";
     const cleared = outcome.labCleared ? ` The ${regionById(outcome.labCleared)?.title ?? "lab"} is restored!` : "";
     showMotionResult(true, `Nice invention.${discovered}${cleared}`, outcome.stars, outcome.newStars, outcome.newRewards);
@@ -537,7 +562,8 @@ function maybeCompleteOpeningChallenge() {
     if (tests.active() && !tests.isPaused())
         tests.togglePause();
     const step = openingDirector.currentStep();
-    presentBolt(step === 3 ? "WHEEEE! ...I meant to do that!" : step === 5 ? "That was YOUR solution!" : "It worked!", true);
+    presentBolt(step === 3 ? "WHEEEE! ...I meant to do that!" : step === 5 ? "That was YOUR solution!" : "It worked!", true, step === 3 ? "panic" : "cheer");
+    showBolt("#opening-bolt", step === 3 ? "panic" : "cheer");
 }
 function chooseProfile(id) { void commit(withActiveProfile(appSave, id), true); applySettings(); resumeActiveProfile(); }
 function openInventorForm(editId) {
@@ -706,6 +732,7 @@ async function loadAppState() {
         openingLevels = await loadOpeningLevels(registry);
         labLevels.set("motion-yard", await loadMotionYardLevels(registry));
         labLevels.set("gear-garage", await loadGearGarageLevels(registry));
+        labLevels.set("builder-bay", await loadBuilderBayLevels(registry));
         appSave = loaded.payload ?? createDefaultAppSave();
         savingBlocked = loaded.futureVersion;
         applySettings();
@@ -827,7 +854,7 @@ function showNextHubMoment() {
     document.querySelector("#hub-moment-title").textContent = next.title;
     document.querySelector("#hub-moment-body").textContent = next.body;
     const face = document.querySelector("#hub-moment-bolt");
-    face.replaceChildren(boltArt(activeProfile(appSave)?.equipped.bolt));
+    face.replaceChildren(boltArt(activeProfile(appSave)?.equipped.bolt, next.kind === "REWARD" ? "cheer" : "sign"));
     if (next.kind === "BOLT") {
         currentNarration = next.title;
         speakCurrentLine();
@@ -927,7 +954,7 @@ function startFreeBuild(from) {
     motionObjective.textContent = "Build anything. TEST it. Change it. TEST again.";
     document.querySelector(".motion-badge").textContent = "WORKSHOP";
     resetGuidance(undefined);
-    const scanner = (p?.unlockedTools.includes("tool.force-scanner") || p?.unlockedTools.includes("tool.spin-scanner")) ?? false;
+    const scanner = (p?.unlockedTools.includes("tool.force-scanner") || p?.unlockedTools.includes("tool.spin-scanner") || p?.unlockedTools.includes("tool.stress-scanner")) ?? false;
     forceScannerButton.textContent = "Scanner";
     forceScannerButton.classList.toggle("hidden", !scanner);
     forceScannerButton.classList.remove("force-on");
@@ -1054,7 +1081,8 @@ function applyTrayGlow() {
             glow.add(id);
     document.querySelectorAll("[data-part]").forEach(b => b.classList.toggle("hint-glow", glow.has(b.dataset.part)));
 }
-function showBoltTip(line) {
+function showBoltTip(line, pose = "point") {
+    showBolt("#bolt-tip-face", pose);
     document.querySelector("#bolt-tip-text").textContent = line;
     boltTip.classList.remove("hidden");
     currentNarration = line;
@@ -1083,7 +1111,7 @@ function askForHint() {
     setHint(view);
     hintButton.classList.remove("offer");
     hintButton.innerHTML = `<span aria-hidden="true">💡</span> Clue <span class="tier">${tier}/3</span>`;
-    showBoltTip(view.line);
+    showBoltTip(view.line, "inspect");
 }
 function snapToGhost(id) {
     if (!currentHint.ghosts.length)
@@ -1097,9 +1125,13 @@ function snapToGhost(id) {
     const ghost = ghostSnap(part.definitionId, part.position, currentHint.ghosts, radius);
     if (!ghost)
         return;
-    build.move(id, { x: ghost.x, y: ghost.y }); // placement help only: the same spot the child could drag to by hand
-    if (Math.abs(ghost.rotation - part.rotation) > 1e-6)
-        build.rotate(id, ghost.rotation - part.rotation);
+    if (ghost.length !== undefined)
+        build.reshape(id, { position: { x: ghost.x, y: ghost.y }, rotation: ghost.rotation, parameters: { length: ghost.length } }); // placement help only
+    else {
+        build.move(id, { x: ghost.x, y: ghost.y }); // placement help only: the same spot the child could drag to by hand
+        if (Math.abs(ghost.rotation - part.rotation) > 1e-6)
+            build.rotate(id, ghost.rotation - part.rotation);
+    }
     sfx(760, .05);
 }
 /** Reads the running TEST and writes anything really observed into the Discovery Book. */
@@ -1107,7 +1139,7 @@ function checkRunDiscoveries() {
     const runtime = tests.active();
     if (!runtime)
         return;
-    const result = recordRunEvidence(appSave, evaluateRunDiscoveries(build, runtime), observePartUses(build, runtime));
+    const result = recordRunEvidence(appSave, evaluateRunDiscoveries(build, runtime, activeLevel ? lastRuns.get(activeLevel.id) : undefined), observePartUses(build, runtime));
     if (!result.newDiscoveries.length && !result.newUses.length)
         return;
     void commit(result.save).catch(() => undefined);
@@ -1171,6 +1203,7 @@ function openWhyCard() {
     }
     currentNarration = "Why did that happen?";
     speakCurrentLine();
+    showBolt("#why-bolt", "inspect");
     whyCard.classList.remove("hidden");
 }
 function keepBuilding() { whyCard.classList.add("hidden"); motionResult.classList.add("hidden"); resultShown = false; stopToBuild(); }
@@ -1213,6 +1246,43 @@ function snapGear(id) {
     if (target.kind === "MESH")
         build.connect(id, "axle", target.targetId, "axle", { kind: "ROTATIONAL", relationship: "GEAR", ratio: 1, invertDirection: true });
     sfx(target.kind === "AXLE" ? 640 : 820, .04);
+}
+// ------------------------------------------------------------------ Builder Bay beam editing
+/** A beam reshaped so its ends sit at two points (middle, angle and length follow). */
+function beamFromEnds(p, a, b) {
+    const length = Math.max(0.5, Math.min(6, Math.hypot(b.x - a.x, b.y - a.y)));
+    const ang = Math.atan2(b.y - a.y, b.x - a.x);
+    return { ...p, position: { x: a.x + Math.cos(ang) * length / 2, y: a.y + Math.sin(ang) * length / 2 }, rotation: ang, parameters: { ...p.parameters, length } };
+}
+/** Let go of a beam end: it snaps onto a nearby joint, anchor, cliff top or the floor. Placement only. */
+function finishBeamEnd(drag) {
+    const others = build.allParts().filter(p => p.id !== drag.id);
+    const layout = analyzeStructure(others, id => registry.has(id) ? registry.get(id) : undefined);
+    const target = beamEndSnap(drag.moving.x, drag.moving.y, layout, undefined, currentAssistance(appSave).snapAssist ? 0.35 : 0.2) ?? drag.moving;
+    const shaped = beamFromEnds(build.getPart(drag.id), drag.fixed, target);
+    build.reshape(drag.id, { position: shaped.position, rotation: shaped.rotation, parameters: { length: Number(shaped.parameters.length) } });
+    sfx(700, .04);
+}
+/** A dropped beam slides so whichever end is closest to a joint/support lands exactly on it. */
+function snapBeam(id) {
+    const part = build.getPart(id);
+    if (!part || part.parameters.locked === true)
+        return;
+    const ends = beamEndpoints(part, registry.get(part.definitionId));
+    if (!ends)
+        return;
+    const layout = analyzeStructure(build.allParts().filter(p => p.id !== id), d => registry.has(d) ? registry.get(d) : undefined);
+    const reach = currentAssistance(appSave).snapAssist ? 0.35 : 0.2;
+    const s1 = beamEndSnap(ends.x1, ends.y1, layout, undefined, reach), s2 = beamEndSnap(ends.x2, ends.y2, layout, undefined, reach);
+    const d1 = s1 ? Math.hypot(s1.x - ends.x1, s1.y - ends.y1) : Infinity, d2 = s2 ? Math.hypot(s2.x - ends.x2, s2.y - ends.y2) : Infinity;
+    if (s1 && s2) {
+        const shaped = beamFromEnds(part, s1, s2);
+        build.reshape(id, { position: shaped.position, rotation: shaped.rotation, parameters: { length: Number(shaped.parameters.length) } });
+        return;
+    }
+    const shift = d1 <= d2 && s1 ? { x: s1.x - ends.x1, y: s1.y - ends.y1 } : s2 ? { x: s2.x - ends.x2, y: s2.y - ends.y2 } : undefined;
+    if (shift)
+        build.move(id, { x: part.position.x + shift.x, y: part.position.y + shift.y });
 }
 async function boot() {
     renderShell();
@@ -1610,6 +1680,8 @@ document.querySelectorAll("[data-part]").forEach(button => button.addEventListen
     const placed = build.add(id, { x: 8 + Math.random() * 1.5 - 0.75, y: surfacePart ? 8.32 : 3 });
     if ((openingActive || labActive) && id === "motion.ramp")
         build.rotate(placed.id, -0.18);
+    if (id === "builder.column")
+        build.rotate(placed.id, -Math.PI / 2);
     selectedId = placed.id;
     sfx(520, 0.035);
 }));
@@ -1638,6 +1710,7 @@ ui.stop.addEventListener("click", () => {
         const result = evaluateLevel(activeLevel, runtime);
         if (!result.success) {
             lastWhy = diagnoseRun(activeLevel, build, runtime);
+            rememberRun();
             if (runtime)
                 observer.noteFailure(runtime.snapshotSignature);
             showMotionResult(false, "Change one thing, then TEST again. Fast failure is useful evidence.");
@@ -1663,6 +1736,10 @@ ui.rotate.addEventListener("click", () => { if (!testMode && selectedId && gamep
     build.rotate(selectedId, Math.PI / 12); });
 ui.resetCamera.addEventListener("click", () => { if (gameplayAllowed())
     camera.reset(); });
+document.querySelector("#btn-zoom-in").addEventListener("click", () => { if (gameplayAllowed())
+    camera.setZoom(camera.zoom * 1.2); });
+document.querySelector("#btn-zoom-out").addEventListener("click", () => { if (gameplayAllowed())
+    camera.setZoom(camera.zoom / 1.2); });
 ui.tools.addEventListener("click", () => { if (gameplayAllowed())
     editor.toggle(); });
 window.addEventListener("wobbleworks:preview-level", (event) => {
@@ -1705,8 +1782,22 @@ window.addEventListener("pointerdown", () => void audio.unlock(), { once: true }
 function pointerWorld(sample) { const logical = renderer.viewport.screenToLogical(sample.x, sample.y); const worldLogical = camera.logicalToWorld(logical); return { x: worldLogical.x / 100, y: worldLogical.y / 100 }; }
 function hitPart(x, y, padding = (labActive || freeBuildActive) ? currentGuidance().touchPadding : 0.18) {
     const parts = [...build.allParts()].reverse();
-    return parts.find(p => { if (p.parameters.locked === true)
-        return false; const d = registry.get(p.definitionId); const rigid = d.behaviours.find(b => b.kind === "RIGID_BODY"); const gear = d.behaviours.find(b => b.kind === "GEAR"); const w = gear?.kind === "GEAR" ? gear.radius * 2 : rigid?.kind === "RIGID_BODY" ? rigid.width : 0.9; const h = gear?.kind === "GEAR" ? gear.radius * 2 : rigid?.kind === "RIGID_BODY" ? rigid.height : 0.7; return Math.abs(p.position.x - x) <= w / 2 + padding && Math.abs(p.position.y - y) <= h / 2 + padding; })?.id;
+    return parts.find(p => {
+        if (p.parameters.locked === true)
+            return false;
+        const ends = beamEndpoints(p, registry.get(p.definitionId));
+        if (ends) {
+            const dx = ends.x2 - ends.x1, dy = ends.y2 - ends.y1, L2 = dx * dx + dy * dy || 1;
+            const t = Math.max(0, Math.min(1, ((x - ends.x1) * dx + (y - ends.y1) * dy) / L2));
+            return Math.hypot(ends.x1 + dx * t - x, ends.y1 + dy * t - y) <= 0.12 + padding;
+        }
+        const d = registry.get(p.definitionId);
+        const rigid = d.behaviours.find(b => b.kind === "RIGID_BODY");
+        const gear = d.behaviours.find(b => b.kind === "GEAR");
+        const w = gear?.kind === "GEAR" ? gear.radius * 2 : rigid?.kind === "RIGID_BODY" ? rigid.width : 0.9;
+        const h = gear?.kind === "GEAR" ? gear.radius * 2 : rigid?.kind === "RIGID_BODY" ? rigid.height : 0.7;
+        return Math.abs(p.position.x - x) <= w / 2 + padding && Math.abs(p.position.y - y) <= h / 2 + padding;
+    })?.id;
 }
 input.on((event, sample) => {
     if (testMode || !gameplayAllowed())
@@ -1717,7 +1808,13 @@ input.on((event, sample) => {
             openingDirector.noteInteraction(now());
         const hit = hitPart(w.x, w.y);
         selectedId = hit;
-        if (hit) {
+        const hitBeam = hit ? beamEndpoints(build.getPart(hit), registry.get(build.getPart(hit).definitionId)) : undefined;
+        const nearEnd = hitBeam ? (Math.hypot(w.x - hitBeam.x1, w.y - hitBeam.y1) <= 0.35 ? 1 : Math.hypot(w.x - hitBeam.x2, w.y - hitBeam.y2) <= 0.35 ? 2 : 0) : 0;
+        if (hit && hitBeam && nearEnd) {
+            beamEndDrag = { id: hit, end: nearEnd, fixed: nearEnd === 1 ? { x: hitBeam.x2, y: hitBeam.y2 } : { x: hitBeam.x1, y: hitBeam.y1 }, moving: nearEnd === 1 ? { x: hitBeam.x1, y: hitBeam.y1 } : { x: hitBeam.x2, y: hitBeam.y2 } };
+            telemetry.inc("dragAttempts");
+        }
+        else if (hit) {
             const p = build.getPart(hit);
             dragStart = { id: hit, startWorldX: w.x, startWorldY: w.y, originalX: p.position.x, originalY: p.position.y };
             dragPreview = { ...p.position };
@@ -1730,7 +1827,9 @@ input.on((event, sample) => {
         }
     }
     else if (event === "move") {
-        if (dragStart)
+        if (beamEndDrag)
+            beamEndDrag.moving = { x: Math.max(0.2, Math.min(15.8, w.x)), y: Math.max(0.5, Math.min(8.4, w.y)) };
+        else if (dragStart)
             dragPreview = { x: dragStart.originalX + (w.x - dragStart.startWorldX), y: dragStart.originalY + (w.y - dragStart.startWorldY) };
         else if (panStart) {
             camera.pan(sample.x - panStart.x, sample.y - panStart.y);
@@ -1738,7 +1837,11 @@ input.on((event, sample) => {
         }
     }
     else {
-        if (dragStart && dragPreview) {
+        if (beamEndDrag) {
+            finishBeamEnd(beamEndDrag);
+            beamEndDrag = undefined;
+        }
+        else if (dragStart && dragPreview) {
             const droppedId = dragStart.id;
             const dropped = build.getPart(droppedId);
             const openingRamp = openingActive && dropped?.definitionId === "motion.ramp" && [2, 5].includes(openingDirector.currentStep());
@@ -1748,6 +1851,7 @@ input.on((event, sample) => {
             build.move(droppedId, { x: Math.max(0.4, Math.min(15.6, dragPreview.x)), y: openingRamp ? 7.95 : surfacePart ? 8.32 : Math.max(0.5, Math.min(8.2, dragPreview.y)) });
             snapToGhost(droppedId);
             snapGear(droppedId);
+            snapBeam(droppedId);
             autoSnapOpeningWheel(droppedId);
         }
         dragStart = undefined;
@@ -1762,13 +1866,18 @@ function render() {
     if (labActive) {
         if (currentLabId === "gear-garage")
             renderer.drawGearGarageBackdrop(now() / 1000);
+        else if (currentLabId === "builder-bay")
+            renderer.drawBuilderBayBackdrop();
         else
             renderer.drawMotionYardBackdrop();
     }
     const runtime = tests.active();
     const states = runtime?.physics.states();
     const parts = build.allParts().map(p => p.id === dragStart?.id && dragPreview ? { ...p, position: dragPreview } : p);
-    renderer.drawParts(parts, registry, states, selectedId, runtime?.gears, now() / 1000);
+    const shown = beamEndDrag ? parts.map(p => p.id === beamEndDrag.id ? beamFromEnds(p, beamEndDrag.fixed, beamEndDrag.moving) : p) : parts;
+    renderer.drawParts(shown, registry, states, selectedId, runtime?.gears, now() / 1000, runtime?.structures, forceScanner);
+    if (!runtime && shown.some(p => registry.get(p.definitionId).behaviours.some(b => b.kind === "BEAM")))
+        renderer.drawJoints(analyzeStructure(shown, id => registry.has(id) ? registry.get(id) : undefined));
     if (runtime) {
         renderer.drawGearLinks(runtime.gears.analysis, false);
         renderer.drawRotationView(runtime.gears, forceScanner);
@@ -1803,5 +1912,5 @@ clock.reset(performance.now());
 requestAnimationFrame(frame);
 if ("serviceWorker" in navigator)
     navigator.serviceWorker.register("./sw.js").catch(() => undefined);
-console.info(`WobbleWorks Milestones 0-12 (inventor maker + Gear Garage) loaded: ${DEFAULT_PARTS.length} technical part definitions`);
+console.info(`WobbleWorks Milestones 0-13 (Builder Bay) loaded: ${DEFAULT_PARTS.length} technical part definitions`);
 void boot();

@@ -76,16 +76,34 @@ export function avatarBadge(profile, size = 54) {
     }
     return wrap;
 }
-export function boltArt(costume) {
-    const c = costume ? rewardById(costume)?.id : undefined;
-    const stripes = c === "bolt.racing-stripes" ? `<rect x="40" y="38" width="8" height="46" fill="#fff"/><rect x="52" y="38" width="8" height="46" fill="#fff"/>` : "";
-    const floatie = c === "bolt.duck-floatie" ? `<ellipse cx="50" cy="84" rx="44" ry="11" fill="#ffd43b" stroke="#18323f" stroke-width="5"/><circle cx="88" cy="74" r="9" fill="#ffd43b" stroke="#18323f" stroke-width="4"/><path d="M95 74 l8 2 -8 3z" fill="#ff922b" stroke="#18323f" stroke-width="2"/>` : "";
-    return svg(`<line x1="50" y1="18" x2="50" y2="34" stroke="#18323f" stroke-width="5"/><circle cx="50" cy="14" r="7" fill="#ffd43b" stroke="#18323f" stroke-width="4"/>
-    <rect x="18" y="34" width="64" height="54" rx="20" fill="#ff922b" stroke="#18323f" stroke-width="6"/>${stripes}
-    <rect x="26" y="44" width="48" height="24" rx="10" fill="#fffdf5" stroke="#18323f" stroke-width="4"/>
-    <circle cx="40" cy="56" r="6" fill="#18323f"/><circle cx="60" cy="56" r="6" fill="#18323f"/>
-    <path d="M12 60 q-8 6 -2 14" fill="none" stroke="#18323f" stroke-width="5" stroke-linecap="round"/><path d="M88 60 q8 6 2 14" fill="none" stroke="#18323f" stroke-width="5" stroke-linecap="round"/>
-    <circle cx="50" cy="96" r="10" fill="#495057" stroke="#18323f" stroke-width="5"/>${floatie}`, "0 0 110 110", "bolt-art");
+export const BOLT_POSES = ["point", "wave", "cheer", "panic", "inspect", "sign"];
+export function boltPoseUrl(pose) { return `./assets/char/char.bolt.${pose}.webp`; }
+/**
+ * Costumes that still fit Bolt's painted shape are drawn on top as overlays (hats on his head, the floatie round
+ * his middle). Racing Stripes was drawn onto the old code body and doesn't fit the painted one, so it isn't shown
+ * until its painted overlay arrives (docs/ART_NEEDED.md).
+ */
+export const BOLT_COSTUME_OVERLAYS = {
+    "bolt.duck-floatie": { cls: "bolt-over waist", svg: `<svg viewBox="0 0 120 40" aria-hidden="true"><ellipse cx="60" cy="22" rx="52" ry="14" fill="#ffd43b" stroke="#18323f" stroke-width="5"/><circle cx="104" cy="12" r="10" fill="#ffd43b" stroke="#18323f" stroke-width="4"/><path d="M112 12 l9 2 -9 3z" fill="#ff922b" stroke="#18323f" stroke-width="2"/></svg>` },
+    "bolt.top-hat": { cls: "bolt-over head", svg: `<svg viewBox="0 0 80 60" aria-hidden="true"><rect x="22" y="4" width="36" height="40" rx="4" fill="#212529" stroke="#18323f" stroke-width="4"/><rect x="22" y="30" width="36" height="8" fill="#e03131"/><ellipse cx="40" cy="46" rx="36" ry="9" fill="#212529" stroke="#18323f" stroke-width="4"/></svg>` },
+    "bolt.builder-hat": { cls: "bolt-over head", svg: `<svg viewBox="0 0 80 60" aria-hidden="true"><path d="M10 46 Q10 8 40 8 Q70 8 70 46Z" fill="#ffd43b" stroke="#18323f" stroke-width="5"/><rect x="2" y="42" width="76" height="10" rx="5" fill="#fab005" stroke="#18323f" stroke-width="4"/></svg>` }
+};
+export const BOLT_COSTUMES_WITHOUT_OVERLAY = ["bolt.racing-stripes"];
+export function boltArt(costume, pose = "wave") {
+    const wrap = el("span", `bolt-art pose-${pose}`);
+    wrap.setAttribute("aria-hidden", "true");
+    const img = el("img", "bolt-pic");
+    img.src = boltPoseUrl(pose);
+    img.alt = "";
+    img.draggable = false;
+    wrap.append(img);
+    const over = costume ? BOLT_COSTUME_OVERLAYS[costume] : undefined;
+    if (over) {
+        const o = el("span", over.cls);
+        o.innerHTML = over.svg;
+        wrap.append(o);
+    }
+    return wrap;
 }
 /** Sprocket = the robot puppy from Aaron's key art: white, blue patches, floppy blue ears (orange inside),
  *  blue robot joints, brown collar with an orange gear tag. Code placeholder until his Sprocket art is filed. */

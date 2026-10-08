@@ -10,9 +10,14 @@
 export const PART_ART_ASPECT = {
     "motion.ball": 1.01, "motion.wheel": 0.98, "motion.roller": 1.41, "motion.cart": 1.24, "motion.axle": 1.63,
     "motion.ramp": 1.24, "motion.spring": 0.61, "motion.friction-high": 1.53, "motion.friction-low": 1.56,
-    "motion.bounce-pad": 1.0, "structure.block": 1.0, "structure.crate": 1.03, "air.balloon": 0.81
+    "motion.bounce-pad": 1.0, "structure.block": 1.0, "silly.duck": 0.93, "builder.elephant": 1.03, "silly.bolt": 0.72, "structure.crate": 1.03, "air.balloon": 0.81
 };
+/** Parts whose picture has a different art id (characters filed under assets/char/). */
+export const PART_ART_SOURCE = { "silly.duck": "duck.plain", "builder.elephant": "toy.elephant", "silly.bolt": "char.bolt.wave" };
 export const PART_ART_FIT = {
+    "silly.duck": { widthScale: 0.95, squash: 1, anchor: "CENTER", surface: 0 },
+    "silly.bolt": { widthScale: 1.25, squash: 1, anchor: "CENTER", surface: 0 },
+    "builder.elephant": { widthScale: 1.05, squash: 1, anchor: "CENTER", surface: 0 },
     "motion.ball": { widthScale: 1.04, squash: 1, anchor: "ROUND", surface: 0 },
     "motion.wheel": { widthScale: 1.04, squash: 1, anchor: "ROUND", surface: 0 },
     "motion.roller": { widthScale: 1.25, squash: 1, anchor: "ROUND", surface: 0 },

@@ -62,5 +62,29 @@ export const GEAR_PARTS = [
     { id: "motion.conveyor", familyId: "motion.conveyor", displayName: "Conveyor", category: "MOTION", behaviours: [{ kind: "RIGID_BODY", bodyType: "STATIC", shape: "BOX", width: 5, height: 0.25, density: 1, friction: 0.6, restitution: 0.02 }, { kind: "CONVEYOR" }], ports: [] },
     { id: "gear.heavy-crate", familyId: "gear.heavy-crate", displayName: "Heavy Crate", category: "GEAR", behaviours: [{ kind: "RIGID_BODY", bodyType: "DYNAMIC", shape: "BOX", width: 0.9, height: 0.9, density: 4, friction: 0.7, restitution: 0.05 }], ports: [] }
 ];
-export function createDefaultRegistry() { const r = new PartRegistry(); for (const p of [...DEFAULT_PARTS, ...GEAR_PARTS])
+/**
+ * Builder Bay parts (M13). Beams, ropes and braces are solved by the StructureSystem (src/structures/).
+ * Code-drawn behind these ids until the structure art arrives (docs/ART_NEEDED.md, Batch S).
+ */
+const beam = (id, displayName, material, length, thickness) => ({ id, familyId: id, displayName, category: "STRUCTURE", behaviours: [{ kind: "BEAM", material, length, thickness }], ports: [{ id: "joint", family: "STRUCTURAL", capabilities: ["RIGID"], direction: "BIDIRECTIONAL", offset: { x: 0, y: 0 }, angle: 0, snapRadius: 0.35, multiplicity: "MANY" }] });
+const marker = (id, displayName, category, behaviours) => ({ id, familyId: id, displayName, category, behaviours, ports: [] });
+export const STRUCTURE_PARTS = [
+    beam("builder.beam-wood", "Wooden Beam", "WOOD", 2, 0.18),
+    beam("builder.beam-metal", "Metal Beam", "METAL", 2, 0.16),
+    beam("builder.brace", "Triangle Brace", "METAL", 1.4, 0.1),
+    beam("builder.column", "Support Column", "WOOD", 2.2, 0.24),
+    beam("builder.rope", "Rope", "ROPE", 2, 0.05),
+    marker("builder.anchor", "Anchor Bolt", "STRUCTURE", [{ kind: "STRUCT_ANCHOR" }]),
+    marker("builder.cliff", "Cliff", "STRUCTURE", [{ kind: "STRUCT_GROUND", width: 4, height: 3 }]),
+    marker("builder.chasm", "Canyon", "STRUCTURE", [{ kind: "CHASM", width: 4 }]),
+    marker("builder.bolt-walker", "Bolt", "SILLY", [{ kind: "TRAVELLER", who: "BOLT", weight: 4, speed: 1, height: 0.92 }]),
+    marker("builder.elephant", "Elephant Robot", "SILLY", [{ kind: "TRAVELLER", who: "ELEPHANT", weight: 18, speed: 0.7, height: 1.3 }]),
+    marker("builder.cart", "Heavy Cart", "MOTION", [{ kind: "TRAVELLER", who: "CART", weight: 10, speed: 0.9, height: 0.8 }]),
+    marker("builder.robot", "Parade Robot", "SILLY", [{ kind: "TRAVELLER", who: "ROBOT", weight: 5, speed: 1, height: 0.9 }]),
+    marker("builder.sandbag", "Sandbag", "STRUCTURE", [{ kind: "STRUCT_LOAD", weight: 6 }]),
+    marker("builder.test-weight", "Test Weight", "STRUCTURE", [{ kind: "STRUCT_LOAD", weight: 30 }]),
+    marker("builder.egg", "Egg", "SILLY", [{ kind: "EGG", weight: 0.3 }]),
+    marker("builder.wind", "Wind", "AIR", [{ kind: "WIND", force: 1.5 }])
+];
+export function createDefaultRegistry() { const r = new PartRegistry(); for (const p of [...DEFAULT_PARTS, ...GEAR_PARTS, ...STRUCTURE_PARTS])
     r.register(p); return r; }

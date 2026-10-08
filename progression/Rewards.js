@@ -59,6 +59,26 @@ export const REWARDS = [
     { id: "sprocket.gear-tag", kind: "SPROCKET_ACCESSORY", title: "Gear Tag", icon: "⚙️", description: "A shiny gear for Sprocket's collar." },
     { id: "prop.cuckoo-clock", kind: "PROP", title: "Cuckoo Clock", icon: "🕰️", description: "It says 'cuckoo' sometimes. Mostly at the wrong time." },
     { id: "prop.golden-gear", kind: "PROP", title: "Golden Gear", icon: "🏆", description: "From the factory, with thanks." },
+    // Builder Bay (M13)
+    { id: "part.builder.beam-wood", kind: "PART", title: "Wooden Beam", icon: "🪵", description: "Light and handy. Not the strongest." },
+    { id: "part.builder.beam-metal", kind: "PART", title: "Metal Beam", icon: "🔩", description: "Strong — and heavy." },
+    { id: "part.builder.brace", kind: "PART", title: "Triangle Brace", icon: "📐", description: "Turns wobbly squares into steady triangles." },
+    { id: "part.builder.column", kind: "PART", title: "Support Column", icon: "🏛️", description: "Holds things up from below." },
+    { id: "part.builder.rope", kind: "PART", title: "Rope", icon: "🪢", description: "Great at pulling. Useless at pushing." },
+    { id: "tool.stress-scanner", kind: "TOOL", title: "Stress Scanner", icon: "🩻", description: "Shows which parts are pulled, squashed and close to breaking — now in Free Build too." },
+    { id: "sticker.bridge-builder", kind: "STICKER", title: "Bridge Builder", icon: "🌉", description: "Bolt crossed the canyon." },
+    { id: "sticker.steady", kind: "STICKER", title: "Steady!", icon: "🧘", description: "You stopped the wobble." },
+    { id: "sticker.triangle", kind: "STICKER", title: "Triangle Power", icon: "🔺", description: "Three sides, no wobble." },
+    { id: "sticker.heavy-hauler", kind: "STICKER", title: "Heavy Hauler", icon: "🚚", description: "The heavy cart made it across." },
+    { id: "sticker.crane-operator", kind: "STICKER", title: "Crane Operator", icon: "🏗️", description: "You built a working crane." },
+    { id: "sticker.roof-rescuer", kind: "STICKER", title: "Roof Rescuer", icon: "🏠", description: "The roof held and Bolt walked through." },
+    { id: "sticker.sky-high", kind: "STICKER", title: "Sky High", icon: "🗼", description: "A tower above the flag." },
+    { id: "sticker.egg-saver", kind: "STICKER", title: "Egg Saver", icon: "🥚", description: "Not a crack!" },
+    { id: "sticker.bridge-scientist", kind: "STICKER", title: "Bridge Scientist", icon: "🔬", description: "You compared two bridges fairly." },
+    { id: "badge.parade-bridge", kind: "BADGE", title: "Parade Bridge Builder", icon: "🎉", description: "The Robot Parade crossed your bridge!" },
+    { id: "badge.builder-bay", kind: "BADGE", title: "Builder Bay Restored", icon: "🏅", description: "Builder Bay is sturdy again!" },
+    { id: "bolt.builder-hat", kind: "BOLT_COSTUME", title: "Builder's Helmet", icon: "👷", description: "Bolt is now officially in charge of safety." },
+    { id: "prop.toy-elephant", kind: "PROP", title: "Toy Elephant", icon: "🐘", description: "A tiny copy of the parade elephant." },
     // hidden prototype lab key pieces — one from a silly mission in each of the first three labs (exploration, never stars)
     { id: "key.prototype-1", kind: "KEY_PIECE", title: "Strange Key Piece", icon: "🗝️", description: "A piece of something. It hums." },
     { id: "key.prototype-2", kind: "KEY_PIECE", title: "Another Strange Key Piece", icon: "🗝️", description: "It fits the first one. Sort of." },
@@ -91,7 +111,18 @@ export const MISSION_REWARDS = Object.freeze({
     "gear.spin-sprocket": { onComplete: ["key.prototype-2"], onAllStars: ["sprocket.gear-tag"] },
     "gear.the-clockwork-carnival": { onComplete: ["badge.clockwork-carnival", "bolt.top-hat"] },
     "gear.jammed-factory-drive": { onComplete: ["badge.gear-garage", "prop.golden-gear"] },
-    "builder.elephant-robot-parade": { onComplete: ["key.prototype-3"] }
+    "builder.bridge-the-gap": { onComplete: ["sticker.bridge-builder", "part.builder.beam-wood"] },
+    "builder.stop-the-wobble": { onComplete: ["sticker.steady", "part.builder.brace"] },
+    "builder.triangle-power": { onComplete: ["sticker.triangle", "part.builder.column"] },
+    "builder.heavy-delivery": { onComplete: ["sticker.heavy-hauler", "part.builder.beam-metal"] },
+    "builder.build-a-crane": { onComplete: ["sticker.crane-operator", "part.builder.rope"] },
+    "builder.roof-rescue": { onComplete: ["sticker.roof-rescuer", "tool.stress-scanner"] },
+    "builder.tallest-tower": { onComplete: ["sticker.sky-high"] },
+    "builder.keep-the-egg-safe": { onComplete: ["sticker.egg-saver"] },
+    "builder.which-bridge-holds-more": { onComplete: ["sticker.bridge-scientist"] },
+    "builder.elephant-robot-parade": { onComplete: ["key.prototype-3"], onAllStars: ["prop.toy-elephant"] },
+    "builder.the-robot-parade-bridge": { onComplete: ["badge.parade-bridge", "bolt.builder-hat"] },
+    "builder.collapsing-workshop-roof": { onComplete: ["badge.builder-bay"] }
 });
 /** Rewards owed for missions already completed (used when old saves or guest progress move into a profile). */
 export function completionRewardIds(levelIds) {
@@ -133,7 +164,19 @@ export const MISSION_STARS = Object.freeze({
     "gear.big-gear-vs-small-gear": { efficient: budget(4), advanced: { kind: "DISCOVERY", discoveryId: "gear.speed-up", label: "FAIR TEST — measure the fast set-up" } },
     "gear.spin-sprocket": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "gear.slow-strong", label: "SMOOTH RIDE — slow the motor down" } },
     "gear.the-clockwork-carnival": { efficient: budget(6), advanced: wild(4) },
-    "gear.jammed-factory-drive": { efficient: budget(2), advanced: wild() }
+    "gear.jammed-factory-drive": { efficient: budget(2), advanced: wild() },
+    "builder.bridge-the-gap": { efficient: budget(1), advanced: { kind: "DISCOVERY", discoveryId: "structure.load-path", label: "LOAD PATH — carry Bolt's weight to the ground" } },
+    "builder.stop-the-wobble": { efficient: budget(1), advanced: { kind: "DISCOVERY", discoveryId: "structure.triangle", label: "TRIANGLE — keep a triangle steady under load" } },
+    "builder.triangle-power": { efficient: budget(1), advanced: { kind: "DISCOVERY", discoveryId: "structure.bracing", label: "BEFORE & AFTER — TEST it wobbly, then braced" } },
+    "builder.heavy-delivery": { efficient: budget(1), advanced: { kind: "DISCOVERY", discoveryId: "combo.ramp-bridge", label: "UP AND OVER — ramp then bridge" } },
+    "builder.build-a-crane": { efficient: budget(4), advanced: { kind: "DISCOVERY", discoveryId: "combo.crane", label: "CRANE — a tower holding a gear winch" } },
+    "builder.roof-rescue": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "structure.tension-compression", label: "PULL & PUSH — see parts pulled and squashed" } },
+    "builder.tallest-tower": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "structure.triangle", label: "STEADY TOWER — triangles in the wind" } },
+    "builder.keep-the-egg-safe": { efficient: budget(1), advanced: { kind: "DISCOVERY", discoveryId: "structure.soft-landing", label: "SAFETY NET — catch it softly" } },
+    "builder.which-bridge-holds-more": { efficient: budget(6), advanced: { kind: "DISCOVERY", discoveryId: "structure.span", label: "FAIR TEST — see a plain beam bend and break" } },
+    "builder.elephant-robot-parade": { efficient: budget(4), advanced: { kind: "DISCOVERY", discoveryId: "structure.material", label: "HEAVY DUTY — metal where wood would break" } },
+    "builder.the-robot-parade-bridge": { efficient: budget(7), advanced: wild(4) },
+    "builder.collapsing-workshop-roof": { efficient: budget(6), advanced: wild() }
 });
 export function evaluateStars(levelId, evidence) {
     const stars = ["solve"];

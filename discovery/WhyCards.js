@@ -8,7 +8,10 @@ export const WHY_CHOICES = {
     TOO_HEAVY: { label: "Too heavy", icon: "🏋️" },
     TOO_LIGHT: { label: "Too light", icon: "🎈" },
     TOO_SLOW: { label: "Too slow", icon: "🐌" },
-    JAMMED: { label: "Jammed", icon: "🔒" }
+    JAMMED: { label: "Jammed", icon: "🔒" },
+    BLOCKED: { label: "In the way", icon: "🚧" },
+    TOO_SHORT: { label: "Not tall enough", icon: "📏" },
+    SAME: { label: "About the same", icon: "⚖️" }
 };
 function tagged(build, tag) { return build.allParts().find(p => p.tags?.includes(tag)); }
 function state(runtime, id) { try {
@@ -24,8 +27,9 @@ function nameOf(part) {
 const m = (v) => `${v.toFixed(1)} m`;
 /** Picks two other answers deterministically so the same failure shows the same card. */
 function choicesFor(reason) {
+    const structure = ["BLOCKED", "TOO_SHORT", "SAME", "UNSTABLE"].includes(reason);
     const gear = ["JAMMED", "TOO_SLOW", "TOO_HEAVY"].includes(reason);
-    const pool = (gear ? ["TOO_FAST", "TOO_SLOW", "WRONG_DIRECTION", "NOT_CONNECTED", "JAMMED", "TOO_HEAVY"] : ["TOO_FAST", "NOT_ENOUGH_FORCE", "TOO_MUCH_FORCE", "WRONG_DIRECTION", "NOT_CONNECTED", "UNSTABLE"]).filter(r => r !== reason);
+    const pool = (structure ? ["UNSTABLE", "TOO_HEAVY", "NOT_CONNECTED", "BLOCKED", "TOO_SHORT", "TOO_FAST"] : gear ? ["TOO_FAST", "TOO_SLOW", "WRONG_DIRECTION", "NOT_CONNECTED", "JAMMED", "TOO_HEAVY"] : ["TOO_FAST", "NOT_ENOUGH_FORCE", "TOO_MUCH_FORCE", "WRONG_DIRECTION", "NOT_CONNECTED", "UNSTABLE"]).filter(r => r !== reason);
     const seed = reason.length;
     const a = pool[seed % pool.length], b = pool[(seed + 2) % pool.length];
     const three = [reason, a, b];
@@ -40,6 +44,10 @@ export function diagnoseRun(level, build, runtime) {
         return undefined;
     const card = (reason, evidence) => ({ reason, evidence, choices: choicesFor(reason) });
     const rules = level?.outcomeRules ?? [];
+    // Builder Bay: the structure's own measurements.
+    const structureCard = diagnoseStructures(rules, build, runtime, card);
+    if (structureCard)
+        return structureCard;
     // Gear Garage: the gear train's own measurements explain most failures.
     const gearCard = diagnoseGears(rules, build, runtime, card);
     if (gearCard)
@@ -126,6 +134,84 @@ export function diagnoseRun(level, build, runtime) {
     }
     return undefined;
 }
+const WHO = { BOLT: "Bolt", ELEPHANT: "the elephant robot", CART: "the cart", ROBOT: "a parade robot" };
+function diagnoseStructures(rules, build, runtime, card) {
+    const st = runtime.structures;
+    const ev = runtime.causalEvents;
+    const n = (v) => v.toFixed(1);
+    if (ev.some(e => e.kind === "WINCH_UNSUPPORTED"))
+        return card("NOT_CONNECTED", "The winch had nothing holding it up, so it couldn't lift anything.");
+    const isStructLevel = rules.some(r => r.kind.startsWith("STRUCT_"));
+    if (!isStructLevel && !st.members.length)
+        return undefined;
+    const material = (id) => { const m = st.members.find(x => x.id === id); return m ? m.material === "WOOD" ? "wooden" : m.material === "METAL" ? "metal" : "rope" : ""; };
+    // A beam with a loose end (resting on nothing, joined to nothing) just tips down: that is "not connected", not "no triangles".
+    const dangling = st.members.find(m => { const ms = st.memberState(m.id); if (ms.breakMode !== "COLLAPSE" && ms.breakMode !== "UNSUPPORTED")
+        return false; return [m.a, m.b].some(j => !st.layout.joints[j].supported && st.members.filter(x => x.a === j || x.b === j).length === 1); });
+    if (dangling)
+        return card("NOT_CONNECTED", "One end of a beam wasn't resting on anything or joined to anything, so it tipped down.");
+    // Experiments: the comparison itself is the lesson, so report it before any breakage.
+    for (const r of rules)
+        if (r.kind === "STRUCT_COMPARE") {
+            const ta = tagged(build, r.aTag), tb = tagged(build, r.bTag);
+            const la = ta && st.load(ta.id), lb = tb && st.load(tb.id);
+            if (la?.done && lb?.done && la.held > 0 && lb.held > 0 && Math.max(la.held, lb.held) / Math.min(la.held, lb.held) < r.minRatio)
+                return card("SAME", `A held ${n(la.held)} and B held ${n(lb.held)} — almost the same. Make the two bridges different.`);
+        }
+    // Whatever gave way FIRST is the cause; later collapses are just the result.
+    const firstFailure = ev.find(e => e.kind === "STRUCT_COLLAPSE" || e.kind === "STRUCT_BREAK");
+    const collapse = firstFailure?.kind === "STRUCT_COLLAPSE" ? firstFailure : undefined;
+    if (collapse)
+        return card("UNSTABLE", "Part of the structure leaned over and fell down — it had no triangles to stop it changing shape.");
+    const brk = firstFailure?.kind === "STRUCT_BREAK" ? firstFailure : undefined;
+    if (brk) {
+        const mode = String(brk.data?.mode ?? "");
+        const mat = material(brk.sourceId);
+        const what = mode === "BENDING" ? "bent too much in the middle and snapped" : mode === "BUCKLE" ? "was squashed until it buckled sideways" : mode === "TENSION" ? "was pulled until it snapped" : "was squashed until it broke";
+        return card("TOO_HEAVY", `A ${mat} beam ${what}. Stronger material, a shorter span or a triangle would share the load.`);
+    }
+    const blocked = ev.find(e => e.kind === "TRAVELLER_BLOCKED");
+    if (blocked) {
+        const who = WHO[registryWho(build, blocked.sourceId)] ?? "someone";
+        return card("BLOCKED", `Something you built was in the way, so ${who} couldn't get past.`);
+    }
+    const fell = ev.find(e => e.kind === "TRAVELLER_FELL");
+    if (fell) {
+        const who = WHO[registryWho(build, fell.sourceId)] ?? "someone";
+        return card("NOT_CONNECTED", `${cap(who)} walked off the edge at ${n(Number(fell.data?.x ?? 0))} m — the path didn't reach all the way.`);
+    }
+    for (const r of rules) {
+        if (r.kind === "STRUCT_EGG_SAFE") {
+            const egg = tagged(build, r.eggTag);
+            const e = egg && st.egg(egg.id);
+            if (e?.landed) {
+                if (!e.onStructure)
+                    return card("NOT_CONNECTED", "Nothing caught the egg — it fell all the way to the floor.");
+                if ((e.impact ?? 0) > r.maxImpact)
+                    return card("TOO_FAST", `The egg landed with a bump of ${n(e.impact ?? 0)}; it can only take ${n(r.maxImpact)}. A shorter drop or a softer catch helps.`);
+            }
+        }
+        if (r.kind === "STRUCT_HEIGHT") {
+            const top = st.topY();
+            if (top === undefined || top > r.aboveY)
+                return card("TOO_SHORT", top === undefined ? "Nothing was left standing." : `The top reached ${n(8.2 - top)} m high, but the flag is at ${n(8.2 - r.aboveY)} m.`);
+            if (st.wobble() > r.maxWobble)
+                return card("UNSTABLE", `The tower swayed ${n(st.wobble() * 100)} cm in the wind — it needs to stay steadier.`);
+        }
+        if (r.kind === "STRUCT_STABLE" && st.wobble() > r.maxWobble)
+            return card("UNSTABLE", `It moved ${n(st.wobble() * 100)} cm under the load. Bracing makes it stiffer.`);
+        if (r.kind === "STRUCT_COMPARE") {
+            const a = tagged(build, r.aTag), b = tagged(build, r.bTag);
+            const la = a && st.load(a.id), lb = b && st.load(b.id);
+            if (la?.done && lb?.done && la.held > 0 && lb.held > 0 && Math.max(la.held, lb.held) / Math.min(la.held, lb.held) < r.minRatio)
+                return card("SAME", `A held ${n(la.held)} and B held ${n(lb.held)} — almost the same. Make the two bridges different.`);
+            if ((la?.fell && la.held === 0) || (lb?.fell && lb.held === 0))
+                return card("NOT_CONNECTED", "A test weight had no bridge under it and dropped straight into the canyon.");
+        }
+    }
+    return undefined;
+}
+function registryWho(build, id) { const p = build.getPart(id); return p?.definitionId === "builder.elephant" ? "ELEPHANT" : p?.definitionId === "builder.cart" ? "CART" : p?.definitionId === "builder.robot" ? "ROBOT" : "BOLT"; }
 function diagnoseGears(rules, build, runtime, card) {
     const g = runtime.gears;
     const n = (v) => v.toFixed(1);

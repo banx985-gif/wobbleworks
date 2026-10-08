@@ -352,3 +352,37 @@ html.high-contrast { --ink:#000; --panel:#fff; --accent:#006b1b; --danger:#a0000
 .gear-icon.crank{border-style:solid;background:linear-gradient(45deg,transparent 44%,#fa5252 45% 55%,transparent 56%),radial-gradient(circle,#ffd43b 0 25%,#868e96 26%)}
 .gear-icon.motor{border-radius:10px;border-style:solid;background:#4dabf7}.gear-icon.motor::after{content:"⚡";display:grid;place-items:center;height:100%;font-size:20px}
 .why-choices button:disabled{opacity:1;cursor:default}.why-choices button:disabled:not(.picked):not(.measured){opacity:.55}
+
+/* ---- Build controls with painted button art (9 Oct) ---- */
+.controls{gap:6px}
+.controls .ctl-icon{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-width:56px;min-height:56px;padding:3px 6px;background:#fff;font-size:.72rem;font-weight:900;line-height:1}
+.controls .ctl-icon img{width:34px;height:34px;object-fit:contain;display:block;pointer-events:none}
+.controls .ctl-glyph{font-size:30px;line-height:34px;height:34px;font-weight:900;color:#1c7ed6}
+.controls .ctl-art{min-width:96px;min-height:56px;padding:0;border:0;background:none;box-shadow:none;display:grid;place-items:center}
+.controls .ctl-art img{height:54px;width:auto;display:block;pointer-events:none;filter:drop-shadow(0 3px 0 #0003)}
+.controls .ctl-art:active img{transform:translateY(2px)}
+.controls button:disabled img{filter:grayscale(.8);opacity:.45}
+.controls .ctl-art:focus-visible{outline:4px solid #1c7ed6;outline-offset:2px;border-radius:18px}
+@media (max-height:560px){.controls .ctl-icon{min-width:56px}.controls .ctl-icon span:not(.ctl-glyph){display:none}.controls .ctl-icon img{width:38px;height:38px}}
+
+/* ---- Builder Bay tray icons (code-drawn until structure art arrives) ---- */
+.beam-icon{display:block;width:44px;height:40px;pointer-events:none;background:linear-gradient(var(--a,0deg),transparent 40%,var(--b,#d9a066) 40% 60%,transparent 60%)}
+.beam-icon.wood{--b:#d9a066}.beam-icon.metal{--b:#868e96}.beam-icon.brace{--a:135deg;--b:#868e96}.beam-icon.column{--a:90deg;--b:#d9a066}.beam-icon.rope{background:radial-gradient(ellipse at 50% 0,transparent 55%,#8d5524 56% 62%,transparent 63%)}
+
+/* ---- Bolt's painted poses (9 Oct) ---- */
+.bolt-art{position:relative;display:inline-block;line-height:0}
+.bolt-art .bolt-pic{width:100%;height:auto;display:block;user-select:none;pointer-events:none}
+.bolt-over{position:absolute;left:50%;transform:translateX(-50%);pointer-events:none}
+.bolt-over svg{width:100%;height:auto;display:block}
+.bolt-over.head{top:-6%;width:42%}
+.bolt-over.waist{top:58%;width:86%}
+.pose-cheer .bolt-over.head{top:-2%;left:52%}
+.station-stack .bolt-art{width:72%;margin-bottom:-4%;position:relative;z-index:1}
+.hub-moment-bolt .bolt-art{width:100%}
+.bolt-avatar.painted{width:72px;height:96px;border:0;background:none;box-shadow:none;border-radius:0}
+.bolt-avatar.painted .bolt-art{width:100%}
+.result-bolt{position:absolute;left:-58px;bottom:-6px;width:96px;pointer-events:none}
+.opening-success .result-bolt{left:-70px}
+.bolt-tip .bolt-art{width:52px}
+.why-bolt{position:absolute;left:-46px;top:-30px;width:86px;pointer-events:none}
+@media (max-width:760px){.result-bolt{left:-34px;width:70px}.bolt-avatar.painted{width:56px;height:76px}.why-bolt{left:-20px;width:60px}}

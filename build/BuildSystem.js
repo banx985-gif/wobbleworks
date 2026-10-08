@@ -47,6 +47,16 @@ export class BuildSystem {
         this.parts[index] = next;
         this.commit({ kind: "ROTATE", id, from: current.rotation, to: next.rotation });
     }
+    /** Change position, rotation and/or parameters in one undoable step. */
+    reshape(id, change) {
+        const index = this.parts.findIndex(p => p.id === id);
+        if (index < 0)
+            return;
+        const current = this.parts[index];
+        const next = { ...current, ...(change.position ? { position: { ...change.position } } : {}), ...(change.rotation !== undefined ? { rotation: change.rotation } : {}), ...(change.parameters ? { parameters: { ...current.parameters, ...change.parameters } } : {}) };
+        this.parts[index] = next;
+        this.commit({ kind: "RESHAPE", id, from: current, to: next });
+    }
     connect(fromPartId, fromPortId, toPartId, toPortId, config) {
         const connection = { id: `conn-${crypto.randomUUID()}`, fromPartId, fromPortId, toPartId, toPortId, config };
         this.connections.push(connection);
@@ -102,6 +112,8 @@ export class BuildSystem {
             this.connections.push(deepClone(m.connection));
         if (m.kind === "DISCONNECT")
             this.connections = this.connections.filter(c => c.id !== m.connection.id);
+        if (m.kind === "RESHAPE")
+            this.replacePart(m.id, () => deepClone(m.to));
     }
     applyInverse(m) {
         if (m.kind === "ADD")
@@ -118,5 +130,7 @@ export class BuildSystem {
             this.connections = this.connections.filter(c => c.id !== m.connection.id);
         if (m.kind === "DISCONNECT")
             this.connections.push(deepClone(m.connection));
+        if (m.kind === "RESHAPE")
+            this.replacePart(m.id, () => deepClone(m.from));
     }
 }

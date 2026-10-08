@@ -1,5 +1,6 @@
 import { collectMotionDiscoveries, MOTION_REAL_WORLD_CARDS } from "../motion/MotionYard.js";
 import { collectGearDiscoveries, GEAR_REAL_WORLD_CARDS } from "../gears/GearGarage.js";
+import { collectStructureDiscoveries, STRUCTURE_REAL_WORLD_CARDS } from "../structures/BuilderBay.js";
 export const DISCOVERIES = [
     { id: "motion.gravity-down", kind: "CONCEPT", title: "Gravity pulls down", line: "Let go of something and it falls.", art: "motion.ball", truthContractId: "truth.motion.v1" },
     { id: "motion.slope-effect", kind: "CONCEPT", title: "Slopes change motion", line: "A ramp turns falling into rolling.", art: "motion.ramp", truthContractId: "truth.motion.v1" },
@@ -28,10 +29,23 @@ export const DISCOVERIES = [
     { id: "combo.gear-winch", kind: "COMBINATION", title: "Gears + rope = lift", line: "A gear-driven winch wound up a rope and lifted a load.", art: "gear.winch", truthContractId: "truth.gears.v1" },
     { id: "secret.gear-gridlock", kind: "SECRET", title: "Gear Gridlock", line: "Three gears in a ring can't turn at all — each one blocks the next!", art: "gear.medium", truthContractId: "truth.gears.v1" },
     { id: "secret.super-spin", kind: "SECRET", title: "Super Spin", line: "A gear spun five times faster than the crank!", art: "gear.small", truthContractId: "truth.gears.v1" },
-    { id: "secret.sprocket-fling", kind: "SECRET", title: "Sprocket Spin-Out", line: "Too fast! Sprocket went flying (into a soft cushion).", art: "gear.carousel", truthContractId: "truth.gears.v1" }
+    { id: "secret.sprocket-fling", kind: "SECRET", title: "Sprocket Spin-Out", line: "Too fast! Sprocket went flying (into a soft cushion).", art: "gear.carousel", truthContractId: "truth.gears.v1" },
+    // Builder Bay (M13) — every one measured by the StructureSystem (truth.structures.v1)
+    { id: "structure.bracing", kind: "CONCEPT", title: "Bracing makes it steady", line: "You added a brace and your structure stopped wobbling.", art: "builder.brace", truthContractId: "truth.structures.v1" },
+    { id: "structure.triangle", kind: "CONCEPT", title: "Triangles hold their shape", line: "A triangle can't lean or squash unless a side breaks.", art: "builder.brace", truthContractId: "truth.structures.v1" },
+    { id: "structure.tension-compression", kind: "CONCEPT", title: "Pulled and squashed", line: "Some parts get pulled (tension) while others get squashed (compression).", art: "builder.beam-wood", truthContractId: "truth.structures.v1" },
+    { id: "structure.material", kind: "CONCEPT", title: "Materials matter", line: "Metal held a load that would have broken wood — but metal is heavier too.", art: "builder.beam-metal", truthContractId: "truth.structures.v1" },
+    { id: "structure.span", kind: "CONCEPT", title: "Long beams bend more", line: "A heavy load in the middle of a long beam bent it until it snapped.", art: "builder.beam-wood", truthContractId: "truth.structures.v1" },
+    { id: "structure.buckle", kind: "CONCEPT", title: "Long thin posts buckle", line: "Squash a long thin post and it bends out sideways.", art: "builder.column", truthContractId: "truth.structures.v1" },
+    { id: "structure.load-path", kind: "CONCEPT", title: "Weight goes down to the ground", line: "Everything that crossed your bridge pressed down through it into the ground.", art: "builder.beam-metal", truthContractId: "truth.structures.v1" },
+    { id: "structure.soft-landing", kind: "CONCEPT", title: "Soft catches are gentle", line: "A rope net stretched and caught the egg gently.", art: "builder.rope", truthContractId: "truth.structures.v1" },
+    { id: "combo.crane", kind: "COMBINATION", title: "Gears + tower = crane", line: "Your tower held the winch while the gears lifted the load.", art: "gear.winch", truthContractId: "truth.structures.v1" },
+    { id: "combo.ramp-bridge", kind: "COMBINATION", title: "Ramp + bridge", line: "Up a Motion ramp and across your bridge in one go.", art: "motion.ramp", truthContractId: "truth.structures.v1" },
+    { id: "secret.mega-collapse", kind: "SECRET", title: "Spectacular Collapse", line: "Five parts broke in one test! (That's how engineers learn.)", art: "builder.beam-wood", truthContractId: "truth.structures.v1" },
+    { id: "secret.sky-tower", kind: "SECRET", title: "Sky Scraper", line: "A tower so tall it nearly touched the ceiling — and it stood firm!", art: "builder.beam-metal", truthContractId: "truth.structures.v1" }
 ];
 export function discoveryById(id) { return DISCOVERIES.find(d => d.id === id); }
-export function realWorldCard(id) { return [...MOTION_REAL_WORLD_CARDS, ...GEAR_REAL_WORLD_CARDS].find(c => c.discoveryId === id); }
+export function realWorldCard(id) { return [...MOTION_REAL_WORLD_CARDS, ...GEAR_REAL_WORLD_CARDS, ...STRUCTURE_REAL_WORLD_CARDS].find(c => c.discoveryId === id); }
 // ------------------------------------------------------------------ evidence helpers (read-only)
 /** Separate touches: events on the same object more than `gap` ticks apart count as new episodes. */
 export function episodes(events, gap = 12) {
@@ -159,11 +173,23 @@ const CONCEPT_EVIDENCE = {
     "combo.gear-winch": "A gear-driven winch lifted a load.",
     "secret.gear-gridlock": "Gears meshed in a ring jammed.",
     "secret.super-spin": "A gear turned five times faster than its driver.",
-    "secret.sprocket-fling": "The carousel spun faster than Sprocket could hold on."
+    "secret.sprocket-fling": "The carousel spun faster than Sprocket could hold on.",
+    "structure.bracing": "After a brace was added, the measured wobble dropped by half or more compared with the last test.",
+    "structure.triangle": "A closed triangle carried load and stayed steady for a second or more.",
+    "structure.tension-compression": "One member was pulled and another squashed, both carrying real load.",
+    "structure.material": "A metal member carried a force bigger than the same wooden one could take.",
+    "structure.span": "A beam broke from bending under a load part-way along it.",
+    "structure.buckle": "A long member failed by buckling when squashed.",
+    "structure.load-path": "Something crossed a built structure and its weight was carried to the supports.",
+    "structure.soft-landing": "The egg landed in a rope net.",
+    "combo.crane": "A structure held a winch while gears lifted a load.",
+    "combo.ramp-bridge": "A traveller climbed a ramp and crossed a built structure.",
+    "secret.mega-collapse": "Five or more members broke in one test.",
+    "secret.sky-tower": "A steady structure reached above 2 m from the top of the playfield."
 };
 /** Every discovery this TEST run has real evidence for (concept + combination + secret). */
-export function evaluateRunDiscoveries(build, runtime) {
-    const concepts = [...collectMotionDiscoveries(undefined, build, runtime), ...collectGearDiscoveries(build, runtime)].map(id => ({ id, evidence: CONCEPT_EVIDENCE[id] ?? "Seen in a test." }));
+export function evaluateRunDiscoveries(build, runtime, previous) {
+    const concepts = [...collectMotionDiscoveries(undefined, build, runtime), ...collectGearDiscoveries(build, runtime), ...collectStructureDiscoveries(build, runtime, previous)].map(id => ({ id, evidence: CONCEPT_EVIDENCE[id] ?? "Seen in a test." }));
     return [...concepts, ...collectSpecialDiscoveries(build, runtime)].filter(a => discoveryById(a.id));
 }
 export function eventsFor(runtime, partId, kind) {

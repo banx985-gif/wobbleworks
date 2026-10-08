@@ -1,5 +1,6 @@
 import { LOGICAL_HEIGHT, LOGICAL_WIDTH, Viewport } from "./Viewport.js";
-import { partArtRect, rampArtRect } from "./PartArt.js";
+import { PART_ART_SOURCE, partArtRect, rampArtRect } from "./PartArt.js";
+import { drawBuilderBayBackdrop, drawJoints, drawStructurePart, structureKind, structureLayer } from "./StructureRenderer.js";
 import { drawDoorPanel, drawGearGarageBackdrop, drawGearLinks, drawGearPart, drawRotationView, gearBehaviour, gearOutput } from "./GearRenderer.js";
 export class CanvasRenderer {
     canvas;
@@ -105,16 +106,20 @@ export class CanvasRenderer {
             c.strokeRect(x - 24, 600, 66, 12);
         }
     }
-    drawParts(parts, registry, runtimeStates, selectedId, gears, time = 0) {
+    drawParts(parts, registry, runtimeStates, selectedId, gears, time = 0, structures, showStress = false) {
         const states = new Map(runtimeStates?.map(s => [s.id, s]) ?? []);
         // Draw order only: fixed things first (zones, ramps, pads), then shafts, then gears, then moving things in front.
-        const layer = (p) => { const def = registry.get(p.definitionId); const g = gearBehaviour(def); if (g)
+        const layer = (p) => { const def = registry.get(p.definitionId); if (structureKind(def))
+            return [-2, -1, 1.5, 1.6, 4][structureLayer(def)] ?? 4; const g = gearBehaviour(def); if (g)
             return g.role === "SHAFT" ? 1 : 2; const r = def.behaviours.find(b => b.kind === "RIGID_BODY"); return !r || (r.kind === "RIGID_BODY" && r.bodyType === "STATIC") ? 0 : 3; };
-        const ordered = [0, 1, 2, 3].flatMap(k => parts.filter(p => layer(p) === k));
+        const ordered = [-2, -1, 0, 1, 1.5, 1.6, 2, 3, 4].flatMap(k => parts.filter(p => layer(p) === k));
+        const structCtx = { ...(structures ? { structures } : {}), registry: (id) => registry.get(id), art: this.art, time, showStress };
         const gearCtx = { ...(gears ? { gears } : {}), states, parts, registry: (id) => registry.get(id), time };
         for (const part of ordered) {
             const def = registry.get(part.definitionId);
             const rigid = def.behaviours.find(b => b.kind === "RIGID_BODY");
+            if (drawStructurePart(this.ctx, part, def, selectedId === part.id, structCtx))
+                continue;
             if (gearBehaviour(def)) {
                 if (gearOutput(def)?.output === "DOOR")
                     drawDoorPanel(this.ctx, part, gears?.state(part.id)?.turns ?? 0);
@@ -215,12 +220,14 @@ export class CanvasRenderer {
         }
         c.restore();
     }
+    drawBuilderBayBackdrop() { drawBuilderBayBackdrop(this.ctx); }
+    drawJoints(layout) { drawJoints(this.ctx, layout); }
     drawGearGarageBackdrop(time) { drawGearGarageBackdrop(this.ctx, time); }
     drawGearLinks(analysis, building) { drawGearLinks(this.ctx, analysis, building); }
     drawRotationView(gears, showValues) { drawRotationView(this.ctx, gears, showValues); }
     /** Painted part picture fitted to the physics size (see PartArt.ts). False when there is no picture yet. */
     drawPartArt(id, w, h, selected) {
-        const image = this.art(id);
+        const image = this.art(PART_ART_SOURCE[id] ?? id);
         const rect = image ? partArtRect(id, w, h) : undefined;
         if (!image || !rect)
             return false;
@@ -315,6 +322,14 @@ export class CanvasRenderer {
             const rigid = def.behaviours.find(b => b.kind === "RIGID_BODY");
             const w = rigid?.kind === "RIGID_BODY" ? rigid.width * 100 : 80, h = rigid?.kind === "RIGID_BODY" ? rigid.height * 100 : 60;
             const x = g.x * 100, y = g.y * 100;
+            if (structureKind(def) === "BEAM") {
+                c.save();
+                c.globalAlpha = 0.42 + 0.12 * Math.sin(pulse * 3);
+                drawStructurePart(c, { id: "ghost", definitionId: g.definitionId, position: { x: g.x, y: g.y }, rotation: g.rotation, parameters: g.length !== undefined ? { length: g.length } : {} }, def, false, { registry: id => registry.get(id), art: this.art, time: pulse, showStress: false });
+                c.restore();
+                this.drawPointer(x, y - 20, pulse);
+                continue;
+            }
             const gb = gearBehaviour(def);
             if (gb) {
                 c.save();

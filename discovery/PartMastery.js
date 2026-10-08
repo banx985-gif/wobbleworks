@@ -12,7 +12,11 @@ export const PART_CARDS = [
     { partId: "gear.small", title: "Small Gear", uses: [{ id: "spin-fast", label: "Spin fast" }, { id: "drive-big", label: "Turn a big gear strongly" }] },
     { partId: "gear.medium", title: "Medium Gear", uses: [{ id: "pass-along", label: "Pass the turning along" }, { id: "flip", label: "Flip the direction" }] },
     { partId: "gear.large", title: "Large Gear", uses: [{ id: "drive-small", label: "Make a small gear zoom" }, { id: "strong", label: "Turn slowly and strongly" }] },
-    { partId: "gear.belt-pulley", title: "Pulley", uses: [{ id: "belt", label: "Share a belt" }] }
+    { partId: "gear.belt-pulley", title: "Pulley", uses: [{ id: "belt", label: "Share a belt" }] },
+    { partId: "builder.beam-wood", title: "Wooden Beam", uses: [{ id: "bridge", label: "Carry someone across" }, { id: "prop", label: "Hold up a load" }] },
+    { partId: "builder.beam-metal", title: "Metal Beam", uses: [{ id: "heavy", label: "Carry a heavy load" }, { id: "tower", label: "Stand tall" }] },
+    { partId: "builder.brace", title: "Triangle Brace", uses: [{ id: "triangle", label: "Make a triangle" }, { id: "squash", label: "Push back when squashed" }] },
+    { partId: "builder.rope", title: "Rope", uses: [{ id: "tie", label: "Pull tight" }, { id: "net", label: "Catch softly" }] }
 ];
 const HEAVY = new Set(["motion.cart", "motion.parcel", "silly.bolt"]);
 function speed(runtime, id) { try {
@@ -171,6 +175,41 @@ export function observePartUses(build, runtime) {
         }
         if (part.definitionId === "gear.belt-pulley" && gears.analysis.links.some(l => l.kind === "BELT" && (l.a === part.id || l.b === part.id)))
             add(part.definitionId, "belt");
+    }
+    // Structures: uses from what the StructureSystem measured.
+    const st = runtime.structures;
+    for (const m of st.members) {
+        const ms = st.memberState(m.id);
+        if (ms.broken)
+            continue;
+        const part = build.getPart(m.partId);
+        if (!part)
+            continue;
+        const carried = st.travellerStates().some(t => t.arrived && st.walkedOnStructure(t.id));
+        if (part.definitionId === "builder.beam-wood") {
+            if (carried && ms.peakRatio > 0.1)
+                add(part.definitionId, "bridge");
+            if (ms.mode === "COMPRESSION" && ms.peakRatio > 0.15)
+                add(part.definitionId, "prop");
+        }
+        if (part.definitionId === "builder.beam-metal") {
+            if (ms.peakRatio > 0.3 && Math.abs(ms.axial) > 25)
+                add(part.definitionId, "heavy");
+            if (Math.abs(Math.sin(part.rotation)) > 0.8 && st.calmTicksBelow(0.1) >= 60)
+                add(part.definitionId, "tower");
+        }
+        if (part.definitionId === "builder.brace") {
+            if (st.calmTicksBelow(0.1) >= 60)
+                add(part.definitionId, "triangle");
+            if (ms.mode === "COMPRESSION" && ms.peakRatio > 0.1)
+                add(part.definitionId, "squash");
+        }
+        if (part.definitionId === "builder.rope") {
+            if (ms.mode === "TENSION" && ms.peakRatio > 0.05)
+                add(part.definitionId, "tie");
+            if (st.eggStates().some(e => e.onMember === m.id))
+                add(part.definitionId, "net");
+        }
     }
     return uses.filter(u => PART_CARDS.some(c => c.partId === u.partId && c.uses.some(x => x.id === u.useId)));
 }

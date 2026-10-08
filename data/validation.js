@@ -123,6 +123,22 @@ export function assertLevelDefinition(value, knownPartIds) {
             if ((rule.minSpeed ?? 0) < 0 || (rule.maxSpeed !== undefined && rule.maxSpeed < (rule.minSpeed ?? 0)) || (rule.minTurns ?? 0) < 0 || (rule.sustainSeconds ?? 0) < 0)
                 throw new ValidationError(`Invalid GEAR_OUTPUT rule`);
         }
+        else if (rule.kind === "STRUCT_ARRIVES") {
+            if (!authoredTags.has(rule.travellerTag))
+                throw new ValidationError(`STRUCT_ARRIVES references unknown authored tag`);
+        }
+        else if (rule.kind === "STRUCT_STABLE" || rule.kind === "STRUCT_HEIGHT") {
+            if (rule.maxWobble <= 0 || rule.sustainSeconds < 0)
+                throw new ValidationError(`Invalid ${rule.kind} rule`);
+        }
+        else if (rule.kind === "STRUCT_EGG_SAFE") {
+            if (!authoredTags.has(rule.eggTag) || rule.maxImpact <= 0)
+                throw new ValidationError(`Invalid STRUCT_EGG_SAFE rule`);
+        }
+        else if (rule.kind === "STRUCT_COMPARE") {
+            if (!authoredTags.has(rule.aTag) || !authoredTags.has(rule.bTag) || rule.minRatio < 1)
+                throw new ValidationError(`Invalid STRUCT_COMPARE rule`);
+        }
         else if (rule.kind === "GEAR_COMPARE") {
             if (!authoredTags.has(rule.aTag) || !authoredTags.has(rule.bTag) || rule.minRatio < 1)
                 throw new ValidationError(`Invalid GEAR_COMPARE rule`);

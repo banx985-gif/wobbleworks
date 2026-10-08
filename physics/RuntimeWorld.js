@@ -3,11 +3,15 @@ import { SIMULATION_PHASES, SimulationPipeline } from "../core/SimulationPipelin
 import { verifyBuildSnapshot } from "../core/BuildSnapshot.js";
 import { PhysicsWorld } from "./PhysicsWorld.js";
 import { GearSystem } from "../gears/GearSystem.js";
+import { StructureSystem } from "../structures/StructureSystem.js";
 export class RuntimeWorld {
     snapshotSignature;
     physics = new PhysicsWorld();
     /** Gear Garage rotation (M12): constrained gear relationships, no tooth collisions. */
     gears;
+    /** Builder Bay structures (M13): beams, ropes, braces, and the loads that cross them. */
+    structures;
+    unmounted = new Set();
     carried = new Set();
     lifted = new Set();
     flung = new Set();
@@ -42,6 +46,7 @@ export class RuntimeWorld {
                 catch { /* load missing */ }
             }
         }
+        this.structures = new StructureSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.gears = new GearSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined, this.snapshot.connections, extraLoads);
         this.installPipeline();
     }
@@ -77,7 +82,7 @@ export class RuntimeWorld {
         this.pipeline.on("PRE_PHYSICS_SENSORS", () => this.sampleSensors());
         this.pipeline.on("LOGIC_EVALUATION", () => this.evaluateLogic());
         this.pipeline.on("ACTUATOR_RESOLUTION", () => this.resolveActuators());
-        this.pipeline.on("FORCE_AND_COUPLING", ({ dt }) => { this.applyCouplings(); this.gears.step(dt); this.applyGearCouplings(); });
+        this.pipeline.on("FORCE_AND_COUPLING", ({ dt }) => { this.applyCouplings(); this.gears.step(dt); this.applyGearCouplings(); this.stepStructures(dt); });
         this.pipeline.on("PHYSICS_STEP", ({ dt }) => this.physics.step(dt));
         this.pipeline.on("POST_PHYSICS_CONTACTS", () => this.collectPhysicsEvents());
         this.pipeline.on("DOMAIN_TRANSFER", ({ dt }) => this.transferDomains(dt));
@@ -254,6 +259,16 @@ export class RuntimeWorld {
                 const top = n.y + n.output.drum + half + 0.1;
                 const mass = this.physics.mass(loadId);
                 const liftedBy = start.position.y - s.y;
+                // A crane winch must hang from the structure the child built (Builder Bay); with nothing holding it up it can't lift.
+                if (n.parameters.mountOnStructure === true && !this.structures.hasJointNear(n.x, n.y)) {
+                    if (!this.unmounted.has(n.id)) {
+                        this.unmounted.add(n.id);
+                        this.event("WINCH_UNSUPPORTED", n.id);
+                    }
+                    if (liftedBy > 0.05)
+                        this.physics.setLinearVelocity(loadId, { x: 0, y: s.vy });
+                    continue;
+                }
                 const hold = () => { this.physics.setLinearVelocity(loadId, { x: 0, y: 0 }); this.physics.applyForce(loadId, { x: 0, y: -mass * 9.81 }); };
                 if (w !== 0) {
                     if (s.y <= top) {
@@ -306,6 +321,24 @@ export class RuntimeWorld {
                 this.event("SPROCKET_FLUNG", n.id, undefined, { speed: Math.round(Math.abs(w) * 100) / 100 });
             }
         }
+    }
+    /** Structures carry gravity loads, travellers and anything hanging from them (a crane winch's rope). */
+    stepStructures(dt) {
+        const hanging = [];
+        for (const n of this.gears.nodes) {
+            if (n.output?.kind !== "WINCH" || n.parameters.mountOnStructure !== true || typeof n.parameters.ropeTo !== "string")
+                continue;
+            const start = this.snapshot.parts.find(p => p.id === n.parameters.ropeTo);
+            const s = this.safeState(String(n.parameters.ropeTo));
+            if (!start || !s)
+                continue;
+            // The rope pulls down on the mount with the load's weight once the load is off the ground (load units: newtons × 0.5).
+            if (start.position.y - s.y > 0.02)
+                hanging.push({ x: n.x, y: n.y, force: this.physics.mass(String(n.parameters.ropeTo)) * 9.81 * 0.5, sourceId: n.id });
+        }
+        this.structures.step(dt, hanging);
+        for (const e of this.structures.drainEvents())
+            this.event(e.kind, e.sourceId, e.targetId, e.data);
     }
     collectPhysicsEvents() {
         for (const broken of this.physics.brokenJointEvents)

@@ -102,6 +102,27 @@ export function evaluateOutcomeRule(rule, build, runtime) {
         const fast = Math.max(Math.abs(sa.omega), Math.abs(sb.omega)), slow = Math.min(Math.abs(sa.omega), Math.abs(sb.omega));
         return fast / slow >= rule.minRatio;
     }
+    if (rule.kind === "STRUCT_ARRIVES") {
+        const ts = tagged(build, rule.travellerTag);
+        return ts.length > 0 && ts.every(t => runtime.structures.traveller(t.id)?.arrived === true);
+    }
+    if (rule.kind === "STRUCT_STABLE")
+        return runtime.structures.calmTicksBelow(rule.maxWobble) >= Math.round(rule.sustainSeconds * 60);
+    if (rule.kind === "STRUCT_HEIGHT") {
+        const top = runtime.structures.topY();
+        return top !== undefined && top <= rule.aboveY && runtime.structures.calmTicksBelow(rule.maxWobble) >= Math.round(rule.sustainSeconds * 60);
+    }
+    if (rule.kind === "STRUCT_EGG_SAFE")
+        return tagged(build, rule.eggTag).some(e => { const st = runtime.structures.egg(e.id); return st !== undefined && st.landed && st.onStructure && (st.impact ?? Infinity) <= rule.maxImpact; });
+    if (rule.kind === "STRUCT_COMPARE") {
+        const a = tagged(build, rule.aTag)[0], b = tagged(build, rule.bTag)[0];
+        if (!a || !b)
+            return false;
+        const la = runtime.structures.load(a.id), lb = runtime.structures.load(b.id);
+        if (!la?.done || !lb?.done || la.held <= 0 || lb.held <= 0)
+            return false;
+        return Math.max(la.held, lb.held) / Math.min(la.held, lb.held) >= rule.minRatio;
+    }
     if (rule.kind === "MECHANISM_FAMILY_COUNT") {
         const present = new Set(build.allParts().filter(part => rule.definitionIds.includes(part.definitionId)).map(part => part.definitionId));
         return present.size >= rule.minimum;
