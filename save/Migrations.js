@@ -1,5 +1,6 @@
 import { completionRewardIds, grantRewardsTo } from "../progression/Rewards.js";
-import { CURRENT_SAVE_SCHEMA, DEFAULT_ASSISTANCE, DEFAULT_SETTINGS, MAX_EXPERIMENTS, OPENING_STARTER_PARTS, PAINTED_AVATARS, sanitizeProfileName, validateExperiment } from "../app/AppState.js";
+import { CURRENT_SAVE_SCHEMA, DEFAULT_ASSISTANCE, DEFAULT_SETTINGS, MAX_EXPERIMENTS, MAX_INVENTIONS, OPENING_STARTER_PARTS, PAINTED_AVATARS, isSafeId, sanitizeProfileName, validateExperiment, validateInvention } from "../app/AppState.js";
+import { cleanInventionName, contentChecksum, contentOf } from "../inventions/Inventions.js";
 import { DEFAULT_LOOK, validateLook } from "../inventor/InventorLook.js";
 function asArray(v) { return Array.isArray(v) ? v : []; }
 function asStrings(v) { return asArray(v).filter((x) => typeof x === "string"); }
@@ -30,7 +31,7 @@ const v1ToV2 = (v1) => {
             settings: { ...DEFAULT_SETTINGS }, assistance: { ...DEFAULT_ASSISTANCE },
             location: isOwner && openingComplete ? "HUB" : "OPENING",
             freeBuildUnlocked: isOwner ? v1.freeBuildUnlocked === true || openingComplete : false,
-            restorationSeen: [], visitorsMet: [], experiments: []
+            restorationSeen: [], visitorsMet: [], experiments: [], inventions: []
         };
         // Missions finished before rewards existed still earn their completion rewards (parts, tools, badges…).
         const rewarded = isOwner ? grantRewardsTo(base, completionRewardIds(motionDone)).profile : base;
@@ -96,7 +97,49 @@ const v3ToV4 = (v3) => {
     });
     return { ...v3, schemaVersion: 4, profiles };
 };
-export const SAVE_MIGRATIONS = Object.freeze({ 1: v1ToV2, 2: v2ToV3, 3: v3ToV4 });
+/**
+ * v4 (M22–M23) → v5: My Inventions (M24). Every inventor gets an invention library. Each invention already on the
+ * Workshop shelf becomes an invention with that build as its Version 1, and the shelf item is linked to it, so
+ * nothing anyone saved is lost and the shelf shows the same things as before. A library that somehow already
+ * exists is kept only if every entry is valid.
+ */
+const v4ToV5 = (v4) => {
+    const profiles = asArray(v4.profiles).map(raw => {
+        if (!raw || typeof raw !== "object")
+            return raw;
+        const p = { ...raw };
+        const existing = asArray(p.inventions);
+        if (existing.length && existing.length <= MAX_INVENTIONS && existing.every(i => validateInvention(i)))
+            return p;
+        const inventions = [];
+        const shelf = [];
+        for (const item of asArray(p.shelf)) {
+            if (!item || typeof item !== "object")
+                continue;
+            const s = { ...item };
+            const b = s.build;
+            const { inventionId: _i, versionN: _n, ...plain } = s;
+            if (inventions.length >= MAX_INVENTIONS || !isSafeId(s.id) || !b || !Array.isArray(b.parts) || !Array.isArray(b.connections)) {
+                shelf.push(plain);
+                continue;
+            }
+            const content = contentOf(b);
+            const at = Number.isFinite(s.savedAtMs) ? s.savedAtMs : 0;
+            const inv = { id: s.id, name: cleanInventionName(String(s.title ?? "")), createdAtMs: at, environment: isSafeId(s.sourceLevelId) ? `lab:${s.sourceLevelId}` : "workshop", versions: [{ n: 1, savedAtMs: at, base: content, checksum: contentChecksum(content), partCount: content.parts.length }] };
+            if (!validateInvention(inv)) {
+                shelf.push(plain);
+                continue;
+            }
+            inventions.push(inv);
+            shelf.push({ ...plain, inventionId: inv.id, versionN: 1 });
+        }
+        p.inventions = inventions;
+        p.shelf = shelf;
+        return p;
+    });
+    return { ...v4, schemaVersion: 5, profiles };
+};
+export const SAVE_MIGRATIONS = Object.freeze({ 1: v1ToV2, 2: v2ToV3, 3: v3ToV4, 4: v4ToV5 });
 export function migrateAppSave(input) {
     if (!input || typeof input !== "object" || Array.isArray(input))
         return { ok: false, reason: "NOT_A_SAVE" };

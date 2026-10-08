@@ -499,3 +499,48 @@ html.high-contrast { --ink:#000; --panel:#fff; --accent:#006b1b; --danger:#a0000
 .sandbox-prompt.hidden { display: none; } .sandbox-prompt span { font-weight: 800; } .sandbox-prompt button { min-height: 56px; min-width: 56px; border-radius: 12px; font-weight: 900; }
 .toast { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); z-index: 9; background: #212529ee; color: #fff; font-weight: 800; padding: 14px 20px; border-radius: 16px; max-width: 80vw; text-align: center; }
 .toast.hidden { display: none; }
+
+/* ---- My Inventions & Photo Mode (M24) ---- */
+.invention-save{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:40;display:flex;flex-direction:column;gap:10px;min-width:min(440px,92%);padding:18px 20px;background:#fff;border:4px solid #203040;border-radius:22px;box-shadow:0 10px 0 #0002}
+.invention-save strong{font-size:1.3rem}
+.invention-save button{min-height:56px}
+.inv-save-row{display:flex;align-items:center;gap:10px;font-weight:800}.inv-save-row input{flex:1;min-height:52px;font-size:1.1rem;padding:0 12px;border:3px solid #9ab;border-radius:12px}
+.inv-save-actions{display:flex;gap:10px;flex-wrap:wrap}.inv-save-actions button{flex:1}
+.inventions-root{display:flex;flex-direction:column;gap:12px}
+.inv-bar,.inv-head,.inv-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.inv-bar{justify-content:space-between}
+.inv-head h2{margin:0;flex:1}.inv-name-input{flex:1;min-height:56px;font-size:1.2rem;padding:0 12px;border:3px solid #9ab;border-radius:12px}
+.inv-actions button,.inv-bar button,.inv-head button,.inv-version-buttons button,.inv-storage-row button,.inventions-root>button{min-height:56px}
+.inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px}
+.inv-card{display:flex;flex-direction:column;align-items:stretch;gap:4px;padding:8px;text-align:left;position:relative}
+.inv-thumb{aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#e7f5ff;border:3px solid #203040}.inv-thumb img,.inv-thumb svg{width:100%;height:100%;object-fit:cover;display:block}
+.inv-shelf-tag{position:absolute;top:12px;right:12px;background:#ffd43b;border:2px solid #203040;border-radius:10px;padding:2px 6px;font-weight:900;font-size:.8rem}
+.inv-empty,.inv-tip{background:#fff9db;border:3px dashed #fab005;border-radius:14px;padding:10px 14px}
+.inv-versions{display:flex;flex-direction:column;gap:8px}
+.inv-version{display:grid;grid-template-columns:150px 1fr auto;gap:12px;align-items:center;padding:8px;background:#fff;border:3px solid #c5d6dd;border-radius:16px}
+.inv-version.picked{border-color:#1c7ed6;background:#e7f5ff}
+.inv-version-words{display:flex;flex-direction:column;gap:3px}.inv-version-buttons{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.inv-chips{display:flex;gap:6px;flex-wrap:wrap}.inv-chip{background:#d3f9d8;border:2px solid #2b8a3e;border-radius:10px;padding:1px 6px;font-size:.8rem;font-weight:800}
+.inv-warn{color:#c92a2a;font-weight:800}
+.inv-compare{background:#e7f5ff;border:4px solid #1c7ed6;border-radius:18px;padding:10px 16px}.inv-compare h3{margin:0 0 6px}.inv-compare ul{margin:4px 0 8px;padding-left:22px}
+.inv-meter{height:22px;border:3px solid #203040;border-radius:12px;overflow:hidden;background:#fff}.inv-meter span{display:block;height:100%;background:#69db7c}
+.inv-storage-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px;background:#fff;border:3px solid #c5d6dd;border-radius:14px}.inv-storage-row strong{flex:1}
+@media (max-width:700px){.inv-version{grid-template-columns:110px 1fr}.inv-version-buttons{grid-column:1/-1}}
+.photo-mode{position:absolute;inset:0;z-index:35}
+.photo-layer{position:absolute;inset:0;touch-action:none;cursor:grab}
+.photo-item{position:absolute;transform:translate(-50%,-50%);touch-action:none;cursor:move;line-height:1}
+.photo-item.picked{outline:4px dashed #1c7ed6;outline-offset:4px;border-radius:12px}
+.photo-sticker .photo-glyph{display:block;font-size:64px;width:72px;height:72px;text-align:center;line-height:72px}
+.photo-bolt .photo-glyph{display:block;height:min(220px,38vh);width:auto}
+.photo-sprocket .photo-glyph{display:block;width:min(150px,22vh);height:auto}
+.photo-bar{position:absolute;left:8px;right:8px;bottom:8px;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;pointer-events:auto}
+.photo-bar button,.photo-drawer button,.photo-show{min-height:56px;min-width:56px;background:#fff;border:3px solid #203040;border-radius:14px;font-weight:900;box-shadow:0 4px 0 #0002}
+.photo-bar .primary{background:#69db7c}
+.photo-drawer{position:absolute;left:50%;top:12px;transform:translateX(-50%);display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:94%;padding:10px;background:#ffffffee;border:3px solid #203040;border-radius:18px}
+.photo-drawer button.on{background:#ffd43b}.photo-drawer .photo-sticker-btn{font-size:30px}
+.photo-show{position:absolute;right:10px;top:10px;opacity:.75}
+.photo-mode.clean .photo-bar,.photo-mode.clean .photo-drawer{display:none}
+.photo-mode.clean .photo-item.picked{outline:none}
+.photo-on .tray,.photo-on .controls,.photo-on header,.photo-on .motion-hud,.photo-on .sandbox-bar,.photo-on .sandbox-drawer,.photo-on .sandbox-prompt,.photo-on .chain-hud,.photo-on .program-panel,.photo-on .experiment-panel,.photo-on .bolt-tip,.photo-on .debug,.photo-on .opening-hud,.photo-on .motion-result,.photo-on .why-card,.photo-on .discovery-pop{display:none!important}
+.controls [hidden]{display:none!important}
+.inventions-root{text-align:left}
+#app.photo-on{grid-template-rows:1fr}

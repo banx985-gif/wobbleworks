@@ -1,7 +1,11 @@
 import { AppShellController } from "./app/AppShellController.js";
 import { activeProfile, completedLevelIds, createDefaultAppSave, currentAssistance, currentLastBuild, currentOpening, currentSettings, mostRecentProfile, titleVisibility, validateAppSave, withActiveProfile, withAssistance, withBuild, withCreatedProfile, withDeletedProfile, withEntitlement, withFirstTest, withLocation, withOpeningMetrics, withOpeningProgress, withEditedProfile, withSettings, DEFAULT_SETTINGS, DEFAULT_ASSISTANCE, withoutActiveProfile, MAX_PROFILES, PAINTED_AVATARS } from "./app/AppState.js";
 import { ParentGate } from "./app/ParentGate.js";
-import { boltArt, renderCampusMap, renderHub, renderLocker, renderProfileSelect, renderShelf, renderTrophies } from "./hub/HubScreens.js";
+import { boltArt, boltPoseUrl, renderCampusMap, renderHub, renderLocker, renderProfileSelect, renderShelf, renderTrophies, sprocketArt } from "./hub/HubScreens.js";
+import { renderInventions, showInventionDetail, showInventionList } from "./hub/InventionScreens.js";
+import { contentChecksum, contentOf, deleteInvention, duplicateInvention, inventionById, latestVersion, liveThumbKeys, renameInvention, resolveVersion, restoreAsNewVersion, saveNewInvention, saveVersion, shelfItemFor, showOnShelf, suggestedName, takeOffShelf, thumbKey, tidySuggestion, tidyVersions } from "./inventions/Inventions.js";
+import { RunMeter } from "./inventions/RunMeter.js";
+import { drawPhotoBackground, PhotoMode, photoStickers, thumbnailFrom } from "./photo/PhotoMode.js";
 import { renderParentDashboard, renderParentGate } from "./parent/ParentArea.js";
 import { OWNERSHIP_CHILD_COPY, regionById, routeToRegion } from "./progression/Campus.js";
 import { addToShelf, equipCosmetic, markRestorationSeen, markRewardsSeen, meetVisitor, recordMissionSuccess } from "./progression/ProgressionManager.js";
@@ -51,7 +55,7 @@ import { attachKind, spaceSnap, vesselBehaviour } from "./space/SpaceSystem.js";
 import { InputManager } from "./input/InputManager.js";
 import { CanvasRenderer } from "./render/CanvasRenderer.js";
 import { CameraController } from "./render/CameraController.js";
-import { AutosaveScheduler, IndexedDbStore, SaveManager } from "./save/SaveManager.js";
+import { AutosaveScheduler, IndexedDbStore, SaveManager, ThumbnailCache } from "./save/SaveManager.js";
 import { EditorOverlay } from "./tooling/EditorOverlay.js";
 import { AssetManager } from "./core/AssetManager.js";
 import { discoveryById, evaluateRunDiscoveries } from "./discovery/Discoveries.js";
@@ -80,7 +84,10 @@ const perf = new PerformanceMonitor();
 const telemetry = new Telemetry();
 const editor = new EditorOverlay();
 const shell = new AppShellController();
-const saveManager = new SaveManager(new IndexedDbStore("wobbleworks-app", 1), validateAppSave, {
+/** One local database: the save (through SaveManager) and the My Inventions picture cache share it. */
+const appStore = new IndexedDbStore("wobbleworks-app", 1);
+const thumbs = new ThumbnailCache(appStore);
+const saveManager = new SaveManager(appStore, validateAppSave, {
     migrate: raw => { const r = migrateAppSave(raw); return r.ok ? { payload: r.save, migrated: r.migrated } : r.reason === "FUTURE_VERSION" ? { futureVersion: true } : undefined; }
 });
 /** True when the stored save came from a newer build: we never overwrite it. */
@@ -408,6 +415,11 @@ function loadMission(id) {
     }
     if (!labMissionUnlocked(lab, id, completedSet()))
         return;
+    photo.exit();
+    editingInvention = undefined;
+    lastRun = undefined;
+    runMeter = undefined;
+    invSave.classList.add("hidden");
     const level = labLevels.get(labId)?.get(id);
     if (!level) {
         loadingError.textContent = `${lab.title} content is missing: ${id}.`;
@@ -692,7 +704,9 @@ function renderShell() {
         void commit(markRewardsSeen(appSave, (activeProfile(appSave)?.unseenRewards ?? []).filter(id => id.startsWith("badge.") || id.startsWith("sticker."))));
     }
     if (current === "SHELF")
-        renderShelf(shelfRoot, appSave, { open: openShelfInvention });
+        renderShelf(shelfRoot, appSave, { open: openShelfInvention, thumb: (id, n) => thumbs.get(thumbKey(id, n)) });
+    if (current === "INVENTIONS")
+        renderInventionScreen();
     if (current === "GROWN_UPS")
         renderGate("");
     if (current === "PARENT_DASHBOARD")
@@ -751,6 +765,12 @@ function stopToBuild() {
     }
     if (!testMode)
         return;
+    if (runMeter) {
+        const m = runMeter.result();
+        if (m)
+            lastRun = { checksum: runMeter.buildChecksum, metrics: m };
+        runMeter = undefined;
+    }
     if (activeLevel && labOfLevel(activeLevel.id) === CHAIN_WORKSHOP.id && !resultShown)
         noteChainRun();
     tests.stop();
@@ -876,6 +896,11 @@ function resumeActiveProfile() {
     showHub();
 }
 function leaveGameplay() {
+    photo.exit();
+    editingInvention = undefined;
+    lastRun = undefined;
+    runMeter = undefined;
+    invSave.classList.add("hidden");
     currentRoom = undefined;
     sandboxBar.classList.add("hidden");
     sandboxDrawer.classList.add("hidden");
@@ -1099,6 +1124,11 @@ function openShelfInvention(id) {
     const item = activeProfile(appSave)?.shelf.find(s => s.id === id);
     if (!item)
         return;
+    // A shelf item from My Inventions opens that invention (in the room it was built in) ready to save its next version.
+    if (item.inventionId && inventionById(appSave, item.inventionId)) {
+        openInvention(item.inventionId, item.versionN ?? latestVersion(inventionById(appSave, item.inventionId)).n);
+        return;
+    }
     startFreeBuild(item.build);
 }
 /** Empty Workshop Free Build (free tier). Tray = the parts this inventor has unlocked. */
@@ -1581,7 +1611,19 @@ document.querySelectorAll("[data-shell-action]").forEach(button => button.addEve
     }
     if (action === "my-inventions") {
         ensureRecentProfileActive();
-        transition("SHELF");
+        inventionsReturn = "EXTRAS";
+        showInventionList();
+        transition("INVENTIONS");
+        return;
+    }
+    if (action === "open-inventions") {
+        inventionsReturn = "SHELF";
+        showInventionList();
+        transition("INVENTIONS");
+        return;
+    }
+    if (action === "inventions-back") {
+        transition(inventionsReturn, true);
         return;
     }
     if (action === "profiles") {
@@ -1851,15 +1893,34 @@ else
     showLab(); });
 shelfButton.addEventListener("click", () => {
     const meta = lastMissionLevelId ? missionMeta(lastMissionLevelId) : undefined;
-    const out = addToShelf(appSave, meta?.title ?? "My Invention", build.snapshot("shelf"), lastMissionLevelId);
-    if (out.full) {
-        shelfButton.textContent = "Shelf is full";
-        shelfButton.disabled = true;
-        return;
+    // M24: a working mission build is also kept in My Inventions (Version 1), and the shelf shows that invention.
+    const kept = saveNewInvention(appSave, { name: meta?.title ?? "My Invention", content: contentOf(build.snapshot()), environment: lastMissionLevelId ? `lab:${lastMissionLevelId}` : currentEnvironment(), ...(metricsForCurrent() ? { metrics: metricsForCurrent() } : {}) });
+    let next;
+    let itemId;
+    if (kept.invention) {
+        const shelved = showOnShelf(kept.save, kept.invention.id);
+        if (shelved.full) {
+            shelfButton.textContent = "Shelf is full";
+            shelfButton.disabled = true;
+            return;
+        }
+        next = shelved.save;
+        itemId = shelfItemFor(next, kept.invention.id)?.id;
+        void captureThumb(kept.invention.id, 1);
+    }
+    else {
+        const out = addToShelf(appSave, meta?.title ?? "My Invention", build.snapshot("shelf"), lastMissionLevelId);
+        if (out.full) {
+            shelfButton.textContent = "Shelf is full";
+            shelfButton.disabled = true;
+            return;
+        }
+        next = out.save;
+        itemId = out.item?.id;
     }
     // A chain keeps its chain numbers on the shelf too.
     const chainRun = tests.active();
-    const saved = out.item && chainRun?.chain.active ? withChainShelfMeta(out.save, out.item.id, chainStats(chainRun)) : out.save;
+    const saved = itemId && chainRun?.chain.active ? withChainShelfMeta(next, itemId, chainStats(chainRun)) : next;
     void commit(saved, true);
     shelfButton.textContent = "On the shelf ✓";
     shelfButton.disabled = true;
@@ -1911,6 +1972,7 @@ ui.test.addEventListener("click", () => {
     selectedId = undefined;
     ui.mode.textContent = "TEST";
     sfx(700, 0.06);
+    runMeter = new RunMeter(contentChecksum(contentOf(build.snapshot())));
     if (exp)
         beginTrial();
     void persistCurrentBuild(true).catch(() => undefined);
@@ -2518,14 +2580,194 @@ function noteChainRun() {
         void commit(out.save);
     return ` Chain: ${stats.longest} step${stats.longest === 1 ? "" : "s"}${out.beaten.includes("longest") ? " — a new record!" : "."}`;
 }
+// ---------------------------------------------------------------- My Inventions & Photo Mode (M24)
+const saveInventionButton = document.querySelector("#btn-save-invention"), photoButton = document.querySelector("#btn-photo");
+const invSave = document.querySelector("#invention-save"), invSaveName = document.querySelector("#inv-save-name"), invSaveVersion = document.querySelector("#inv-save-version"), invSaveNote = document.querySelector("#inv-save-note");
+const inventionsRoot = document.querySelector("#inventions-root");
+/** The invention the build on screen came from (so 💾 Save makes its next version). */
+let editingInvention;
+let runMeter;
+/** What the last finished TEST measured, and for exactly which build. */
+let lastRun;
+let inventionsReturn = "EXTRAS";
+function currentEnvironment() { if (currentRoom && freeBuildActive)
+    return `sandbox:${currentRoom.id}`; if (labActive && activeLevel)
+    return `lab:${activeLevel.id}`; return "workshop"; }
+/** Results for the build on screen — only if the TEST measured this exact build. */
+function metricsForCurrent() {
+    const sum = contentChecksum(contentOf(build.snapshot()));
+    const live = runMeter?.buildChecksum === sum ? runMeter.result() : undefined;
+    return live ?? (lastRun?.checksum === sum ? lastRun.metrics : undefined);
+}
+/** A clean picture of the build for My Inventions (no selection glow). */
+async function captureThumb(id, n) {
+    const keep = selectedId;
+    selectedId = undefined;
+    render();
+    selectedId = keep;
+    // Crop to the parts the player placed (room furniture left out), with a margin, so the machine fills the picture.
+    const parts = build.allParts().filter(p => p.parameters.locked !== true);
+    const k = canvas.width / Math.max(1, canvas.getBoundingClientRect().width);
+    const px = (x, y) => { const l = camera.worldToLogical({ x: x * 100, y: y * 100 }); const s = renderer.viewport.logicalToScreen(l.x, l.y); return { x: s.x * k, y: s.y * k }; };
+    let crop;
+    if (parts.length) {
+        const pts = parts.flatMap(p => [px(p.position.x - 1.2, p.position.y - 1.2), px(p.position.x + 1.2, p.position.y + 1.2)]);
+        const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+        crop = { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) };
+    }
+    const pic = thumbnailFrom(canvas, 320, 180, crop);
+    if (pic)
+        await thumbs.put(thumbKey(id, n), pic);
+}
+const SAVE_PROBLEMS = {
+    NO_PROFILE: "Make an inventor first to save inventions.",
+    FULL: "My Inventions is full (40). Delete one you don't need, then save again.",
+    VERSIONS_FULL: "This invention already has 25 versions. Tidy up old ones (My Inventions → Storage) or save it as a new invention.",
+    TOO_BIG: "Your invention space is full. Tidy up old versions in My Inventions → Storage, then save again.",
+    DAMAGED: "The newest saved version couldn't be rebuilt exactly, so save this as a new invention instead.",
+    MISSING: "That invention isn't there any more — save this as a new invention."
+};
+function openSaveDialog() {
+    if (!activeProfile(appSave)) {
+        toast(SAVE_PROBLEMS.NO_PROFILE);
+        return;
+    }
+    const inv = editingInvention ? inventionById(appSave, editingInvention) : undefined;
+    invSaveVersion.classList.toggle("hidden", !inv);
+    if (inv) {
+        invSaveVersion.textContent = `💾 Save as Version ${latestVersion(inv).n + 1} of "${inv.name}"`;
+        invSaveName.value = `${inv.name.slice(0, 34)} (new)`;
+    }
+    else
+        invSaveName.value = motionTitle.textContent && labActive ? motionTitle.textContent.slice(0, 40) : suggestedName(appSave);
+    const m = metricsForCurrent();
+    invSaveNote.textContent = m ? "This TEST's results will be saved with it, so you can compare versions." : "Tip: TEST it first, and its results are saved too.";
+    invSave.classList.remove("hidden");
+    window.setTimeout(() => invSaveName.focus(), 0);
+}
+async function finishSave(r, label) {
+    if (r.reason) {
+        toast(SAVE_PROBLEMS[r.reason] ?? "Couldn't save that.");
+        return;
+    }
+    if (r.unchanged && r.version) {
+        toast(`Nothing has changed since Version ${r.version.n} — it's already saved.`);
+        invSave.classList.add("hidden");
+        return;
+    }
+    if (!r.invention || !r.version)
+        return;
+    editingInvention = r.invention.id;
+    invSave.classList.add("hidden");
+    await commit(r.save, true);
+    await captureThumb(r.invention.id, r.version.n);
+    toast(label(r.version.n, r.invention.name));
+    sfx(840, .06);
+}
+saveInventionButton.addEventListener("click", () => { if (gameplayAllowed())
+    openSaveDialog(); });
+invSaveVersion.addEventListener("click", () => { if (!editingInvention)
+    return; const m = metricsForCurrent(); void finishSave(saveVersion(appSave, editingInvention, contentOf(build.snapshot()), Date.now(), m ? { metrics: m } : {}), (n, name) => `Saved as Version ${n} of "${name}"!`); });
+document.querySelector("#inv-save-new").addEventListener("click", () => { const m = metricsForCurrent(); void finishSave(saveNewInvention(appSave, { name: invSaveName.value, content: contentOf(build.snapshot()), environment: currentEnvironment(), ...(m ? { metrics: m } : {}) }), (_n, name) => `Saved "${name}" in My Inventions!`); });
+document.querySelector("#inv-save-cancel").addEventListener("click", () => invSave.classList.add("hidden"));
+function placeName(env) {
+    if (env.startsWith("sandbox:"))
+        return `Free Build — ${sandboxById(env.slice(8))?.title ?? "a room"}`;
+    if (env.startsWith("lab:")) {
+        const id = env.slice(4);
+        const lab = PLAY_SETS.find(l => l.missions.some(m => m.id === id));
+        return `${lab?.title ?? "a lab"} — ${missionMeta(id)?.title ?? id}`;
+    }
+    return "the Workshop (Free Build)";
+}
+/** Opens one version, in the room or mission it was built in when that is still open (otherwise in Free Build). */
+function openInvention(id, n) {
+    const inv = inventionById(appSave, id);
+    const content = inv ? resolveVersion(inv, n) : undefined;
+    if (!inv || !content) {
+        toast("That version can't be rebuilt exactly, so it wasn't opened.");
+        return;
+    }
+    const env = inv.environment;
+    if (env.startsWith("sandbox:") && labLevels.get(FREE_BUILD_ROOMS.id)?.get(env.slice(8)) && (sandboxOpen(appSave, env.slice(8)) || testingLabs.has(FREE_BUILD_ROOMS.id)))
+        startSandbox(labLevels.get(FREE_BUILD_ROOMS.id).get(env.slice(8)));
+    else if (env.startsWith("lab:") && labLevels.get(labOfLevel(env.slice(4)))?.get(env.slice(4)) && labMissionUnlocked(labDef(labOfLevel(env.slice(4))), env.slice(4), completedSet()) && labIsOpen(labOfLevel(env.slice(4))))
+        loadMission(env.slice(4));
+    else
+        startFreeBuild();
+    build.replaceAll(content);
+    selectedId = undefined;
+    updateSandboxCap();
+    editingInvention = id;
+    lastRun = undefined;
+    const newest = latestVersion(inv).n;
+    toast(n === newest ? `"${inv.name}" Version ${n}. Change it, then 💾 Save to make Version ${n + 1}.` : `"${inv.name}" Version ${n}. Saving it makes a new Version ${newest + 1} — the old ones stay.`);
+}
+function afterLibraryChange(next, prune = false) { void commit(next, true).then(() => prune ? thumbs.prune(liveThumbKeys(appSave)) : 0); renderInventionScreen(); }
+function renderInventionScreen() {
+    renderInventions(inventionsRoot, appSave, {
+        open: (id, n) => openInvention(id, n),
+        duplicate: (id, n) => { const r = duplicateInvention(appSave, id, n); if (r.reason || !r.invention) {
+            toast(SAVE_PROBLEMS[r.reason ?? "MISSING"]);
+            return;
+        } void thumbs.copy(thumbKey(id, n), thumbKey(r.invention.id, 1)); showInventionDetail(r.invention.id); afterLibraryChange(r.save); toast(`Made a copy: "${r.invention.name}".`); },
+        restore: (id, n) => { const r = restoreAsNewVersion(appSave, id, n); if (r.reason) {
+            toast(SAVE_PROBLEMS[r.reason]);
+            return;
+        } if (r.unchanged) {
+            toast("The newest version is already exactly that build.");
+            return;
+        } void thumbs.copy(thumbKey(id, n), thumbKey(id, r.version.n)); afterLibraryChange(r.save); toast(`Version ${n} is back as Version ${r.version.n}. Version ${n} is still there too.`); },
+        toggleShelf: (id, n) => { if (shelfItemFor(appSave, id)) {
+            afterLibraryChange(takeOffShelf(appSave, id));
+            return;
+        } const r = showOnShelf(appSave, id, n); if (r.full) {
+            toast("The Workshop shelf is full (24). Take something off it first.");
+            return;
+        } afterLibraryChange(r.save); toast("It's on the Workshop shelf now! ⭐"); },
+        rename: (id, name) => afterLibraryChange(renameInvention(appSave, id, name)),
+        remove: id => { if (editingInvention === id)
+            editingInvention = undefined; afterLibraryChange(deleteInvention(appSave, id), true); },
+        tidy: id => { const inv = inventionById(appSave, id); if (!inv)
+            return; const r = tidyVersions(appSave, id, tidySuggestion(appSave, inv)); if (r.reason) {
+            toast("That invention's history couldn't be checked, so nothing was removed.");
+            return;
+        } afterLibraryChange(r.save, true); toast(`Removed ${r.removed} old version${r.removed === 1 ? "" : "s"}.`); },
+        cleanPictures: () => thumbs.prune(liveThumbKeys(appSave)),
+        pictureBytes: () => thumbs.bytes(),
+        thumb: key => thumbs.get(key),
+        placeName,
+        partName: defId => registry.has(defId) ? registry.get(defId).displayName : defId,
+        rerender: renderInventionScreen
+    });
+}
+const photo = new PhotoMode({
+    stage: document.querySelector(".stage"), canvas: canvas, app: appElement,
+    pan: (dx, dy) => camera.pan(dx, dy), zoom: f => camera.setZoom(camera.zoom * f),
+    stickers: () => photoStickers(activeProfile(appSave)?.rewards ?? []),
+    boltUrl: pose => boltPoseUrl(pose), sprocket: () => sprocketArt(activeProfile(appSave)?.equipped.sprocket),
+    title: () => (editingInvention ? inventionById(appSave, editingInvention)?.name : undefined) ?? motionTitle.textContent ?? "invention",
+    toast,
+    // The photo can be the invention's picture only when the build on screen IS its newest version.
+    useAsCover: () => { const inv = editingInvention ? inventionById(appSave, editingInvention) : undefined; if (!inv || contentChecksum(contentOf(build.snapshot())) !== latestVersion(inv).checksum)
+        return undefined; const key = thumbKey(inv.id, latestVersion(inv).n); return d => thumbs.put(key, d); },
+    onExit: () => undefined
+});
+photoButton.addEventListener("click", () => { if (!gameplayAllowed())
+    return; selectedId = undefined; invSave.classList.add("hidden"); photo.enter(); });
 function render() {
     maybeCompleteOpeningChallenge();
     maybeCompleteMotionMission();
     updateProgramPanel();
     renderer.begin(camera);
-    if (freeBuildActive && currentRoom)
+    const photoBackground = photo.isOpen() && photo.background !== "room";
+    if (photoBackground)
+        drawPhotoBackground(renderer.ctx, photo.background, now() / 1000);
+    if (freeBuildActive && currentRoom && !photoBackground)
         drawRoomBackdrop(currentRoom);
-    if (labActive) {
+    if (labActive && photoBackground)
+        renderer.drawScenery(activeLevel?.id);
+    else if (labActive) {
         if (currentLabId === "gear-garage")
             renderer.drawGearGarageBackdrop(now() / 1000);
         else if (currentLabId === "builder-bay")
@@ -2576,6 +2818,11 @@ function render() {
         checkRunDiscoveries();
     renderer.end();
     const enabled = gameplayAllowed();
+    const canKeep = (labActive || freeBuildActive) && !exp && Boolean(activeProfile(appSave));
+    if (saveInventionButton.hidden === canKeep) {
+        saveInventionButton.hidden = !canKeep;
+        photoButton.hidden = !canKeep;
+    }
     ui.undo.disabled = !enabled || testMode || !build.canUndo();
     ui.redo.disabled = !enabled || testMode || !build.canRedo();
     ui.test.disabled = !enabled || testMode;
@@ -2586,7 +2833,11 @@ function render() {
 }
 function frame(frameNow) {
     perf.frame(frameNow);
-    perf.measureSimulation(() => clock.consume(frameNow, dt => { tests.step(dt); experimentTick(); }));
+    perf.measureSimulation(() => clock.consume(frameNow, dt => { tests.step(dt); experimentTick(); if (testMode && runMeter) {
+        const rt = tests.active();
+        if (rt)
+            runMeter.sample(rt);
+    } }));
     render();
     requestAnimationFrame(frame);
 }

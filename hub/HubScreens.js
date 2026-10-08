@@ -421,7 +421,7 @@ export function renderShelf(root, save, cb) {
     if (!p)
         return;
     if (!p.shelf.length) {
-        root.append(el("p", "", "Nothing on the shelf yet. After an invention works, tap “Put on Shelf”."));
+        root.append(el("p", "", "Nothing on the shelf yet. After an invention works, tap “Put on Shelf” — or pick one in 📚 My Inventions and tap “Show on shelf”."));
         return;
     }
     const grid = el("div", "shelf-grid");
@@ -429,13 +429,17 @@ export function renderShelf(root, save, cb) {
         const b = el("button", `shelf-item${item.frameId === "frame.gold" ? " gold" : item.frameId ? " wood" : ""}`);
         const thumb = el("div", "shelf-thumb");
         thumb.append(miniBuild(item.build.parts.map(x => ({ x: x.position.x, y: x.position.y, id: x.definitionId }))));
+        // An invention from My Inventions shows its saved picture when there is one.
+        if (item.inventionId && cb.thumb)
+            void cb.thumb(item.inventionId, item.versionN ?? 1).then(src => { if (!src)
+                return; const img = el("img"); img.src = src; img.alt = ""; thumb.replaceChildren(img); });
         b.append(thumb, el("strong", "", item.title), el("span", "muted", `${item.build.parts.length} parts`));
         b.addEventListener("click", () => cb.open(item.id));
         grid.append(b);
     }
     root.append(grid);
 }
-function miniBuild(parts) {
+export function miniBuild(parts) {
     const colour = (id) => id.includes("ramp") ? "#ffa94d" : id.includes("ball") || id.includes("marble") ? "#4dabf7" : id.includes("spring") ? "#e64980" : id.includes("wheel") ? "#495057" : id.includes("friction") ? "#a0522d" : "#ffd43b";
     return svg(`<rect width="160" height="90" fill="#e7f5ff"/><rect y="80" width="160" height="10" fill="#c5d6dd"/>${parts.slice(0, 40).map(q => `<rect x="${Math.max(0, Math.min(146, q.x * 10 - 7))}" y="${Math.max(0, Math.min(76, q.y * 9.4 - 7))}" width="14" height="14" rx="4" fill="${colour(q.id)}" stroke="#18323f" stroke-width="2"/>`).join("")}`, "0 0 160 90");
 }
@@ -469,7 +473,7 @@ export function renderProfileSelect(root, save, selectedId, cb) {
         const stars = Object.values(p.levels).reduce((n, r) => n + r.stars.length, 0);
         const trophies = p.rewards.filter(id => id.startsWith("badge.") || id.startsWith("sticker.")).length;
         const stats = el("div", "inventor-stats");
-        for (const [icon, label, value] of [["⭐", "Stars", stars], ["⚙️", "Inventions", p.shelf.length], ["🏆", "Trophies", trophies]]) {
+        for (const [icon, label, value] of [["⭐", "Stars", stars], ["⚙️", "Inventions", p.inventions.length + p.shelf.filter(s => !s.inventionId).length], ["🏆", "Trophies", trophies]]) {
             const row = el("div");
             row.append(el("span", "", icon), el("span", "", label), el("strong", "", String(value)));
             stats.append(row);

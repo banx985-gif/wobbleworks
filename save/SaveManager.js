@@ -175,6 +175,87 @@ export class SaveManager {
     }
 }
 /**
+ * Picture cache for My Inventions (M24). One small JPEG per invention version, kept under its own key so the
+ * main save stays small. Pictures are only a convenience: a missing one is drawn from the build instead, and
+ * cleanup only removes pictures whose version no longer exists — never one still in use.
+ */
+export const THUMB_INDEX_KEY = "thumbs.index";
+export const THUMB_PREFIX = "thumb.";
+export const THUMB_MAX_CHARS = 120_000;
+export class ThumbnailCache {
+    store;
+    index;
+    memory = new Map();
+    constructor(store) {
+        this.store = store;
+    }
+    async keys() {
+        if (!this.index) {
+            try {
+                const raw = await this.store.get(THUMB_INDEX_KEY);
+                this.index = Array.isArray(raw) ? raw.filter((k) => typeof k === "string") : [];
+            }
+            catch {
+                this.index = [];
+            }
+        }
+        return this.index;
+    }
+    async list() { return [...await this.keys()]; }
+    async get(key) {
+        const hit = this.memory.get(key);
+        if (hit)
+            return hit;
+        try {
+            const v = await this.store.get(THUMB_PREFIX + key);
+            if (typeof v === "string" && v.startsWith("data:image/")) {
+                this.memory.set(key, v);
+                return v;
+            }
+        }
+        catch { /* a missing picture is fine */ }
+        return undefined;
+    }
+    /** Stores a picture (refused if it isn't a small image). The picture and the index are written together. */
+    async put(key, dataUrl) {
+        if (!dataUrl.startsWith("data:image/") || dataUrl.length > THUMB_MAX_CHARS)
+            return false;
+        const keys = await this.keys();
+        const next = keys.includes(key) ? keys : [...keys, key];
+        try {
+            await this.store.setMany([{ key: THUMB_PREFIX + key, value: dataUrl }, { key: THUMB_INDEX_KEY, value: next }]);
+        }
+        catch {
+            return false;
+        }
+        this.index = next;
+        this.memory.set(key, dataUrl);
+        return true;
+    }
+    /** Copies a picture to a new key (a restored version or a duplicate uses the same picture). */
+    async copy(from, to) { const v = await this.get(from); return v ? this.put(to, v) : false; }
+    /** Removes pictures whose key isn't in `live`. Returns how many were removed. */
+    async prune(live) {
+        const keys = await this.keys();
+        const dead = keys.filter(k => !live.has(k));
+        if (!dead.length)
+            return 0;
+        const next = keys.filter(k => live.has(k));
+        try {
+            await this.store.setMany([...dead.map(k => ({ key: THUMB_PREFIX + k, value: null })), { key: THUMB_INDEX_KEY, value: next }]);
+        }
+        catch {
+            return 0;
+        }
+        this.index = next;
+        for (const k of dead)
+            this.memory.delete(k);
+        return dead.length;
+    }
+    async bytes() { let n = 0; for (const k of await this.keys())
+        n += (await this.get(k))?.length ?? 0; return n; }
+}
+/**
  * Debounced autosave: many quick changes → one save. A failed save is reported and retried on the
  * next change; it never throws into gameplay.
  */

@@ -16,7 +16,7 @@ export function measureSave(save) {
         if (!largest || bytes > largest.bytes)
             largest = { name: p.name, bytes };
     }
-    return { saveBytes: utf8Length(canonicalJson(save)), inventionCount: save.profiles.reduce((n, p) => n + p.shelf.length, 0) + save.myInventionsCount, ...(largest ? { largestProfile: largest } : {}) };
+    return { saveBytes: utf8Length(canonicalJson(save)), inventionCount: save.profiles.reduce((n, p) => n + p.inventions.length + p.shelf.filter(s => s.inventionId === undefined).length, 0) + save.myInventionsCount, ...(largest ? { largestProfile: largest } : {}) };
 }
 export async function storageReport(save, estimate = globalThis.navigator?.storage?.estimate?.bind(navigator.storage)) {
     const measured = measureSave(save);

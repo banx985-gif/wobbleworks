@@ -1,19 +1,22 @@
 import { completionRewardIds, grantRewardsTo } from "../progression/Rewards.js";
 import { validateLook } from "../inventor/InventorLook.js";
 /**
- * WobbleWorks root save — schema version 3 (v2 = Milestone 10; v3 adds the inventor maker look).
+ * WobbleWorks root save — schema version 5 (v2 = Milestone 10; v3 adds the inventor maker look; v4 experiments; v5 My Inventions).
  *
  * Root fields that are not inside a profile are the *guest* progress made before the
  * first inventor is created (the opening is played before any profile exists).
  * When the first inventor is created, that guest progress moves into the profile.
  * Every later profile owns its own campaign, unlocks, rewards, shelf, settings and assistance.
  */
-export const CURRENT_SAVE_SCHEMA = 4;
+export const CURRENT_SAVE_SCHEMA = 5;
 /** BLUE, PINK and GREEN are the three painted inventors (Aaron's art, 8 Oct). ORANGE/PURPLE remain valid for older saves. */
 export const AVATAR_STYLES = ["ORANGE", "BLUE", "GREEN", "PURPLE", "PINK"];
 export const PAINTED_AVATARS = ["BLUE", "PINK", "GREEN"];
 export const MAX_EXPERIMENTS = 40;
 export const MAX_TRIALS = 12;
+export const MAX_INVENTIONS = 40;
+export const MAX_VERSIONS = 25;
+export const INVENTION_NAME_MAX = 40;
 export const DEFAULT_SETTINGS = Object.freeze({ textScale: 1, reducedMotion: false, highContrast: false, subtitles: true, narration: true, soundEffects: true, music: true, vibration: true });
 export const DEFAULT_ASSISTANCE = Object.freeze({ snapAssist: true, boltTips: true });
 export const MAX_PROFILES = 6;
@@ -53,7 +56,7 @@ export function createProfile(name, avatarStyle, nowMs = Date.now(), id = newId(
         id, name: sanitizeProfileName(name), avatarStyle: style, createdAtMs: nowMs, lastPlayedAtMs: nowMs,
         openingStep: 1, openingComplete: false, levels: {}, discoveries: [], unlockedParts: [], unlockedTools: [],
         rewards: [], unseenRewards: [], equipped: {}, shelf: [], records: {}, settings: { ...DEFAULT_SETTINGS },
-        assistance: { ...DEFAULT_ASSISTANCE }, location: "OPENING", freeBuildUnlocked: false, restorationSeen: [], visitorsMet: [], experiments: []
+        assistance: { ...DEFAULT_ASSISTANCE }, location: "OPENING", freeBuildUnlocked: false, restorationSeen: [], visitorsMet: [], experiments: [], inventions: []
     };
 }
 // ------------------------------------------------------------------ validation
@@ -126,6 +129,13 @@ export function validateProfile(p) {
         return false;
     if (new Set(p.shelf.map(s => s.id)).size !== p.shelf.length)
         return false;
+    if (!Array.isArray(p.inventions) || p.inventions.length > MAX_INVENTIONS || !p.inventions.every(validateInvention))
+        return false;
+    if (new Set(p.inventions.map(i => i.id)).size !== p.inventions.length)
+        return false;
+    // A shelf item that shows an invention must point at one that exists (and at one of its versions).
+    if (!p.shelf.every(s => s.inventionId === undefined ? s.versionN === undefined : isSafeId(s.inventionId) && p.inventions.some(i => i.id === s.inventionId && (s.versionN === undefined || i.versions.some(v => v.n === s.versionN)))))
+        return false;
     if (!p.records || typeof p.records !== "object" || !Object.entries(p.records).every(([k, v]) => isSafeId(k) && Number.isFinite(v)))
         return false;
     if (!validateSettings(p.settings))
@@ -151,6 +161,29 @@ export function validateProfile(p) {
     }
     if (p.guidance !== undefined && (!p.guidance || !isCount(p.guidance.unaidedSolves) || !isCount(p.guidance.helpedSolves) || !isCount(p.guidance.hintsUsed)))
         return false;
+    return true;
+}
+function isContent(v) { const c = v; return Boolean(c && typeof c === "object" && Array.isArray(c.parts) && Array.isArray(c.connections) && c.parts.every(p => p && isSafeId(p.id) && typeof p.definitionId === "string")); }
+/** An invention's shape: safe ids, a name, and 1–25 versions numbered upward where only version 1 keeps a whole build. */
+export function validateInvention(i) {
+    if (!i || typeof i !== "object" || !isSafeId(i.id) || typeof i.name !== "string" || i.name.length < 1 || i.name.length > INVENTION_NAME_MAX)
+        return false;
+    if (!Number.isFinite(i.createdAtMs) || !isSafeId(i.environment) || (i.copiedFrom !== undefined && !isSafeId(i.copiedFrom)))
+        return false;
+    if (!Array.isArray(i.versions) || i.versions.length < 1 || i.versions.length > MAX_VERSIONS)
+        return false;
+    let last = 0;
+    for (const [k, v] of i.versions.entries()) {
+        if (!v || !Number.isInteger(v.n) || v.n <= last || !Number.isFinite(v.savedAtMs) || typeof v.checksum !== "string" || !isCount(v.partCount))
+            return false;
+        last = v.n;
+        if (k === 0 ? !isContent(v.base) || v.delta !== undefined : v.base !== undefined || !v.delta || !Array.isArray(v.delta.add) || !Array.isArray(v.delta.change) || !isStringArray(v.delta.remove, true) || (v.delta.connections !== undefined && !Array.isArray(v.delta.connections)) || (v.delta.order !== undefined && !isStringArray(v.delta.order, true)))
+            return false;
+        if (v.restoredFrom !== undefined && (!Number.isInteger(v.restoredFrom) || v.restoredFrom < 1))
+            return false;
+        if (v.metrics !== undefined && (!v.metrics || typeof v.metrics !== "object" || !Object.entries(v.metrics).every(([key, x]) => isSafeId(key) && Number.isFinite(x))))
+            return false;
+    }
     return true;
 }
 /** A saved experiment: safe ids, a real guess (if any) and 1–12 trials of finite measured numbers. */
@@ -248,7 +281,7 @@ export function titleVisibility(save) {
         continueGame: returning && (recent !== undefined || guestStarted),
         profiles: returning && hasProfiles,
         freeBuild: returning && (recent ? recent.freeBuildUnlocked : save.freeBuildUnlocked),
-        myInventions: returning && (recent ? recent.shelf.length > 0 : save.myInventionsCount > 0)
+        myInventions: returning && (recent ? recent.shelf.length > 0 || recent.inventions.length > 0 : save.myInventionsCount > 0)
     };
 }
 // ------------------------------------------------------------------ mutations (pure)
