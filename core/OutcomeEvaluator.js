@@ -181,6 +181,25 @@ export function evaluateOutcomeRule(rule, build, runtime) {
             return false;
         return samples.every(o => { const p = position(runtime, o); const moved = Math.hypot(p.x - o.position.x, p.y - o.position.y); return isMagnetic(runtime.partDefinition(o.id)) ? moved >= rule.minMove : moved <= rule.maxStill; });
     }
+    if (rule.kind === "TANK_LEVEL") {
+        const tanks = tagged(build, rule.tankTag);
+        return tanks.length > 0 && tanks.every(t => { const st = runtime.water.tank(t.id); return st !== undefined && st.fraction >= (rule.minFraction ?? 0) && st.fraction <= (rule.maxFraction ?? 1); });
+    }
+    if (rule.kind === "WATER_RECEIVED") {
+        if (runtime.elapsedTime < (rule.minElapsed ?? 0))
+            return false;
+        const ts = tagged(build, rule.targetTag);
+        return ts.length > 0 && ts.every(t => { const w = runtime.water.waterReceived(t.id); return w >= (rule.min ?? 0) && w <= (rule.max ?? Infinity); });
+    }
+    if (rule.kind === "FILL_COMPARE") {
+        const a = tagged(build, rule.aTag)[0], b = tagged(build, rule.bTag)[0];
+        if (!a || !b)
+            return false;
+        const ta = runtime.water.fillTime(a.id, rule.fillFraction), tb = runtime.water.fillTime(b.id, rule.fillFraction);
+        if (ta === undefined || tb === undefined)
+            return false;
+        return Math.max(ta, tb) / Math.max(1e-6, Math.min(ta, tb)) >= rule.minRatio;
+    }
     if (rule.kind === "MECHANISM_FAMILY_COUNT") {
         const present = new Set(build.allParts().filter(part => rule.definitionIds.includes(part.definitionId)).map(part => part.definitionId));
         return present.size >= rule.minimum;

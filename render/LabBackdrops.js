@@ -64,6 +64,35 @@ THEMES["magnet-factory"] = { title: "MAGNET FACTORY", top: "#5f3dc4", bottom: "#
             c.strokeRect(x, 230, 40, 26);
         }
     } };
+/** Water Works: tiled walls, big pipes along the top and a water gauge. */
+THEMES["water-works"] = { title: "WATER WORKS", top: "#1864ab", bottom: "#4dabf7", wall: "#a5d8ff", floor: "#74c0fc", accent: "#228be6", motif: (c, t) => {
+        c.strokeStyle = "#d0ebff";
+        c.lineWidth = 2;
+        for (let x = 0; x < 1600; x += 50) {
+            c.beginPath();
+            c.moveTo(x, 130);
+            c.lineTo(x, 700);
+            c.stroke();
+        }
+        for (let y = 130; y < 700; y += 50) {
+            c.beginPath();
+            c.moveTo(0, y);
+            c.lineTo(1600, y);
+            c.stroke();
+        }
+        c.fillStyle = "#868e96";
+        c.fillRect(0, 150, 1600, 26);
+        c.fillStyle = "#adb5bd";
+        for (let x = 60; x < 1600; x += 260)
+            c.fillRect(x, 142, 22, 42);
+        c.fillStyle = "#e7f5ff";
+        for (let k = 0; k < 10; k++) {
+            const x = ((t * 80 + k * 170) % 1700) - 50;
+            c.beginPath();
+            c.arc(x, 163, 4, 0, Math.PI * 2);
+            c.fill();
+        }
+    } };
 export function hasLabBackdrop(labId) { return labId in THEMES; }
 export function drawLabBackdrop(c, labId, time) {
     const th = THEMES[labId];

@@ -29,7 +29,7 @@ export function gearNodeFrom(part, def) {
     const dir = Number(part.parameters.direction ?? 1) < 0 ? -1 : 1;
     return {
         id: part.id, definitionId: part.definitionId, x: part.position.x, y: part.position.y, role: g.role, radius: g.radius, teeth: g.teeth, parameters: part.parameters,
-        ...(d?.kind === "GEAR_DRIVER" ? { driver: { kind: d.driver, speed: d.speed * dir, torque: d.torque, ...(d.electric ? { electric: true } : {}) } } : {}),
+        ...(d?.kind === "GEAR_DRIVER" ? { driver: { kind: d.driver, speed: d.speed * dir, torque: d.torque, ...(d.electric ? { electric: true } : {}), ...(d.hydraulic ? { hydraulic: true } : {}) } } : {}),
         ...(o?.kind === "GEAR_OUTPUT" ? { output: { kind: o.output, load: Number(part.parameters.load ?? o.load), drum: o.drum ?? g.radius } } : {})
     };
 }
@@ -124,7 +124,7 @@ export class GearSystem {
         for (const n of this.analysis.nodes) {
             this.angle.set(n.id, 0);
             this.runTicks.set(n.id, 0);
-            if (n.driver?.electric)
+            if (n.driver?.electric || n.driver?.hydraulic)
                 this.driveScale.set(n.id, 0);
         }
         for (const [id, load] of extraLoads)
@@ -234,7 +234,9 @@ export class GearSystem {
     /** Power Lab: set how hard the circuit drives an electric motor (no effect on cranks or ordinary motors). */
     setDriveScale(driverId, scale) { if (this.driveScale.has(driverId))
         this.driveScale.set(driverId, scale); }
-    isElectric(id) { return this.driveScale.has(id); }
+    isElectric(id) { return this.driveScale.has(id) && this.node(id)?.driver?.electric === true; }
+    /** Water Works: a water wheel driven by the flow over it. */
+    isHydraulic(id) { return this.driveScale.has(id) && this.node(id)?.driver?.hydraulic === true; }
     trainInfo(id) {
         const t = this.trainOf(id);
         if (!t)

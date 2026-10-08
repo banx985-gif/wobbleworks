@@ -6,6 +6,7 @@ import { GearSystem } from "../gears/GearSystem.js";
 import { StructureSystem } from "../structures/StructureSystem.js";
 import { CircuitSystem } from "../power/CircuitSystem.js";
 import { MagnetSystem } from "../magnets/MagnetSystem.js";
+import { FluidSystem } from "../water/FluidSystem.js";
 export class RuntimeWorld {
     snapshotSignature;
     physics = new PhysicsWorld();
@@ -17,6 +18,8 @@ export class RuntimeWorld {
     circuits;
     /** Magnet Factory (M15): bar magnets, electromagnets and magnetic materials. */
     magnets;
+    /** Water Works (M16): pipes, tanks, valves, pumps, nozzles and water wheels. */
+    water;
     /** Buttons held down by a finger during this TEST, and switches flipped since the last tick. */
     fingerPressed = new Set();
     flips = new Set();
@@ -58,6 +61,7 @@ export class RuntimeWorld {
         this.structures = new StructureSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.gears = new GearSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined, this.snapshot.connections, extraLoads);
         this.circuits = new CircuitSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
+        this.water = new FluidSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.magnets = new MagnetSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.installPipeline();
     }
@@ -95,7 +99,7 @@ export class RuntimeWorld {
         this.pipeline.on("PRE_PHYSICS_SENSORS", () => this.sampleSensors());
         this.pipeline.on("LOGIC_EVALUATION", () => this.evaluateLogic());
         this.pipeline.on("ACTUATOR_RESOLUTION", () => this.resolveActuators());
-        this.pipeline.on("FORCE_AND_COUPLING", ({ dt }) => { this.stepMagnets(dt); this.applyCouplings(); this.gears.step(dt); this.applyGearCouplings(); this.stepStructures(dt); });
+        this.pipeline.on("FORCE_AND_COUPLING", ({ dt }) => { this.stepMagnets(dt); this.applyJets(); this.applyCouplings(); this.gears.step(dt); this.applyGearCouplings(); this.stepStructures(dt); });
         this.pipeline.on("PHYSICS_STEP", ({ dt }) => this.physics.step(dt));
         this.pipeline.on("POST_PHYSICS_CONTACTS", () => { this.magnets.applyGuides(this.physics); this.collectPhysicsEvents(); });
         this.pipeline.on("DOMAIN_TRANSFER", ({ dt }) => this.transferDomains(dt));
@@ -154,6 +158,30 @@ export class RuntimeWorld {
             return Math.abs(st.x - part.position.x) <= rigid.width / 2 + 0.1 && bottom >= top - 0.15 && bottom <= top + 0.25;
         });
     }
+    /** Water jets push what they hit (their flow times their speed). */
+    applyJets() {
+        for (const jet of this.water.jetStates()) {
+            if (jet.points.length < 2)
+                continue;
+            for (const part of this.snapshot.parts) {
+                if (!this.isDynamicBody(part.id))
+                    continue;
+                const s = this.safeState(part.id);
+                if (!s)
+                    continue;
+                for (let i = 1; i < jet.points.length; i++) {
+                    const p = jet.points[i], q = jet.points[i - 1];
+                    if (Math.hypot(p.x - s.x, p.y - s.y) > 0.4)
+                        continue;
+                    const dx = p.x - q.x, dy = p.y - q.y, d = Math.hypot(dx, dy) || 1;
+                    const f = Math.min(1, jet.flow * jet.speed * 0.4);
+                    this.physics.applyForce(part.id, { x: dx / d * f, y: dy / d * f });
+                    this.event("WATER_JET_PUSH", jet.id, part.id, { force: Math.round(f * 100) / 100 });
+                    break;
+                }
+            }
+        }
+    }
     stepMagnets(dt) {
         if (!this.magnets.hasMagnets())
             return;
@@ -163,9 +191,18 @@ export class RuntimeWorld {
     }
     /** Circuits first in the tick (network topology): then electric motors drive their gear trains at the current they get. */
     stepCircuits(dt) {
-        if (!this.circuits.hasCircuit() && !this.circuits.layout.elements.length)
+        if (!this.circuits.layout.elements.length && !this.water.layout.ports.length)
             return;
         this.circuits.step(dt, id => this.buttonPressed(id), this.flips);
+        // Water after electricity (pumps need current); valves tapped during the TEST flip here too.
+        if (this.water.layout.ports.length) {
+            this.water.step(dt, id => Math.abs(this.circuits.motorDrive(id)), id => this.gears.state(id)?.angle ?? 0, this.flips);
+            for (const n of this.gears.nodes)
+                if (this.gears.isHydraulic(n.id))
+                    this.gears.setDriveScale(n.id, this.water.wheelDrive(n.id));
+            for (const e of this.water.drainEvents())
+                this.event(e.kind, e.sourceId, e.targetId, e.data);
+        }
         this.flips.clear();
         for (const n of this.gears.nodes)
             if (this.gears.isElectric(n.id))

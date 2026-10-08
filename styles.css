@@ -409,3 +409,4 @@ html.high-contrast { --ink:#000; --panel:#fff; --accent:#006b1b; --danger:#a0000
 .map-pic{width:clamp(28px,5.2cqw,58px);height:clamp(28px,5.2cqw,58px);object-fit:contain;display:block;margin:0 auto;filter:drop-shadow(0 2px 0 #18323f55)}
 .beam-icon.wire{background:radial-gradient(ellipse at 50% 0,transparent 55%,#203040 56% 64%,transparent 65%)}
 .emoji-icon{display:block;width:40px;height:40px;font-size:30px;line-height:40px;text-align:center;pointer-events:none}
+.beam-icon.pipe{background:linear-gradient(0deg,transparent 30%,#203040 30% 34%,#4dabf7 34% 66%,#203040 66% 70%,transparent 70%)}.beam-icon.pipe.narrow{background:linear-gradient(0deg,transparent 40%,#203040 40% 44%,#4dabf7 44% 56%,#203040 56% 60%,transparent 60%)}

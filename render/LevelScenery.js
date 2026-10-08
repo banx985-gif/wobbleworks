@@ -34,7 +34,13 @@ export const LEVEL_SCENERY = {
     "magnet.scrap-sorter": [S("sorter-chutes", 13.8, 8.2, 2.4)],
     "magnet.which-materials-move": [S("magnet-targets", 14, 8.2, 1.8)],
     "magnet.the-giant-scrap-sorter": [S("sorter-chutes", 2.0, 8.2, 2.2)],
-    "magnet.scrap-avalanche": [S("scrap-pile", 12.6, 8.2, 2.2), S("hazard-sign", 3, 8.2, 1.1)]
+    "magnet.scrap-avalanche": [S("scrap-pile", 12.6, 8.2, 2.2), S("hazard-sign", 3, 8.2, 1.1)],
+    // Water Works
+    "water.stop-the-leak": [S("leaky-pipe", 14.6, 8.2, 2)],
+    "water.water-the-garden": [S("garden-beds", 13.8, 8.2, 2.2)],
+    "water.spray-the-target": [S("spray-targets", 14.6, 8.2, 1.8)],
+    "water.the-grand-fountain": [S("fountain", 14.9, 8.2, 1.5)],
+    "water.flooded-workshop": [S("hazard-sign", 10.5, 8.2, 1.1), S("leaky-pipe", 15, 8.2, 1.4)]
 };
 /** Picture aspect ratios (width / height), so the layout can be checked without loading pictures. */
 export const SCENERY_ASPECT = {

@@ -70,6 +70,20 @@ export const DISCOVERIES = [
     { id: "combo.magnet-circuit", kind: "COMBINATION", title: "Switchable magnet", line: "Electricity on: grab. Electricity off: drop.", art: "icon.magnet-zap", truthContractId: "truth.magnetism.v1" },
     { id: "secret.magnet-sandwich", kind: "SECRET", title: "Floating Sandwich", line: "Two magnets floating in a stack. Delicious. (Not edible.)", art: "icon.magnet-poles", truthContractId: "truth.magnetism.v1" },
     { id: "secret.magnet-rocket", kind: "SECRET", title: "Magnet Rocket", line: "WHOOSH! A magnet cart pushed faster than 5 m/s.", art: "icon.speed", truthContractId: "truth.magnetism.v1" },
+    // Water Works (M16) — every one measured by the FluidSystem (truth.water.v1)
+    { id: "water.path", kind: "CONCEPT", title: "Water follows the path", line: "Give water a path and it flows along it.", art: "icon.water-drop", truthContractId: "truth.water.v1" },
+    { id: "water.downhill", kind: "CONCEPT", title: "Water runs downhill", line: "Water flowed down from a high tank to a lower one, all by itself.", art: "icon.water-drop-plain", truthContractId: "truth.water.v1" },
+    { id: "water.climb", kind: "CONCEPT", title: "Water can't climb on its own", line: "Water won't go higher than where it starts.", art: "icon.wave", truthContractId: "truth.water.v1" },
+    { id: "water.valve", kind: "CONCEPT", title: "Valves open and shut", line: "A valve lets water through, or stops it.", art: "water.valves", truthContractId: "truth.water.v1" },
+    { id: "water.pump", kind: "CONCEPT", title: "Pumps push water up", line: "A pump adds a push so water can climb.", art: "water.tanks", truthContractId: "truth.water.v1" },
+    { id: "water.narrow", kind: "CONCEPT", title: "Narrow pipes carry less", line: "A skinny pipe lets much less water through than a wide one.", art: "icon.water-drop", truthContractId: "truth.water.v1" },
+    { id: "water.jet", kind: "CONCEPT", title: "Jets fly in arcs", line: "Water from a nozzle flies in a curve and lands on target.", art: "water.nozzle-launcher", truthContractId: "truth.water.v1" },
+    { id: "water.overflow", kind: "CONCEPT", title: "Tanks fill up", line: "A tank holds only so much — then it overflows.", art: "water.tanks", truthContractId: "truth.water.v1" },
+    { id: "water.wheel", kind: "CONCEPT", title: "Water can turn wheels", line: "Falling water pushed a water wheel round.", art: "icon.wave", truthContractId: "truth.water.v1" },
+    { id: "combo.water-gears", kind: "COMBINATION", title: "Water + gears", line: "A water wheel's gears ran an old machine.", art: "icon.gear-yellow", truthContractId: "truth.water.v1" },
+    { id: "combo.water-electric", kind: "COMBINATION", title: "Electric fountain", line: "An electric pump fed a jet that hit its target.", art: "icon.energy-flask", truthContractId: "truth.water.v1" },
+    { id: "secret.water-duck-splash", kind: "SECRET", title: "Duck Water Park", line: "SPLASH! The duck rode the jets into the pool.", art: "duck.plain", truthContractId: "truth.water.v1" },
+    { id: "secret.water-big-spill", kind: "SECRET", title: "Indoor Swimming Pool", line: "Ten litres on the floor! Bolt has fetched a mop.", art: "fx.splash", truthContractId: "truth.water.v1" },
     { id: "secret.sky-tower", kind: "SECRET", title: "Sky Scraper", line: "A tower so tall it nearly touched the ceiling — and it stood firm!", art: "builder.beam-metal", truthContractId: "truth.structures.v1" }
 ];
 export function discoveryById(id) { return DISCOVERIES.find(d => d.id === id); }

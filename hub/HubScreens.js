@@ -117,8 +117,9 @@ export function sprocketArt(accessory, awake = true) {
         : `<path d="M64 44 q5 3 10 0" fill="none" stroke="#18323f" stroke-width="3" stroke-linecap="round"/>`;
     const acc = accessory === "sprocket.bandana" ? `<path d="M56 54 l26 0 -12 14z" fill="#fa5252" ${O}/>`
         : accessory === "sprocket.magnet-tag" ? `<g transform="translate(69 59)"><path d="M-7 -6 v6 a7 7 0 0 0 14 0 v-6" fill="none" stroke="#e03131" stroke-width="5"/><rect x="-9.5" y="-9" width="5" height="4" fill="#ced4da"/><rect x="4.5" y="-9" width="5" height="4" fill="#ced4da"/></g>`
-            : accessory === "sprocket.glow-collar" ? `<path d="M55 51 q14 8 28 0" fill="none" stroke="#ffd43b" stroke-width="7" stroke-linecap="round" opacity=".9"/><circle cx="69" cy="58" r="5" fill="#fff59d" stroke="#18323f" stroke-width="2"/>`
-                : accessory === "sprocket.spring-collar" ? `<path d="M56 54 q4 -6 8 0 q4 6 8 0 q4 -6 8 0" fill="none" stroke="#845ef7" stroke-width="5"/>` : "";
+            : accessory === "sprocket.rain-hat" ? `<path d="M52 20 q17 -16 34 0 l6 4 h-46z" fill="#ffd43b" stroke="#18323f" stroke-width="3"/>`
+                : accessory === "sprocket.glow-collar" ? `<path d="M55 51 q14 8 28 0" fill="none" stroke="#ffd43b" stroke-width="7" stroke-linecap="round" opacity=".9"/><circle cx="69" cy="58" r="5" fill="#fff59d" stroke="#18323f" stroke-width="2"/>`
+                    : accessory === "sprocket.spring-collar" ? `<path d="M56 54 q4 -6 8 0 q4 6 8 0 q4 -6 8 0" fill="none" stroke="#845ef7" stroke-width="5"/>` : "";
     return svg(`
     <path d="M18 60 q-12 -6 -8 -20" fill="none" stroke="#18323f" stroke-width="9" stroke-linecap="round" class="sprocket-tail"/>
     <path d="M18 60 q-12 -6 -8 -20" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" class="sprocket-tail"/>

@@ -32,6 +32,7 @@ import { evaluateBuilderMission, loadBuilderBayLevels, runSummary, STRUCTURE_REA
 import { analyzeStructure, beamEndpoints as structureBeamEndpoints, beamEndSnap } from "./structures/StructureSystem.js";
 import { analyzeCircuit, circuitBehaviour, wireEnds, wireEndSnap } from "./power/CircuitSystem.js";
 import { magnetBehaviour } from "./magnets/MagnetSystem.js";
+import { analyzeFluid, fluidBehaviour, pipeEnds, pipeEndSnap } from "./water/FluidSystem.js";
 import { LAB_MODULES, evaluateLabMission, labModule } from "./labs/Labs.js";
 import { loadLabLevels } from "./labs/LabModule.js";
 import { hasLabBackdrop } from "./render/LabBackdrops.js";
@@ -201,8 +202,9 @@ const ui = {
     debug: document.querySelector("#debug"), mode: document.querySelector("#mode-label")
 };
 /** Parts you stretch by their ends: Builder Bay beams and Power Lab wires. */
-function beamEndpoints(part, def) { return structureBeamEndpoints(part, def) ?? wireEnds(part, def); }
+function beamEndpoints(part, def) { return structureBeamEndpoints(part, def) ?? wireEnds(part, def) ?? pipeEnds(part, def); }
 function isWirePart(id) { const p = build.getPart(id); return p !== undefined && registry.get(p.definitionId).behaviours.some(b => b.kind === "WIRE"); }
+function isPipePart(id) { const p = build.getPart(id); return p !== undefined && registry.get(p.definitionId).behaviours.some(b => b.kind === "PIPE"); }
 function delay(ms) { return new Promise(resolve => window.setTimeout(resolve, ms)); }
 function now() { return performance.now(); }
 function gameplayAllowed() { return shell.canUseGameplay(now()); }
@@ -967,7 +969,7 @@ function startFreeBuild(from) {
     motionObjective.textContent = "Build anything. TEST it. Change it. TEST again.";
     document.querySelector(".motion-badge").textContent = "WORKSHOP";
     resetGuidance(undefined);
-    const scanner = (p?.unlockedTools.includes("tool.force-scanner") || p?.unlockedTools.includes("tool.spin-scanner") || p?.unlockedTools.includes("tool.stress-scanner") || p?.unlockedTools.includes("tool.circuit-scanner") || p?.unlockedTools.includes("tool.magnet-scanner")) ?? false;
+    const scanner = (p?.unlockedTools.includes("tool.force-scanner") || p?.unlockedTools.includes("tool.spin-scanner") || p?.unlockedTools.includes("tool.stress-scanner") || p?.unlockedTools.includes("tool.circuit-scanner") || p?.unlockedTools.includes("tool.magnet-scanner") || p?.unlockedTools.includes("tool.flow-scanner")) ?? false;
     forceScannerButton.textContent = "Scanner";
     forceScannerButton.classList.toggle("hidden", !scanner);
     forceScannerButton.classList.remove("force-on");
@@ -1263,7 +1265,7 @@ function snapGear(id) {
 // ------------------------------------------------------------------ Builder Bay beam editing
 /** A beam reshaped so its ends sit at two points (middle, angle and length follow). */
 function beamFromEnds(p, a, b) {
-    const wire = registry.get(p.definitionId).behaviours.some(x => x.kind === "WIRE");
+    const wire = registry.get(p.definitionId).behaviours.some(x => x.kind === "WIRE" || x.kind === "PIPE");
     const length = Math.max(wire ? 0.2 : 0.5, Math.min(wire ? 12 : 6, Math.hypot(b.x - a.x, b.y - a.y)));
     const ang = Math.atan2(b.y - a.y, b.x - a.x);
     return { ...p, position: { x: a.x + Math.cos(ang) * length / 2, y: a.y + Math.sin(ang) * length / 2 }, rotation: ang, parameters: { ...p.parameters, length } };
@@ -1272,7 +1274,7 @@ function beamFromEnds(p, a, b) {
 function finishBeamEnd(drag) {
     const others = build.allParts().filter(p => p.id !== drag.id);
     const reach = currentAssistance(appSave).snapAssist ? 0.35 : 0.2;
-    const target = (isWirePart(drag.id)
+    const target = (isPipePart(drag.id) ? pipeEndSnap(drag.moving.x, drag.moving.y, analyzeFluid(others, id => registry.has(id) ? registry.get(id) : undefined), reach) : isWirePart(drag.id)
         ? wireEndSnap(drag.moving.x, drag.moving.y, analyzeCircuit(others, id => registry.has(id) ? registry.get(id) : undefined), undefined, reach)
         : beamEndSnap(drag.moving.x, drag.moving.y, analyzeStructure(others, id => registry.has(id) ? registry.get(id) : undefined), undefined, reach)) ?? drag.moving;
     const shaped = beamFromEnds(build.getPart(drag.id), drag.fixed, target);
@@ -1290,7 +1292,7 @@ function snapBeam(id) {
     const reach = currentAssistance(appSave).snapAssist ? 0.35 : 0.2;
     const others = build.allParts().filter(p => p.id !== id);
     const lookup = (d) => registry.has(d) ? registry.get(d) : undefined;
-    const snap = isWirePart(id) ? (() => { const layout = analyzeCircuit(others, lookup); return (x, y) => wireEndSnap(x, y, layout, undefined, reach); })() : (() => { const layout = analyzeStructure(others, lookup); return (x, y) => beamEndSnap(x, y, layout, undefined, reach); })();
+    const snap = isPipePart(id) ? (() => { const layout = analyzeFluid(others, lookup); return (x, y) => pipeEndSnap(x, y, layout, reach); })() : isWirePart(id) ? (() => { const layout = analyzeCircuit(others, lookup); return (x, y) => wireEndSnap(x, y, layout, undefined, reach); })() : (() => { const layout = analyzeStructure(others, lookup); return (x, y) => beamEndSnap(x, y, layout, undefined, reach); })();
     const s1 = snap(ends.x1, ends.y1), s2 = snap(ends.x2, ends.y2);
     const d1 = s1 ? Math.hypot(s1.x - ends.x1, s1.y - ends.y1) : Infinity, d2 = s2 ? Math.hypot(s2.x - ends.x2, s2.y - ends.y2) : Infinity;
     if (s1 && s2) {
@@ -1803,6 +1805,11 @@ function tapAction(p) {
     const def = registry.get(p.definitionId);
     if (circuitBehaviour(def)?.role === "SWITCH")
         return "FLIP";
+    const fluid = fluidBehaviour(def);
+    if (fluid?.role === "VALVE")
+        return "VALVE";
+    if (def.id === "plumb.nozzle")
+        return "AIM";
     const bar = magnetBehaviour(def);
     if (!bar || bar.electric)
         return undefined;
@@ -1836,10 +1843,10 @@ function testModeTouch(event, sample) {
         return;
     if (event === "down") {
         const w = pointerWorld(sample);
-        const hit = [...build.allParts()].reverse().find(p => { const b = circuitBehaviour(registry.get(p.definitionId)); return (b?.role === "BUTTON" || b?.role === "SWITCH") && Math.abs(p.position.x - w.x) <= 0.6 && Math.abs(p.position.y - w.y) <= 0.5; });
+        const hit = [...build.allParts()].reverse().find(p => { const b = circuitBehaviour(registry.get(p.definitionId)); return (b?.role === "BUTTON" || b?.role === "SWITCH" || fluidBehaviour(registry.get(p.definitionId))?.role === "VALVE") && Math.abs(p.position.x - w.x) <= 0.6 && Math.abs(p.position.y - w.y) <= 0.5; });
         if (!hit)
             return;
-        const role = circuitBehaviour(registry.get(hit.definitionId)).role;
+        const role = circuitBehaviour(registry.get(hit.definitionId))?.role ?? "SWITCH";
         if (role === "BUTTON") {
             fingerButton = hit.id;
             runtime.pressButton(hit.id, true);
@@ -1910,6 +1917,10 @@ input.on((event, sample) => {
             if (dropped && tap) {
                 if (tap === "FLIP")
                     build.reshape(droppedId, { parameters: { closed: dropped.parameters.closed !== true } });
+                else if (tap === "VALVE")
+                    build.reshape(droppedId, { parameters: { open: dropped.parameters.open !== true } });
+                else if (tap === "AIM")
+                    build.reshape(droppedId, { rotation: dropped.rotation - Math.PI / 12 < -Math.PI / 2 - 1e-6 ? 0.25 : dropped.rotation - Math.PI / 12 });
                 else
                     build.reshape(droppedId, { rotation: ((dropped.rotation + (tap === "QUARTER" ? Math.PI / 2 : Math.PI)) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) });
                 sfx(tap === "FLIP" && dropped.parameters.closed === true ? 420 : 760, .05);
@@ -1963,6 +1974,10 @@ function render() {
         renderer.drawCircuitScanner(shown, registry, runtime.circuits);
     if (runtime && forceScanner && runtime.magnets.hasMagnets())
         renderer.drawMagnetForces(runtime);
+    if (runtime && runtime.water.layout.ports.length)
+        renderer.drawWaterEffects(runtime, now() / 1000);
+    if (!runtime && shown.some(p => fluidBehaviour(registry.get(p.definitionId)) || registry.get(p.definitionId).behaviours.some(b => b.kind === "PIPE")))
+        renderer.drawWaterPorts(analyzeFluid(shown, id => registry.has(id) ? registry.get(id) : undefined));
     if (!runtime && shown.some(p => registry.get(p.definitionId).behaviours.some(b => b.kind === "BEAM")))
         renderer.drawJoints(analyzeStructure(shown, id => registry.has(id) ? registry.get(id) : undefined));
     if (runtime) {

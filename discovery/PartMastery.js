@@ -1,3 +1,4 @@
+import { pipeEnds } from "../water/FluidSystem.js";
 import { episodes } from "./Discoveries.js";
 export const PART_CARDS = [
     { partId: "motion.spring", title: "Spring", uses: [{ id: "launch", label: "Launch" }, { id: "launch-heavy", label: "Launch something heavy" }] },
@@ -20,6 +21,8 @@ export const PART_CARDS = [
     { partId: "circuit.wire", title: "Wire", uses: [{ id: "loop", label: "Close a loop" }, { id: "branch", label: "Make a second path" }] },
     { partId: "circuit.switch", title: "Switch", uses: [{ id: "control", label: "Turn something on and off" }] },
     { partId: "circuit.motor", title: "Electric Motor", uses: [{ id: "turn", label: "Turn gears with electricity" }] },
+    { partId: "plumb.pipe", title: "Pipe", uses: [{ id: "carry", label: "Carry water" }, { id: "down", label: "Send water downhill" }] },
+    { partId: "plumb.valve", title: "Valve", uses: [{ id: "shut", label: "Hold water back" }] },
     { partId: "magnetic.bar", title: "Bar Magnet", uses: [{ id: "pull", label: "Pull without touching" }, { id: "push", label: "Push without touching" }, { id: "lift", label: "Lift metal up" }] }
 ];
 const HEAVY = new Set(["motion.cart", "motion.parcel", "silly.bolt"]);
@@ -215,6 +218,20 @@ export function observePartUses(build, runtime) {
                 add(part.definitionId, "net");
         }
     }
+    // Water: uses from what the FluidSystem measured.
+    const wsys = runtime.water;
+    if (wsys.layout.ports.length)
+        for (const part of build.allParts()) {
+            if (part.definitionId === "plumb.pipe" && wsys.flowThrough(part.id) > 0.05) {
+                add(part.definitionId, "carry");
+                const def = runtime.partDefinition(part.id);
+                const e = def ? pipeEnds(part, def) : undefined;
+                if (e && Math.abs(e.y2 - e.y1) > 0.8)
+                    add(part.definitionId, "down");
+            }
+            if (part.definitionId === "plumb.valve" && !wsys.isOpen(part.id) && runtime.causalEvents.some(ev => ev.kind === "WATER_FLOWING"))
+                add(part.definitionId, "shut");
+        }
     // Magnets: uses from what the MagnetSystem measured.
     for (const e of runtime.causalEvents) {
         const mag = build.getPart(e.sourceId);

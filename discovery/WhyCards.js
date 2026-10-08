@@ -18,7 +18,10 @@ export const WHY_CHOICES = {
     OVERLOAD: { label: "Too much at once", icon: "🔌" },
     WRONG_POLE: { label: "Wrong end facing", icon: "🧲" },
     TOUCHED: { label: "Something touched it", icon: "✋" },
-    NOT_MAGNETIC: { label: "Not magnetic", icon: "🪵" }
+    NOT_MAGNETIC: { label: "Not magnetic", icon: "🪵" },
+    TOO_HIGH: { label: "Too high to reach", icon: "⛰️" },
+    LEAKING: { label: "Leaking", icon: "💧" },
+    MISSED: { label: "Missed the target", icon: "🎯" }
 };
 function tagged(build, tag) { return build.allParts().find(p => p.tags?.includes(tag)); }
 function state(runtime, id) { try {
@@ -34,6 +37,12 @@ function nameOf(part) {
 const m = (v) => `${v.toFixed(1)} m`;
 /** Picks two other answers deterministically so the same failure shows the same card. */
 function choicesFor(reason) {
+    if (["TOO_HIGH", "LEAKING", "MISSED"].includes(reason)) {
+        const pool = ["TOO_HIGH", "LEAKING", "MISSED", "NOT_CONNECTED", "TOO_SLOW", "WRONG_DIRECTION"].filter(r => r !== reason);
+        const seed = reason.length;
+        const three = [reason, pool[seed % pool.length], pool[(seed + 2) % pool.length]];
+        return [three[seed % 3], three[(seed + 1) % 3], three[(seed + 2) % 3]];
+    }
     const power = ["SHORTCUT", "ALWAYS_ON", "USED_TOO_MUCH", "OVERLOAD", "WRONG_POLE", "TOUCHED", "NOT_MAGNETIC"].includes(reason);
     const magnetPool = ["WRONG_POLE", "TOUCHED", "NOT_MAGNETIC", "NOT_ENOUGH_FORCE", "UNSTABLE", "TOO_MUCH_FORCE"];
     if (power) {
@@ -66,6 +75,9 @@ export function diagnoseRun(level, build, runtime) {
     const magnetCard = diagnoseMagnets(rules, build, runtime, card);
     if (magnetCard)
         return magnetCard;
+    const waterCard = diagnoseWater(rules, build, runtime, card);
+    if (waterCard)
+        return waterCard;
     // Builder Bay: the structure's own measurements.
     const structureCard = diagnoseStructures(rules, build, runtime, card);
     if (structureCard)
@@ -408,3 +420,74 @@ function diagnoseMagnets(rules, build, runtime, card) {
     return undefined;
 }
 function m2(v) { return `${v.toFixed(1)} m`; }
+function diagnoseWater(rules, build, runtime, card) {
+    const w = runtime.water;
+    if (!w.layout.ports.length)
+        return undefined;
+    const events = runtime.causalEvents;
+    const tag = (t) => build.allParts().filter(p => p.tags?.includes(t));
+    for (const r of rules)
+        if (r.kind === "WATER_RECEIVED" && r.max !== undefined)
+            for (const p of tag(r.targetTag))
+                if (w.waterReceived(p.id) > r.max)
+                    return card("LEAKING", `${w.waterReceived(p.id).toFixed(1)} litres of water landed on ${nameOf(p)}. Where is it coming from?`);
+    for (const r of rules)
+        if (r.kind === "TANK_LEVEL" && r.maxFraction !== undefined)
+            for (const p of tag(r.tankTag)) {
+                const t = w.tank(p.id);
+                if (t && t.fraction > r.maxFraction)
+                    return card("WRONG_DIRECTION", `Water went into ${nameOf(p)} (${Math.round(t.fraction * 100)}% full) — the way to it was open.`);
+            }
+    const pumps = build.allParts().filter(p => p.definitionId === "plumb.pump");
+    const piped = (id) => { const ports = w.layout.ports.filter(q => q.partId === id); return ports.length > 0 && ports.every(q => w.layout.ports.filter(o => o.node === q.node).length >= 2); };
+    if (pumps.length && !events.some(e => e.kind === "PUMP_LIFT")) {
+        if (pumps.some(p => piped(p.id) && (runtime.circuits.load(p.id)?.everOn ?? false) === false))
+            return card("NOT_CONNECTED", "The pump never got any electricity, so it couldn't push.");
+    }
+    const airlock = events.find(e => e.kind === "WATER_AIRLOCK");
+    if (airlock)
+        return card("TOO_HIGH", `The water couldn't climb up to the pipe at ${(8.4 - Number(airlock.data?.y ?? 0)).toFixed(1)} m high — water can't go higher than where it starts on its own.`);
+    const spill = events.find(e => e.kind === "WATER_SPILL");
+    const spilled = w.totalSpilled();
+    for (const r of rules)
+        if (r.kind === "TANK_LEVEL" && r.minFraction !== undefined)
+            for (const p of tag(r.tankTag)) {
+                const t = w.tank(p.id);
+                if (!t || t.fraction >= r.minFraction)
+                    continue;
+                if (spill && spilled > 0.3)
+                    return card("LEAKING", `${spilled.toFixed(1)} litres poured out of an open or broken pipe instead of reaching ${nameOf(p)}.`);
+                if (t.volume <= 0.01)
+                    return card("NOT_CONNECTED", `No water reached ${nameOf(p)} — there's no complete path to it.`);
+                return card("TOO_SLOW", `${nameOf(p)} only got to ${Math.round(t.fraction * 100)}% full.`);
+            }
+    for (const r of rules)
+        if (r.kind === "WATER_RECEIVED" && r.min !== undefined)
+            for (const p of tag(r.targetTag)) {
+                if (w.waterReceived(p.id) >= r.min)
+                    continue;
+                const jet = w.jetStates()[0];
+                if (jet && !jet.hitTarget) {
+                    const end = jet.points[jet.points.length - 1];
+                    return card("MISSED", `The jet landed at ${end.x.toFixed(1)} m across, but ${nameOf(p)} is at ${p.position.x.toFixed(1)} m. Try aiming ${end.x < p.position.x ? "further" : "shorter"}.`);
+                }
+                if (spill && spilled > 0.3)
+                    return card("LEAKING", `${spilled.toFixed(1)} litres spilled from an open pipe end instead.`);
+                return card("NOT_CONNECTED", `${nameOf(p)} got only ${w.waterReceived(p.id).toFixed(1)} litres — no water was sent its way.`);
+            }
+    for (const r of rules)
+        if (r.kind === "FILL_COMPARE") {
+            const a = tag(r.aTag)[0], b = tag(r.bTag)[0];
+            const ta = a && w.fillTime(a.id, r.fillFraction), tb = b && w.fillTime(b.id, r.fillFraction);
+            if (ta && tb)
+                return card("SAME", `Tank A took ${ta.toFixed(1)} s and tank B took ${tb.toFixed(1)} s — about the same. Are the two pipes different?`);
+        }
+    const wheels = runtime.gears.nodes.filter(n => runtime.gears.isHydraulic(n.id));
+    for (const n of wheels) {
+        if ((runtime.gears.state(n.id)?.runTicks ?? 0) === 0)
+            return card("NOT_CONNECTED", "No water reached the water wheel, so it never turned.");
+        if (rules.some(r => r.kind === "GEAR_OUTPUT"))
+            return card("NOT_CONNECTED", "The water wheel turned, but nothing passed its turning on to the machine.");
+    }
+    return undefined;
+}

@@ -124,6 +124,30 @@ export const REWARDS = [
     { id: "avatar.magnet-headband", kind: "AVATAR", title: "Magnet Headband", icon: "🧲", description: "Attracts attention." },
     { id: "badge.scrap-sorter", kind: "BADGE", title: "Giant Sorter Restorer", icon: "♻️", description: "The Giant Scrap Sorter runs again." },
     { id: "badge.magnet-factory", kind: "BADGE", title: "Magnet Factory Restored", icon: "🏅", description: "The Magnet Factory is humming again!" },
+    // Water Works (M16)
+    { id: "part.plumb.pipe", kind: "PART", title: "Pipe", icon: "🟦", description: "Water follows it. Only its two ends join on." },
+    { id: "part.plumb.tank", kind: "PART", title: "Tank", icon: "🛢️", description: "Holds water — until it's full." },
+    { id: "part.plumb.valve", kind: "PART", title: "Valve", icon: "🚰", description: "Tap it to open or shut." },
+    { id: "part.plumb.nozzle", kind: "PART", title: "Nozzle", icon: "💦", description: "Turns water pressure into a jet. Tap to aim." },
+    { id: "part.plumb.pump", kind: "PART", title: "Water Pump", icon: "⚡", description: "Pushes water uphill — with electricity." },
+    { id: "part.plumb.pipe-narrow", kind: "PART", title: "Narrow Pipe", icon: "➖", description: "Lets less water through." },
+    { id: "part.plumb.wheel", kind: "PART", title: "Water Wheel", icon: "☸️", description: "Falling water turns it. Gears go on its shaft." },
+    { id: "part.plumb.sprinkler", kind: "PART", title: "Sprinkler", icon: "🌱", description: "Showers the ground below." },
+    { id: "tool.flow-scanner", kind: "TOOL", title: "Flow Scanner", icon: "💧", description: "Shows how much water flows in every pipe — now in Free Build too." },
+    { id: "sticker.tank-filler", kind: "STICKER", title: "Tank Filler", icon: "🛢️", description: "Your first full tank." },
+    { id: "sticker.downhill", kind: "STICKER", title: "Downhill All the Way", icon: "⛰️", description: "Gravity did the work." },
+    { id: "sticker.valve-master", kind: "STICKER", title: "Valve Master", icon: "🚰", description: "Open here, shut there." },
+    { id: "sticker.leak-fixer", kind: "STICKER", title: "Leak Fixer", icon: "🔧", description: "Bolt's box stayed dry." },
+    { id: "sticker.gardener", kind: "STICKER", title: "Gardener", icon: "🌻", description: "Three happy beds." },
+    { id: "sticker.water-wheel", kind: "STICKER", title: "Mill Wheel", icon: "☸️", description: "Water turned the fan." },
+    { id: "sticker.pump-up", kind: "STICKER", title: "Pump It Up", icon: "⬆️", description: "Water went uphill." },
+    { id: "sticker.sharpshooter", kind: "STICKER", title: "Sharpshooter", icon: "🎯", description: "Two targets, two jets." },
+    { id: "sticker.pipe-scientist", kind: "STICKER", title: "Pipe Scientist", icon: "🔬", description: "Wide pipe or narrow — you tested it fairly." },
+    { id: "prop.duck-flume", kind: "PROP", title: "Duck Flume", icon: "🦆", description: "Wheee! Splash!" },
+    { id: "sprocket.rain-hat", kind: "SPROCKET_ACCESSORY", title: "Rain Hat", icon: "🌂", description: "Sprocket stays dry. Mostly." },
+    { id: "avatar.snorkel", kind: "AVATAR", title: "Snorkel Mask", icon: "🤿", description: "For very wet experiments." },
+    { id: "badge.grand-fountain", kind: "BADGE", title: "Fountain Restorer", icon: "⛲", description: "The Grand Fountain sprays again!" },
+    { id: "badge.water-works", kind: "BADGE", title: "Water Works Restored", icon: "🏅", description: "The water is flowing again!" },
     { id: "badge.power-lab", kind: "BADGE", title: "Power Lab Restored", icon: "🏅", description: "The lights are on in the Power Lab!" },
     // hidden prototype lab key pieces — one from a silly mission in each of the first three labs (exploration, never stars)
     { id: "key.prototype-1", kind: "KEY_PIECE", title: "Strange Key Piece", icon: "🗝️", description: "A piece of something. It hums." },
@@ -192,7 +216,19 @@ export const MISSION_REWARDS = Object.freeze({
     "magnet.which-materials-move": { onComplete: ["sticker.material-scientist"] },
     "magnet.magnetic-sandwich": { onComplete: ["prop.magnet-sandwich"], onAllStars: ["sprocket.magnet-tag"] },
     "magnet.the-giant-scrap-sorter": { onComplete: ["badge.scrap-sorter", "avatar.magnet-headband"] },
-    "magnet.scrap-avalanche": { onComplete: ["badge.magnet-factory"] }
+    "magnet.scrap-avalanche": { onComplete: ["badge.magnet-factory"] },
+    "water.fill-the-tank": { onComplete: ["sticker.tank-filler", "part.plumb.pipe", "part.plumb.tank"] },
+    "water.downhill-flow": { onComplete: ["sticker.downhill"] },
+    "water.turn-the-valve": { onComplete: ["sticker.valve-master", "part.plumb.valve"] },
+    "water.stop-the-leak": { onComplete: ["sticker.leak-fixer", "tool.flow-scanner"] },
+    "water.water-the-garden": { onComplete: ["sticker.gardener", "part.plumb.sprinkler"] },
+    "water.spin-the-wheel": { onComplete: ["sticker.water-wheel", "part.plumb.wheel"] },
+    "water.pump-it-up": { onComplete: ["sticker.pump-up", "part.plumb.pump"] },
+    "water.spray-the-target": { onComplete: ["sticker.sharpshooter", "part.plumb.nozzle"] },
+    "water.which-pipe-fills-faster": { onComplete: ["sticker.pipe-scientist", "part.plumb.pipe-narrow"] },
+    "water.duck-water-park": { onComplete: ["prop.duck-flume"], onAllStars: ["sprocket.rain-hat"] },
+    "water.the-grand-fountain": { onComplete: ["badge.grand-fountain", "avatar.snorkel"] },
+    "water.flooded-workshop": { onComplete: ["badge.water-works"] }
 });
 /** Rewards owed for missions already completed (used when old saves or guest progress move into a profile). */
 export function completionRewardIds(levelIds) {
@@ -271,7 +307,19 @@ export const MISSION_STARS = Object.freeze({
     "magnet.which-materials-move": { efficient: budget(3), advanced: { kind: "DISCOVERY", discoveryId: "magnet.not-all-metal", label: "NOT EVERY METAL — find the ones that don't move" } },
     "magnet.magnetic-sandwich": { efficient: nothingAdded, advanced: { kind: "DISCOVERY", discoveryId: "secret.magnet-sandwich", label: "DOUBLE DECKER — both rings floating" } },
     "magnet.the-giant-scrap-sorter": { efficient: budget(5), advanced: wild(3) },
-    "magnet.scrap-avalanche": { efficient: budget(1), advanced: wild(2) }
+    "magnet.scrap-avalanche": { efficient: budget(1), advanced: wild(2) },
+    "water.fill-the-tank": { efficient: budget(1), advanced: { kind: "DISCOVERY", discoveryId: "water.path", label: "FOLLOW THE PATH — water goes where pipes lead" } },
+    "water.downhill-flow": { efficient: budget(1), advanced: { kind: "DISCOVERY", discoveryId: "water.climb", label: "TOO HIGH — see that water can't climb on its own" } },
+    "water.turn-the-valve": { efficient: nothingAdded, advanced: { kind: "DISCOVERY", discoveryId: "water.valve", label: "OPEN & SHUT — one valve open, one closed" } },
+    "water.stop-the-leak": { efficient: budget(1), advanced: wild(2) },
+    "water.water-the-garden": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "water.jet", label: "SPRAY — jets landing on the beds" } },
+    "water.spin-the-wheel": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "combo.water-gears", label: "OLD MEETS NEW — water turns the old fan" } },
+    "water.pump-it-up": { efficient: budget(4), advanced: { kind: "DISCOVERY", discoveryId: "water.pump", label: "UPHILL — pump it higher" } },
+    "water.spray-the-target": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "water.jet", label: "ARC — hit a target with a jet" } },
+    "water.which-pipe-fills-faster": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "water.narrow", label: "FAIR RACE — wide against narrow" } },
+    "water.duck-water-park": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "secret.water-duck-splash", label: "SPLASHDOWN — the duck reaches the pool" } },
+    "water.the-grand-fountain": { efficient: budget(4), advanced: wild(3) },
+    "water.flooded-workshop": { efficient: budget(3), advanced: wild(2) }
 });
 export function evaluateStars(levelId, evidence) {
     const stars = ["solve"];
