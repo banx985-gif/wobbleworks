@@ -23,6 +23,7 @@ const key = (x, y) => `${x},${y}`;
 const cellOf = (p) => ({ x: Math.round(p.x), y: Math.round(p.y) });
 const MOVE_TIME = 1 / 1.5, TURN_TIME = 0.4, ACT_TIME = 0.3, MAX_INSTANT = 64;
 export class RobotSystem {
+    parts;
     robots = [];
     walls = new Set();
     tiles = new Map();
@@ -41,6 +42,7 @@ export class RobotSystem {
     products = 0;
     danceSteps = 0;
     constructor(parts, definition) {
+        this.parts = parts;
         for (const p of parts) {
             const def = definition(p.definitionId);
             const c = cellOf(p.position);
@@ -391,6 +393,8 @@ export class RobotSystem {
     // ---------------------------------------------------------------- read-only views
     robot(id) { const r = this.robots.find(q => q.id === id); return r ? { id, x: r.x, y: r.y, angle: r.angle, ...(r.holding ? { holding: r.holding } : {}), bumps: r.bumps, crashed: r.crashed, done: r.done, ...(r.doneAt !== undefined ? { doneAt: r.doneAt } : {}), ...(r.current ? { current: r.current } : {}), blocks: r.blocks } : undefined; }
     robotViews() { return this.robots.map(r => this.robot(r.id)); }
+    /** Is this box resting (not carried) on the cell of that part (a drop zone or slot)? */
+    boxAt(boxId, partId) { const b = this.boxes.find(q => q.id === boxId); const p = this.parts.find(q => q.id === partId); return Boolean(b && p && b.carriedBy === undefined && b.x === Math.round(p.position.x) && b.y === Math.round(p.position.y)); }
     box(id) { const b = this.boxes.find(q => q.id === id); return b ? { x: b.x, y: b.y, carried: b.carriedBy !== undefined, product: b.product } : undefined; }
     isPressed(id) { return this.buttons.some(b => b.id === id && b.pressed); }
     isOpen(id) { return this.doors.some(d => d.id === id && d.open); }

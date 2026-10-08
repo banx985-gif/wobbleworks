@@ -39,6 +39,8 @@ import { loadLabLevels } from "./labs/LabModule.js";
 import { hasLabBackdrop } from "./render/LabBackdrops.js";
 import { renderBlockEditor } from "./robots/BlockEditor.js";
 import { parseProgram } from "./robots/RobotProgram.js";
+import { isRobot } from "./robots/RobotSystem.js";
+import { attachKind, spaceSnap, vesselBehaviour } from "./space/SpaceSystem.js";
 import { InputManager } from "./input/InputManager.js";
 import { CanvasRenderer } from "./render/CanvasRenderer.js";
 import { CameraController } from "./render/CameraController.js";
@@ -972,7 +974,7 @@ function startFreeBuild(from) {
     motionObjective.textContent = "Build anything. TEST it. Change it. TEST again.";
     document.querySelector(".motion-badge").textContent = "WORKSHOP";
     resetGuidance(undefined);
-    const scanner = (p?.unlockedTools.includes("tool.force-scanner") || p?.unlockedTools.includes("tool.spin-scanner") || p?.unlockedTools.includes("tool.stress-scanner") || p?.unlockedTools.includes("tool.circuit-scanner") || p?.unlockedTools.includes("tool.magnet-scanner") || p?.unlockedTools.includes("tool.flow-scanner") || p?.unlockedTools.includes("tool.air-scanner") || p?.unlockedTools.includes("tool.program-debugger")) ?? false;
+    const scanner = (p?.unlockedTools.includes("tool.force-scanner") || p?.unlockedTools.includes("tool.spin-scanner") || p?.unlockedTools.includes("tool.stress-scanner") || p?.unlockedTools.includes("tool.circuit-scanner") || p?.unlockedTools.includes("tool.magnet-scanner") || p?.unlockedTools.includes("tool.flow-scanner") || p?.unlockedTools.includes("tool.air-scanner") || p?.unlockedTools.includes("tool.program-debugger") || p?.unlockedTools.includes("tool.gravity-meter")) ?? false;
     forceScannerButton.textContent = "Scanner";
     forceScannerButton.classList.toggle("hidden", !scanner);
     forceScannerButton.classList.remove("force-on");
@@ -1285,6 +1287,26 @@ function finishBeamEnd(drag) {
     sfx(700, .04);
 }
 /** A wing, tail, propeller, balloon… dropped next to a flying machine clips onto its slot. Placement only. */
+/** Space Centre: a dropped booster, fin, wheel, battery or panel clips onto the nearest rocket or rover slot. Placement only. */
+function snapToVessel(id) {
+    const part = build.getPart(id);
+    if (!part)
+        return;
+    const def = registry.get(part.definitionId);
+    const kind = attachKind(def);
+    if (!kind || part.parameters.locked === true)
+        return;
+    const vessels = build.allParts().filter(p => vesselBehaviour(registry.get(p.definitionId))).sort((a, b) => Math.hypot(a.position.x - part.position.x, a.position.y - part.position.y) - Math.hypot(b.position.x - part.position.x, b.position.y - part.position.y));
+    for (const v of vessels) {
+        const type = vesselBehaviour(registry.get(v.definitionId)).vessel;
+        const target = spaceSnap(part.position.x, part.position.y, kind, { x: v.position.x, y: v.position.y, angle: v.rotation, type });
+        if (target) {
+            build.move(id, target);
+            sfx(780, .04);
+            return;
+        }
+    }
+}
 function snapToCraft(id) {
     const part = build.getPart(id);
     if (!part)
@@ -1826,6 +1848,15 @@ function tapAction(p) {
     const def = registry.get(p.definitionId);
     if (circuitBehaviour(def)?.role === "SWITCH")
         return "FLIP";
+    // Space Centre settings: lean the launch pad, choose a booster's burn time, a launcher's power; turn a solar panel.
+    if (def.id === "space.launch-pad")
+        return "TILT";
+    if (def.id === "space.booster")
+        return "BURN";
+    if (def.behaviours.some(b => b.kind === "LAUNCHER"))
+        return "POWER";
+    if (def.id === "space.solar-panel")
+        return "EIGHTH";
     const fluid = fluidBehaviour(def);
     if (fluid?.role === "VALVE")
         return "VALVE";
@@ -1940,6 +1971,18 @@ input.on((event, sample) => {
             if (dropped && tap) {
                 if (tap === "FLIP")
                     build.reshape(droppedId, { parameters: { closed: dropped.parameters.closed !== true } });
+                else if (tap === "TILT")
+                    build.reshape(droppedId, { parameters: { tilt: (Number(dropped.parameters.tilt ?? 0) + 15) % 60 } });
+                else if (tap === "BURN") {
+                    const burns = [1.5, 1.0, 0.5];
+                    const i = burns.indexOf(Number(dropped.parameters.burn ?? 1.5));
+                    build.reshape(droppedId, { parameters: { burn: burns[(i + 1) % burns.length] } });
+                }
+                else if (tap === "POWER") {
+                    const l = registry.get(dropped.definitionId).behaviours.find(b => b.kind === "LAUNCHER");
+                    const n = l?.kind === "LAUNCHER" ? l.speeds.length : 4;
+                    build.reshape(droppedId, { parameters: { power: (Math.round(Number(dropped.parameters.power ?? 0)) + 1) % n } });
+                }
                 else if (tap === "VALVE")
                     build.reshape(droppedId, { parameters: { open: dropped.parameters.open !== true } });
                 else if (tap === "AIM")
@@ -1963,6 +2006,7 @@ input.on((event, sample) => {
             build.move(droppedId, { x: Math.max(0.4, Math.min(15.6, dragPreview.x)), y: openingRamp ? 7.95 : surfacePart ? 8.32 : Math.max(0.5, Math.min(8.2, dragPreview.y)) });
             snapToGhost(droppedId);
             snapToCraft(droppedId);
+            snapToVessel(droppedId);
             snapGear(droppedId);
             snapBeam(droppedId);
             autoSnapOpeningWheel(droppedId);
@@ -1978,12 +2022,13 @@ const programState = { selected: undefined };
 let programRobotId;
 let programPanelKey = "";
 function updateProgramPanel() {
-    if (selectedId && !testMode && build.getPart(selectedId)?.definitionId === "robot.bot" && selectedId !== programRobotId) {
+    const isBot = (id) => { const p = id ? build.getPart(id) : undefined; return Boolean(p && registry.has(p.definitionId) && isRobot(registry.get(p.definitionId))); };
+    if (selectedId && !testMode && isBot(selectedId) && selectedId !== programRobotId) {
         programRobotId = selectedId;
         programState.selected = undefined;
     }
     const part = programRobotId ? build.getPart(programRobotId) : undefined;
-    if (!part || part.definitionId !== "robot.bot" || !gameplayAllowed()) {
+    if (!part || !isBot(part.id) || !gameplayAllowed()) {
         if (programRobotId && !part)
             programRobotId = undefined;
         if (!programPanel.classList.contains("hidden")) {
@@ -1998,7 +2043,7 @@ function updateProgramPanel() {
         return;
     programPanelKey = key;
     programPanel.classList.remove("hidden");
-    const robotName = (part.tags ?? []).find(t => t !== "robot")?.replace(/^robot[-.]?/, "") || "Robot";
+    const robotName = part.definitionId === "space.robot-arm" ? "Robot Arm" : (part.tags ?? []).find(t => t !== "robot")?.replace(/^robot[-.]?/, "") || "Robot";
     renderBlockEditor(programPanel, parseProgram(part.parameters.program), programState, next => {
         if (testMode) {
             programPanelKey = "";
@@ -2043,6 +2088,8 @@ function render() {
         renderer.drawWaterEffects(runtime, now() / 1000);
     if (runtime && forceScanner && runtime.flight.hasFlight())
         renderer.drawFlightForces(runtime);
+    if (runtime && runtime.space.zones.length && (forceScanner || runtime.space.zones.length >= 2))
+        renderer.drawGravityReadouts(runtime);
     if (!runtime && shown.some(p => fluidBehaviour(registry.get(p.definitionId)) || registry.get(p.definitionId).behaviours.some(b => b.kind === "PIPE")))
         renderer.drawWaterPorts(analyzeFluid(shown, id => registry.has(id) ? registry.get(id) : undefined));
     if (!runtime && shown.some(p => registry.get(p.definitionId).behaviours.some(b => b.kind === "BEAM")))

@@ -8,6 +8,8 @@ import { drawMagnetForces, drawMagnetPart, isMagnetPart } from "./MagnetRenderer
 import { drawWaterEffects, drawWaterPart, drawWaterPorts, isWaterPart } from "./WaterRenderer.js";
 import { drawFlightForces, drawFlightPart, isFlightPart } from "./FlightRenderer.js";
 import { drawRobotFloor, drawRobotPart, isRobotPart } from "./RobotRenderer.js";
+import { drawGravityReadouts, drawSpacePart, isSpacePart, spaceLayer } from "./SpaceRenderer.js";
+import { tiltedPoses } from "../space/SpaceSystem.js";
 import { drawDoorPanel, drawGearGarageBackdrop, drawGearLinks, drawGearPart, drawRotationView, gearBehaviour, gearOutput } from "./GearRenderer.js";
 export class CanvasRenderer {
     canvas;
@@ -116,7 +118,8 @@ export class CanvasRenderer {
     drawParts(parts, registry, runtimeStates, selectedId, gears, time = 0, structures, showStress = false, runtime) {
         const states = new Map(runtimeStates?.map(s => [s.id, s]) ?? []);
         // Draw order only: fixed things first (zones, ramps, pads), then shafts, then gears, then moving things in front.
-        const layer = (p) => { const def = registry.get(p.definitionId); if (isRobotPart(def)) {
+        const layer = (p) => { const def = registry.get(p.definitionId); if (isSpacePart(def))
+            return spaceLayer(def); if (isRobotPart(def)) {
             const t = def.behaviours.find(b => b.kind === "ARENA");
             return t?.kind === "ARENA" ? (t.thing === "TILE" || t.thing === "GOAL" || t.thing === "DROP" || t.thing === "PAD" ? -1 : t.thing === "BOX" || t.thing === "SWEEPER" ? 3 : 0) : 3.5;
         } if (isFlightPart(def))
@@ -129,13 +132,22 @@ export class CanvasRenderer {
         const structCtx = { ...(structures ? { structures } : {}), registry: (id) => registry.get(id), art: this.art, time, showStress };
         const magnetCtx = { ...(runtime ? { magnets: runtime.magnets } : {}), states, art: this.art, time, scanner: showStress };
         const robotCtx = { ...(runtime ? { robots: runtime.robots } : {}), time, scanner: showStress };
+        // Space Centre: clip-on parts ride on their rocket or rover; in BUILD a rocket on a tilted pad leans with its parts.
+        const tilts = runtime ? undefined : (parts.some(p => p.definitionId === "space.launch-pad" && Number(p.parameters.tilt ?? 0) !== 0) ? tiltedPoses(parts, id => registry.has(id) ? registry.get(id) : undefined) : undefined);
+        const spacePose = (id) => runtime ? runtime.space.attachedPose(id, runtime.physics) : tilts?.get(id);
+        const spaceCtx = { ...(runtime ? { space: runtime.space, robots: runtime.robots } : {}), states, time, scanner: showStress, pose: spacePose, art: this.art };
         const flightCtx = { ...(runtime ? { flight: runtime.flight } : {}), states, art: this.art, time, scanner: showStress, pose: (id) => runtime?.flight.attachedPose(id, runtime.physics) };
         const waterCtx = { ...(runtime ? { water: runtime.water } : {}), art: this.art, time, scanner: showStress, gearAngle: (id) => gears?.state(id)?.angle ?? 0 };
         const powerCtx = { ...(runtime ? { circuits: runtime.circuits } : {}), art: this.art, time, scanner: showStress };
         const gearCtx = { ...(gears ? { gears } : {}), states, parts, registry: (id) => registry.get(id), time, art: this.art };
-        for (const part of ordered) {
-            const def = registry.get(part.definitionId);
+        for (const placed of ordered) {
+            const def = registry.get(placed.definitionId);
             const rigid = def.behaviours.find(b => b.kind === "RIGID_BODY");
+            if (isSpacePart(def) && drawSpacePart(this.ctx, placed, def, selectedId === placed.id, spaceCtx))
+                continue;
+            // A Power Lab battery or a Flight Hangar parachute clipped onto a rover or rocket is drawn where it is now.
+            const moved = runtime?.space.hasSpace() ? spacePose(placed.id) : undefined;
+            const part = moved ? { ...placed, position: { x: moved.x, y: moved.y }, rotation: moved.angle } : placed;
             if (drawStructurePart(this.ctx, part, def, selectedId === part.id, structCtx))
                 continue;
             if (isMagnetPart(def) && drawMagnetPart(this.ctx, part, def, selectedId === part.id, magnetCtx))
@@ -254,6 +266,7 @@ export class CanvasRenderer {
     drawLabBackdrop(labId, time) { drawLabBackdrop(this.ctx, labId, time); }
     drawMagnetForces(runtime) { drawMagnetForces(this.ctx, runtime.magnets, new Map(runtime.physics.states().map(s => [s.id, s]))); }
     drawRobotFloor() { drawRobotFloor(this.ctx); }
+    drawGravityReadouts(runtime) { drawGravityReadouts(this.ctx, runtime); }
     drawFlightForces(runtime) { drawFlightForces(this.ctx, runtime.flight, new Map(runtime.physics.states().map(s => [s.id, s]))); }
     drawWaterEffects(runtime, time) { drawWaterEffects(this.ctx, runtime.water, time); }
     drawWaterPorts(layout) { drawWaterPorts(this.ctx, layout); }

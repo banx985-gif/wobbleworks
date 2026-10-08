@@ -204,6 +204,39 @@ export function evaluateOutcomeRule(rule, build, runtime) {
             return false;
         return Math.max(ta, tb) / Math.max(1e-6, Math.min(ta, tb)) >= rule.minRatio;
     }
+    if (rule.kind === "ROVER_DELIVERS") {
+        const zones = tagged(build, rule.zoneTag);
+        const cargo = rule.cargoTag ? tagged(build, rule.cargoTag) : [];
+        return tagged(build, rule.roverTag).some(r => {
+            const v = runtime.space.vessel(r.id);
+            if (!v || !v.stable || !v.powered)
+                return false;
+            const p = position(runtime, r);
+            return zones.some(z => Math.hypot(p.x - z.position.x, p.y - z.position.y) <= rule.radius) && cargo.every(c => v.attached.includes(c.id));
+        });
+    }
+    if (rule.kind === "GRAVITY_COMPARE") {
+        // A fair test: exactly one free object in each chamber, the same part with the same mass; then compare how long each took to land.
+        const inZone = (tag) => {
+            const z = tagged(build, tag)[0];
+            if (!z)
+                return [];
+            const zone = runtime.space.zones.find(q => q.id === z.id);
+            if (!zone)
+                return [];
+            return build.allParts().filter(p => p.parameters.locked !== true && runtime.isDynamicBody(p.id) && p.position.x >= zone.x1 && p.position.x < zone.x2);
+        };
+        const a = inZone(rule.aZoneTag), b = inZone(rule.bZoneTag);
+        if (a.length !== 1 || b.length !== 1)
+            return false;
+        const pa = a[0], pb = b[0];
+        if (pa.definitionId !== pb.definitionId || Math.abs(runtime.physics.mass(pa.id) - runtime.physics.mass(pb.id)) > 1e-9)
+            return false;
+        const ta = runtime.space.fallTime(pa.id), tb = runtime.space.fallTime(pb.id);
+        if (ta === undefined || tb === undefined || ta <= 0)
+            return false;
+        return tb / ta >= rule.minRatio;
+    }
     if (rule.kind === "FLIGHT_DISTANCE")
         return tagged(build, rule.craftTag).some(c => { const st = runtime.flight.craft(c.id); return st !== undefined && st.flying && st.maxX >= rule.minX; });
     if (rule.kind === "SAFE_LANDING") {

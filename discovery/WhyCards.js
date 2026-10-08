@@ -27,7 +27,11 @@ export const WHY_CHOICES = {
     BAD_TIMING: { label: "Bad timing", icon: "⏱️" },
     WRONG_TURN: { label: "Wrong turn", icon: "↪️" },
     TOO_MANY_BLOCKS: { label: "Too many blocks", icon: "🧱" },
-    NO_SENSOR: { label: "Didn't check first", icon: "👀" }
+    NO_SENSOR: { label: "Didn't check first", icon: "👀" },
+    NO_GRIP: { label: "Not enough grip", icon: "🛞" },
+    NO_AIR: { label: "No air", icon: "🌑" },
+    NOT_FAIR: { label: "Not a fair test", icon: "⚖️" },
+    NO_SUN: { label: "Not facing the sun", icon: "☀️" }
 };
 function tagged(build, tag) { return build.allParts().find(p => p.tags?.includes(tag)); }
 function state(runtime, id) { try {
@@ -43,6 +47,12 @@ function nameOf(part) {
 const m = (v) => `${v.toFixed(1)} m`;
 /** Picks two other answers deterministically so the same failure shows the same card. */
 function choicesFor(reason) {
+    if (["NO_GRIP", "NO_AIR", "NOT_FAIR", "NO_SUN"].includes(reason)) {
+        const pool = ["NO_GRIP", "NO_AIR", "NOT_FAIR", "NO_SUN", "TOO_HEAVY", "NOT_CONNECTED"].filter(r => r !== reason);
+        const seed = reason.length;
+        const three = [reason, pool[seed % pool.length], pool[(seed + 2) % pool.length]];
+        return [three[seed % 3], three[(seed + 1) % 3], three[(seed + 2) % 3]];
+    }
     if (["BAD_TIMING", "WRONG_TURN", "TOO_MANY_BLOCKS", "NO_SENSOR"].includes(reason)) {
         const pool = ["BAD_TIMING", "WRONG_TURN", "TOO_MANY_BLOCKS", "NO_SENSOR", "BLOCKED", "TOO_SLOW"].filter(r => r !== reason);
         const seed = reason.length;
@@ -86,6 +96,10 @@ export function diagnoseRun(level, build, runtime) {
         return undefined;
     const card = (reason, evidence) => ({ reason, evidence, choices: choicesFor(reason) });
     const rules = level?.outcomeRules ?? [];
+    // Space Centre first: its stages decide which older system's story matters.
+    const spaceCard = diagnoseSpace(rules, build, runtime, card);
+    if (spaceCard)
+        return spaceCard;
     // Power Lab: the circuit's own measurements.
     const powerCard = diagnosePower(rules, build, runtime, card);
     if (powerCard)
@@ -514,6 +528,155 @@ function diagnoseWater(rules, build, runtime, card) {
             return card("NOT_CONNECTED", "The water wheel turned, but nothing passed its turning on to the machine.");
     }
     return undefined;
+}
+/** Space Centre: only what the space simulation measured in this run (truth.space.v1), stage by stage. */
+function diagnoseSpace(rules, build, runtime, card) {
+    const s = runtime.space;
+    if (!s.hasSpace())
+        return undefined;
+    const events = runtime.causalEvents;
+    const tag = (t) => build.allParts().filter(p => p.tags?.includes(t));
+    const of = (k, id) => events.filter(e => e.kind === k && (!id || e.sourceId === id));
+    // A repair job: the tower's own measurements first (a wobbling tower explains itself).
+    if (rules.some(r => r.kind === "STRUCT_STABLE")) {
+        const sc = diagnoseStructures(rules, build, runtime, card);
+        if (sc)
+            return sc;
+    }
+    // A robot arm job: the arm's program comes before anything it powers.
+    for (const arm of build.allParts().filter(p => p.definitionId === "space.robot-arm")) {
+        if (!blockCount(parseProgram(arm.parameters.program)))
+            return card("NOT_CONNECTED", "The robot arm has no program yet, so it didn't move.");
+        for (const r of rules)
+            if (r.kind === "BOX_AT")
+                for (const box of tag(r.boxTag)) {
+                    const b = runtime.robots.box(box.id);
+                    const slot = tag(r.zoneTag)[0];
+                    const v = runtime.robots.robot(arm.id);
+                    if (b && slot && v?.done && !runtime.robots.boxAt(box.id, slot.id)) {
+                        const off = Math.abs(b.x - Math.round(slot.position.x)) + Math.abs(b.y - Math.round(slot.position.y));
+                        return card(b.carried ? "NOT_CONNECTED" : off <= 1 ? "MISSED" : "WRONG_TURN", b.carried ? "The arm finished its program still holding the module — it never let go." : `The arm put the module down ${off} square${off === 1 ? "" : "s"} away from the slot.`);
+                    }
+                }
+        const rc = diagnoseRobots(rules, build, runtime, card);
+        if (rc)
+            return rc;
+    }
+    for (const r of rules)
+        if (r.kind === "GRAVITY_COMPARE") {
+            const free = build.allParts().filter(p => p.parameters.locked !== true && runtime.isDynamicBody(p.id));
+            const za = s.zones.find(z => tag(r.aZoneTag).some(p => p.id === z.id)), zb = s.zones.find(z => tag(r.bZoneTag).some(p => p.id === z.id));
+            if (!za || !zb)
+                continue;
+            const a = free.filter(p => p.position.x >= za.x1 && p.position.x < za.x2), b = free.filter(p => p.position.x >= zb.x1 && p.position.x < zb.x2);
+            if (a.length !== 1 || b.length !== 1)
+                return card("NOT_FAIR", `Put exactly one thing in each room (there were ${a.length} and ${b.length}).`);
+            if (a[0].definitionId !== b[0].definitionId)
+                return card("NOT_FAIR", "Two different things! A fair test drops the SAME thing in each room.");
+            if (Math.abs(a[0].position.y - b[0].position.y) > 0.3)
+                return card("NOT_FAIR", "They started at different heights, so it isn't a fair race.");
+        }
+    for (const v of s.vesselViews()) {
+        const part = build.getPart(v.id);
+        if (!part)
+            continue;
+        if (v.type === "ROVER") {
+            const wanted = rules.some(r => r.kind === "ROVER_DELIVERS" && part.tags?.some(t => t === r.roverTag));
+            if (!wanted)
+                continue;
+            if (of("ROVER_NO_WHEELS", v.id).length)
+                return card("UNSTABLE", "It needs a wheel at the front AND a wheel at the back to stand up and roll.");
+            if (!v.attached.some(id => build.getPart(id)?.definitionId === "space.drive-motor"))
+                return card("NOT_CONNECTED", "Nothing turned the wheels — it needs a drive motor.");
+            if (of("ROVER_NO_POWER", v.id).length)
+                return card("NOT_CONNECTED", s.vesselViews().length && build.allParts().some(p => p.definitionId === "space.sun") ? "The motor had no power. Is there a battery — or a solar panel facing the sun?" : "The motor had no power — it needs a battery.");
+            if (!of("ROVER_DRIVING", v.id).length)
+                return card("NOT_CONNECTED", "The rover was waiting to be told to go. What starts it?");
+            if (of("ROVER_SLIP", v.id).length) {
+                const e = of("ROVER_SLIP", v.id)[0];
+                return card("NO_GRIP", `The wheels spun on the slope: they could only grip with ${Math.round(Number(e.data?.grip ?? 0) * 100)}% of the rover's weight, and on the Moon that weight is small.`);
+            }
+        }
+        else {
+            const thrusted = of("BOOSTER_IGNITED").some(e => e.targetId === v.id);
+            if (s.isHeld(v.id))
+                return card("NOT_CONNECTED", heldReason(build, runtime, String(part.parameters.waitFor ?? "")));
+            if (!thrusted && v.attached.some(id => build.getPart(id)?.definitionId === "space.booster") && part.definitionId === "space.rocket")
+                return card("NOT_CONNECTED", "The booster never lit. What is it waiting for?");
+            if (of("ROCKET_TUMBLE", v.id).length && !v.attached.some(id => build.getPart(id)?.definitionId === "space.fins"))
+                return card("UNSTABLE", of("ROCKET_GUST", v.id).length ? "The gust knocked the rocket's nose round and it tumbled. Nothing at the back kept it pointing straight." : "The rocket tumbled over — nothing at the back kept it pointing straight.");
+            for (const r of rules)
+                if (r.kind === "SAFE_LANDING" && part.tags?.includes(r.objectTag)) {
+                    const hit = runtime.flight.peakImpact(v.id);
+                    if (hit > r.maxImpact)
+                        return card(of("PARACHUTE_NO_AIR").length ? "NO_AIR" : "TOO_FAST", of("PARACHUTE_NO_AIR").length ? `There's no air here, so the parachute had nothing to push on. It hit at ${hit.toFixed(1)} m/s.` : `It hit the ground at ${hit.toFixed(1)} m/s. A gentle touchdown is ${r.maxImpact} m/s or less.`);
+                }
+            for (const r of rules)
+                if (r.kind === "GATES_PASSED" && part.tags?.includes(r.craftTag)) {
+                    const missed = tag(r.gateTag).filter(g => !runtime.flight.gatesPassed(v.id).includes(g.id));
+                    if (missed.length)
+                        return card("MISSED", `It missed ${missed.length === 1 ? "a ring" : `${missed.length} rings`} of the launch corridor.`);
+                }
+            for (const r of rules)
+                if (r.kind === "OBJECT_ENTERS_ZONE" && part.tags?.includes(r.objectTag) && v.touchdown) {
+                    const z = tag(r.zoneTag)[0];
+                    const st = runtime.physics.state(v.id);
+                    if (z) {
+                        const short = st.x < z.position.x;
+                        return card(short ? "NOT_ENOUGH_FORCE" : "TOO_MUCH_FORCE", `It came down ${Math.abs(st.x - z.position.x).toFixed(1)} m ${short ? "short of" : "past"} the target.`);
+                    }
+                }
+        }
+    }
+    for (const r of rules)
+        if (r.kind === "CIRCUIT_POWERED")
+            for (const p of tag(r.targetTag)) {
+                const panels = build.allParts().filter(q => q.definitionId === "space.solar-panel" && !s.isAttached(q.id));
+                if (!panels.length)
+                    continue;
+                const best = Math.max(...panels.map(q => s.sunlight(q.position.x, q.position.y, q.rotation)));
+                if (best < 0.9)
+                    return card("NO_SUN", best < 0.05 ? "The panel was facing away from the sun, so it made no electricity at all." : `The panel only caught ${Math.round(best * 100)}% of the sunshine — not enough for ${nameOf(p)}.`);
+            }
+    for (const r of rules)
+        if (r.kind === "GATES_PASSED")
+            for (const p of tag(r.craftTag)) {
+                if (!runtime.isDynamicBody(p.id) || s.vessel(p.id))
+                    continue;
+                const missed = tag(r.gateTag).filter(g => !runtime.flight.gatesPassed(p.id).includes(g.id));
+                if (!missed.length)
+                    continue;
+                const planet = build.allParts().find(q => q.definitionId === "space.planet");
+                const st = runtime.physics.state(p.id);
+                if (planet)
+                    return card(Math.hypot(st.x - planet.position.x, st.y - planet.position.y) < 1.4 ? "TOO_SLOW" : "TOO_FAST", Math.hypot(st.x - planet.position.x, st.y - planet.position.y) < 1.4 ? "Too slow: the planet pulled it in before it got round." : "Too fast: it swung out wide and missed the hoops.");
+            }
+    return undefined;
+}
+/** Why a stage never started: follow its release back through the systems that feed it. */
+function heldReason(build, runtime, waitFor) {
+    const [kind, id] = waitFor.split(":");
+    if (kind === "TURNED") {
+        const motors = build.allParts().filter(p => p.definitionId === "circuit.motor");
+        const running = motors.some(m => Math.abs(runtime.circuits.current(m.id)) > 0.3);
+        if (!running) {
+            const sensor = build.allParts().find(p => typeof p.parameters.closedWhenBoxAt === "string");
+            if (sensor && !runtime.buttonPressed(sensor.id))
+                return "The fuel cell never reached the fuel port, so the launch circuit stayed open and the clamp held on.";
+            const sw = build.allParts().find(p => p.definitionId === "circuit.switch" && p.parameters.closed !== true);
+            if (sw)
+                return "The launch switch is off, so no electricity reached the clamp motor.";
+            return "No electricity reached the clamp motor, so the clamp held on.";
+        }
+        return `The clamp motor ran, but its turning never reached ${build.getPart(id ?? "") ? "the clamp gear" : "the clamp"} — something between them is missing.`;
+    }
+    if (kind === "POWERED")
+        return `It was waiting for electricity to reach the ${build.getPart(id ?? "")?.definitionId.replace(/^[a-z]+./, "").replaceAll("-", " ") ?? "circuit"}.`;
+    if (kind === "TOUCHDOWN")
+        return "It was waiting for the lander to touch down first.";
+    if (kind === "GATE_PASSED")
+        return "It was waiting for the rocket to get through the launch corridor first.";
+    return "It never left: it was still waiting for its release.";
 }
 /** Robot Lab: only what the robots actually did in this run (truth.robotics.v1). */
 function diagnoseRobots(rules, build, runtime, card) {

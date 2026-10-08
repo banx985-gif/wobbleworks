@@ -9,6 +9,7 @@ import { MagnetSystem } from "../magnets/MagnetSystem.js";
 import { FluidSystem } from "../water/FluidSystem.js";
 import { FlightSystem } from "../flight/FlightSystem.js";
 import { RobotSystem } from "../robots/RobotSystem.js";
+import { SpaceSystem } from "../space/SpaceSystem.js";
 export class RuntimeWorld {
     snapshotSignature;
     physics = new PhysicsWorld();
@@ -26,6 +27,8 @@ export class RuntimeWorld {
     flight;
     /** Robot Lab (M18): programmed robots on the top-down arena floor. */
     robots;
+    /** Space Centre (M19): gravity zones, rockets, rovers, toy planets and launchers. */
+    space;
     /** Buttons held down by a finger during this TEST, and switches flipped since the last tick. */
     fingerPressed = new Set();
     flips = new Set();
@@ -68,6 +71,7 @@ export class RuntimeWorld {
         this.gears = new GearSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined, this.snapshot.connections, extraLoads);
         this.circuits = new CircuitSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.robots = new RobotSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
+        this.space = new SpaceSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.flight = new FlightSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.water = new FluidSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.magnets = new MagnetSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
@@ -111,11 +115,15 @@ export class RuntimeWorld {
                 this.event(e.kind, e.sourceId, e.targetId, e.data);
         } });
         this.pipeline.on("ACTUATOR_RESOLUTION", () => this.resolveActuators());
-        this.pipeline.on("FORCE_AND_COUPLING", ({ dt }) => { this.stepMagnets(dt); this.applyJets(); this.stepFlight(dt); this.applyCouplings(); this.gears.step(dt); this.applyGearCouplings(); this.stepStructures(dt); });
+        this.pipeline.on("FORCE_AND_COUPLING", ({ dt }) => { this.stepMagnets(dt); this.applyJets(); this.stepFlight(dt); this.stepSpace(dt); this.applyCouplings(); this.gears.step(dt); this.applyGearCouplings(); this.stepStructures(dt); });
         this.pipeline.on("PHYSICS_STEP", ({ dt }) => this.physics.step(dt));
-        this.pipeline.on("POST_PHYSICS_CONTACTS", () => { this.magnets.applyGuides(this.physics); if (this.flight.hasFlight()) {
+        this.pipeline.on("POST_PHYSICS_CONTACTS", () => { this.magnets.applyGuides(this.physics); if (this.flight.hasFlight() || this.space.hasSpace()) {
             this.flight.observe(this.physics);
             for (const e of this.flight.drainEvents())
+                this.event(e.kind, e.sourceId, e.targetId, e.data);
+        } if (this.space.hasSpace()) {
+            this.space.observe(this.physics);
+            for (const e of this.space.drainEvents())
                 this.event(e.kind, e.sourceId, e.targetId, e.data);
         } this.collectPhysicsEvents(); });
         this.pipeline.on("DOMAIN_TRANSFER", ({ dt }) => this.transferDomains(dt));
@@ -156,6 +164,11 @@ export class RuntimeWorld {
         const part = this.snapshot.parts.find(p => p.id === id);
         if (!part)
             return false;
+        // A sensor contact closed by a Robot Lab box resting in its slot ("boxId:slotId").
+        if (typeof part.parameters.closedWhenBoxAt === "string") {
+            const [box, slot] = part.parameters.closedWhenBoxAt.split(":");
+            return this.robots.boxAt(box ?? "", slot ?? "");
+        }
         const from = Number(part.parameters.pressFrom), to = Number(part.parameters.pressTo);
         if (Number.isFinite(from) && this.elapsedTime >= from && (!Number.isFinite(to) || this.elapsedTime < to))
             return true;
@@ -205,6 +218,24 @@ export class RuntimeWorld {
             return;
         this.flight.step(dt, this.physics);
         for (const e of this.flight.drainEvents())
+            this.event(e.kind, e.sourceId, e.targetId, e.data);
+    }
+    /** Space Centre. A stage waits for an earlier one with `waitFor: "KIND:sourceId[:targetId]"` (an event already recorded),
+     *  or for a Power Lab part with `waitFor: "POWERED:partId"` (current flowing through it) or a gear with `"TURNED:gearId"`. */
+    stepSpace(dt) {
+        if (!this.space.hasSpace())
+            return;
+        this.space.step(dt, this.physics, spec => {
+            const [kind, source, target] = spec.split(":");
+            if (kind === "POWERED")
+                return Math.abs(this.circuits.current(source ?? "")) > 0.3;
+            if (kind === "TURNED")
+                return Math.abs(this.gears.state(source ?? "")?.angle ?? 0) >= Number(target ?? 1.5);
+            if (kind === "BOX_AT")
+                return this.robots.boxAt(source ?? "", target ?? "");
+            return this.causalEvents.some(e => e.kind === kind && e.sourceId === source && (!target || e.targetId === target));
+        }, (x, y) => this.flight.windAt(x, y));
+        for (const e of this.space.drainEvents())
             this.event(e.kind, e.sourceId, e.targetId, e.data);
     }
     stepMagnets(dt) {

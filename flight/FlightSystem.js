@@ -256,7 +256,8 @@ export class FlightSystem {
         // Wind pushes everything else that's in it (drag on its size).
         if (this.fans.length)
             for (const p of this.parts) {
-                if (this.crafts.some(c => c.id === p.id) || this.isAttached(p.id))
+                // Rockets and rovers feel the wind through the Space Centre's own airflow model.
+                if (this.crafts.some(c => c.id === p.id) || this.isAttached(p.id) || this.definition(p.definitionId)?.behaviours.some(b => b.kind === "VESSEL"))
                     continue;
                 let st;
                 try {
@@ -296,7 +297,7 @@ export class FlightSystem {
             if (!Number.isFinite(physics.mass(p.id)))
                 continue;
             const prev = this.lastV.get(p.id);
-            this.lastV.set(p.id, { vx: st.vx, vy: st.vy, x: st.x });
+            this.lastV.set(p.id, { vx: st.vx, vy: st.vy, x: st.x, y: st.y });
             if (!prev)
                 continue;
             const dv = Math.hypot(st.vx - prev.vx, st.vy - prev.vy);
@@ -310,8 +311,11 @@ export class FlightSystem {
             if (resting && this.ticks > 30)
                 this.landed.set(p.id, this.landed.get(p.id) || this.impacts.has(p.id) || this.ticks > 60);
             for (const g of this.gates) {
-                const gx = g.part.position.x, top = g.part.position.y - g.height / 2, bottom = g.part.position.y + g.height / 2;
-                if ((prev.x - gx) * (st.x - gx) <= 0 && prev.x !== st.x && st.y >= top && st.y <= bottom) {
+                const gx = g.part.position.x, gy = g.part.position.y, top = gy - g.height / 2, bottom = gy + g.height / 2;
+                // A hoop turned on its side (a launch corridor ring) is passed by crossing its height instead of its x.
+                const flat = Math.abs(Math.sin(g.part.rotation)) > 0.7;
+                const crossed = flat ? (prev.y - gy) * (st.y - gy) <= 0 && prev.y !== st.y && Math.abs(st.x - gx) <= g.height / 2 : (prev.x - gx) * (st.x - gx) <= 0 && prev.x !== st.x && st.y >= top && st.y <= bottom;
+                if (crossed) {
                     const set = this.passed.get(p.id) ?? new Set();
                     if (!set.has(g.part.id)) {
                         set.add(g.part.id);

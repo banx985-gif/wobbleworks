@@ -47,6 +47,7 @@ export function drawFlightPart(c, part, def, selected, ctx) {
     }
     else if (gateHeight(def) !== undefined) {
         const h = Number(part.parameters.height ?? gateHeight(def)) * 100;
+        c.rotate(part.rotation);
         c.strokeStyle = "#e64980";
         c.lineWidth = 10;
         c.beginPath();

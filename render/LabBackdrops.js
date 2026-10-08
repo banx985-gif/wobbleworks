@@ -145,6 +145,44 @@ THEMES["robot-lab"] = { title: "ROBOT LAB", top: "#0ca678", bottom: "#38d9a9", w
             c.stroke();
         }
     } };
+/** Space Centre: a launch site at night — stars, a gantry and the Moon low in the sky. */
+THEMES["space-centre"] = { title: "SPACE CENTRE", top: "#0b1026", bottom: "#24305e", wall: "#1b2448", floor: "#495057", accent: "#ffd43b", motif: (c, t) => {
+        c.fillStyle = "#ffffff";
+        for (let i = 0; i < 90; i++) {
+            const x = (i * 173) % 1600, y = 140 + (i * 67) % 520;
+            c.globalAlpha = 0.4 + 0.4 * Math.abs(Math.sin(t * 1.5 + i));
+            c.beginPath();
+            c.arc(x, y, 1.6 + (i % 3) * 0.6, 0, Math.PI * 2);
+            c.fill();
+        }
+        c.globalAlpha = 1;
+        c.fillStyle = "#f1f3f5";
+        c.beginPath();
+        c.arc(1380, 250, 70, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = "#ced4da";
+        for (const [a, b, r] of [[1360, 230, 14], [1405, 270, 18], [1395, 215, 8]]) {
+            c.beginPath();
+            c.arc(a, b, r, 0, Math.PI * 2);
+            c.fill();
+        }
+        c.strokeStyle = "#868e9688";
+        c.lineWidth = 6;
+        for (const gx of [180, 260]) {
+            c.beginPath();
+            c.moveTo(gx, 700);
+            c.lineTo(gx, 300);
+            c.stroke();
+        }
+        for (let y = 320; y < 700; y += 50) {
+            c.beginPath();
+            c.moveTo(180, y);
+            c.lineTo(260, y + 40);
+            c.moveTo(260, y);
+            c.lineTo(180, y + 40);
+            c.stroke();
+        }
+    } };
 export function hasLabBackdrop(labId) { return labId in THEMES; }
 export function drawLabBackdrop(c, labId, time) {
     const th = THEMES[labId];

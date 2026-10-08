@@ -51,7 +51,10 @@ export const LEVEL_SCENERY = {
     "robot.press-the-button": [S("robot-gate", 13.5, 3.2, 1.8)],
     "robot.robot-dance-party": [S("dance-stage", 14.3, 3.4, 1.8)],
     "robot.carry-the-box": [S("supply-crates", 13.6, 8.3, 1.8)],
-    "robot.automated-factory": [S("supply-crates", 13.8, 8.3, 1.8)]
+    "robot.automated-factory": [S("supply-crates", 13.8, 8.3, 1.8)],
+    // Space Centre
+    "space.build-the-rover": [S("moon-flags", 14.2, 7.6, 1.8)],
+    "space.moon-base-delivery": [S("moon-flags", 1.2, 7.6, 1.6)]
 };
 /** Picture aspect ratios (width / height), so the layout can be checked without loading pictures. */
 export const SCENERY_ASPECT = {

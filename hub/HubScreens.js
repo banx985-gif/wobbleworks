@@ -119,9 +119,10 @@ export function sprocketArt(accessory, awake = true) {
         : accessory === "sprocket.magnet-tag" ? `<g transform="translate(69 59)"><path d="M-7 -6 v6 a7 7 0 0 0 14 0 v-6" fill="none" stroke="#e03131" stroke-width="5"/><rect x="-9.5" y="-9" width="5" height="4" fill="#ced4da"/><rect x="4.5" y="-9" width="5" height="4" fill="#ced4da"/></g>`
             : accessory === "sprocket.rain-hat" ? `<path d="M52 20 q17 -16 34 0 l6 4 h-46z" fill="#ffd43b" stroke="#18323f" stroke-width="3"/>`
                 : accessory === "sprocket.flying-goggles" ? `<rect x="57" y="23" width="26" height="12" rx="6" fill="#74c0fc" stroke="#18323f" stroke-width="3"/>`
-                    : accessory === "sprocket.antenna" ? `<path d="M69 18 v-14" stroke="#18323f" stroke-width="3"/><circle cx="69" cy="4" r="4" fill="#63e6be" stroke="#18323f" stroke-width="2"/>`
-                        : accessory === "sprocket.glow-collar" ? `<path d="M55 51 q14 8 28 0" fill="none" stroke="#ffd43b" stroke-width="7" stroke-linecap="round" opacity=".9"/><circle cx="69" cy="58" r="5" fill="#fff59d" stroke="#18323f" stroke-width="2"/>`
-                            : accessory === "sprocket.spring-collar" ? `<path d="M56 54 q4 -6 8 0 q4 6 8 0 q4 -6 8 0" fill="none" stroke="#845ef7" stroke-width="5"/>` : "";
+                    : accessory === "sprocket.space-helmet" ? `<circle cx="69" cy="30" r="22" fill="#a5d8ff55" stroke="#18323f" stroke-width="3"/><path d="M50 40 q19 10 38 0" stroke="#18323f" stroke-width="3" fill="none"/>`
+                        : accessory === "sprocket.antenna" ? `<path d="M69 18 v-14" stroke="#18323f" stroke-width="3"/><circle cx="69" cy="4" r="4" fill="#63e6be" stroke="#18323f" stroke-width="2"/>`
+                            : accessory === "sprocket.glow-collar" ? `<path d="M55 51 q14 8 28 0" fill="none" stroke="#ffd43b" stroke-width="7" stroke-linecap="round" opacity=".9"/><circle cx="69" cy="58" r="5" fill="#fff59d" stroke="#18323f" stroke-width="2"/>`
+                                : accessory === "sprocket.spring-collar" ? `<path d="M56 54 q4 -6 8 0 q4 6 8 0 q4 -6 8 0" fill="none" stroke="#845ef7" stroke-width="5"/>` : "";
     return svg(`
     <path d="M18 60 q-12 -6 -8 -20" fill="none" stroke="#18323f" stroke-width="9" stroke-linecap="round" class="sprocket-tail"/>
     <path d="M18 60 q-12 -6 -8 -20" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" class="sprocket-tail"/>

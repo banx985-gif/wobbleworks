@@ -4,8 +4,9 @@ import { MAGNET_FACTORY } from "../magnets/MagnetFactory.js";
 import { WATER_WORKS } from "../water/WaterWorks.js";
 import { FLIGHT_HANGAR } from "../flight/FlightHangar.js";
 import { ROBOT_LAB } from "../robots/RobotLab.js";
+import { SPACE_CENTRE } from "../space/SpaceCentre.js";
 /** The labs added from M14 onward, in campaign order. Each lab milestone appends its module here. */
-export const LAB_MODULES = [POWER_LAB, MAGNET_FACTORY, WATER_WORKS, FLIGHT_HANGAR, ROBOT_LAB];
+export const LAB_MODULES = [POWER_LAB, MAGNET_FACTORY, WATER_WORKS, FLIGHT_HANGAR, ROBOT_LAB, SPACE_CENTRE];
 export function labModule(labId) { return LAB_MODULES.find(m => m.labId === labId); }
 /** Success uses the level file's rules only; discoveries come from the lab's own measurements. */
 export function evaluateLabMission(module, level, build, runtime) {

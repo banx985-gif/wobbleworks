@@ -190,6 +190,24 @@ export const REWARDS = [
     { id: "avatar.coder-visor", kind: "AVATAR", title: "Coder Visor", icon: "🥽", description: "See the code in everything." },
     { id: "badge.automated-factory", kind: "BADGE", title: "Factory Automator", icon: "🏭", description: "The Automated Factory runs itself." },
     { id: "badge.robot-lab", kind: "BADGE", title: "Robot Lab Restored", icon: "🏅", description: "The robots are back to work!" },
+    // Space Centre (M19)
+    { id: "part.space.rover", kind: "PART", title: "Rover", icon: "🛻", description: "Wheels, a motor and power — off it goes." },
+    { id: "part.space.rocket", kind: "PART", title: "Rocket", icon: "🚀", description: "Boosters, fins and a nose cone." },
+    { id: "tool.gravity-meter", kind: "TOOL", title: "Gravity Meter", icon: "⚖️", description: "Shows mass and weight in any gravity — now in Free Build too." },
+    { id: "sticker.moon-rover", kind: "STICKER", title: "Moon Rover", icon: "🛻", description: "Built a rover." },
+    { id: "sticker.crater", kind: "STICKER", title: "Crater Climber", icon: "⛰️", description: "Climbed out of the crater." },
+    { id: "sticker.straight-up", kind: "STICKER", title: "Straight Up", icon: "🚀", description: "Through all three rings." },
+    { id: "sticker.bullseye", kind: "STICKER", title: "Bullseye", icon: "🎯", description: "Hit the target." },
+    { id: "sticker.soft-landing", kind: "STICKER", title: "Soft Landing", icon: "🛬", description: "Touched down gently." },
+    { id: "sticker.sunny", kind: "STICKER", title: "Sunny Side", icon: "☀️", description: "Faced the sun." },
+    { id: "sticker.space-mechanic", kind: "STICKER", title: "Space Mechanic", icon: "🦾", description: "Fixed the satellite with a robot arm." },
+    { id: "sticker.moon-delivery", kind: "STICKER", title: "Moon Delivery", icon: "📦", description: "Delivered to the base." },
+    { id: "sticker.fair-test", kind: "STICKER", title: "Fair Test", icon: "⚖️", description: "Same thing, two gravities." },
+    { id: "prop.mini-rocket", kind: "PROP", title: "Mini Rocket", icon: "🚀", description: "A rocket for the shelf." },
+    { id: "sprocket.space-helmet", kind: "SPROCKET_ACCESSORY", title: "Space Helmet", icon: "👩‍🚀", description: "Sprocket is ready for the Moon. The tail doesn't fit, but never mind." },
+    { id: "avatar.astronaut", kind: "AVATAR", title: "Astronaut", icon: "🧑‍🚀", description: "One small step…" },
+    { id: "badge.wobbleworks-explorer", kind: "BADGE", title: "WobbleWorks Explorer", icon: "🌙", description: "Launch, land and drive — all in one go." },
+    { id: "badge.space-centre", kind: "BADGE", title: "Space Centre Restored", icon: "🏅", description: "The launch tower stands again!" },
     { id: "badge.power-lab", kind: "BADGE", title: "Power Lab Restored", icon: "🏅", description: "The lights are on in the Power Lab!" },
     // hidden prototype lab key pieces — one from a silly mission in each of the first three labs (exploration, never stars)
     { id: "key.prototype-1", kind: "KEY_PIECE", title: "Strange Key Piece", icon: "🗝️", description: "A piece of something. It hums." },
@@ -294,7 +312,19 @@ export const MISSION_REWARDS = Object.freeze({
     "robot.which-route-is-faster": { onComplete: ["sticker.route-scientist"] },
     "robot.robot-dance-party": { onComplete: ["prop.disco-ball"], onAllStars: ["sprocket.antenna"] },
     "robot.automated-factory": { onComplete: ["badge.automated-factory", "avatar.coder-visor"] },
-    "robot.robot-traffic-jam": { onComplete: ["badge.robot-lab"] }
+    "robot.robot-traffic-jam": { onComplete: ["badge.robot-lab"] },
+    "space.build-the-rover": { onComplete: ["sticker.moon-rover", "part.space.rover"] },
+    "space.cross-the-crater": { onComplete: ["sticker.crater"] },
+    "space.launch-straight": { onComplete: ["sticker.straight-up", "part.space.rocket", "tool.gravity-meter"] },
+    "space.reach-the-target": { onComplete: ["sticker.bullseye"] },
+    "space.safe-touchdown": { onComplete: ["sticker.soft-landing"] },
+    "space.satellite-power": { onComplete: ["sticker.sunny"] },
+    "space.robot-arm-repair": { onComplete: ["sticker.space-mechanic"] },
+    "space.moon-base-delivery": { onComplete: ["sticker.moon-delivery"] },
+    "space.earth-gravity-vs-moon-gravity": { onComplete: ["sticker.fair-test"] },
+    "space.space-duck": { onComplete: ["prop.mini-rocket"], onAllStars: ["sprocket.space-helmet"] },
+    "space.the-wobbleworks-explorer": { onComplete: ["badge.wobbleworks-explorer", "avatar.astronaut"] },
+    "space.broken-launch-tower": { onComplete: ["badge.space-centre"] }
 });
 /** Rewards owed for missions already completed (used when old saves or guest progress move into a profile). */
 export function completionRewardIds(levelIds) {
@@ -409,7 +439,19 @@ export const MISSION_STARS = Object.freeze({
     "robot.which-route-is-faster": { efficient: nothingAdded, advanced: { kind: "DISCOVERY", discoveryId: "robot.sequence", label: "TWO PROGRAMS — race them" } },
     "robot.robot-dance-party": { efficient: nothingAdded, advanced: { kind: "DISCOVERY", discoveryId: "secret.robot-dance", label: "DISCO — six beats" } },
     "robot.automated-factory": { efficient: nothingAdded, advanced: wild(3) },
-    "robot.robot-traffic-jam": { efficient: nothingAdded, advanced: wild(2) }
+    "robot.robot-traffic-jam": { efficient: nothingAdded, advanced: wild(2) },
+    "space.build-the-rover": { efficient: budget(4), advanced: { kind: "DISCOVERY", discoveryId: "space.rover", label: "ROVER — it drives itself" } },
+    "space.cross-the-crater": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "space.grip", label: "GRIP — climb the steep rim" } },
+    "space.launch-straight": { efficient: budget(1), advanced: { kind: "DISCOVERY", discoveryId: "space.fins", label: "STEADY — straight through the gust" } },
+    "space.reach-the-target": { efficient: nothingAdded, advanced: { kind: "DISCOVERY", discoveryId: "space.trajectory", label: "LONG SHOT — lean and land far away" } },
+    "space.safe-touchdown": { efficient: budget(1), advanced: { kind: "DISCOVERY", discoveryId: "space.no-air", label: "NO AIR — find out why a parachute won't help" } },
+    "space.satellite-power": { efficient: nothingAdded, advanced: { kind: "DISCOVERY", discoveryId: "space.solar", label: "SUNNY — face the sun" } },
+    "space.robot-arm-repair": { efficient: nothingAdded, advanced: { kind: "DISCOVERY", discoveryId: "combo.space-robot-power", label: "REPAIRED — the radio comes back" } },
+    "space.moon-base-delivery": { efficient: budget(3), advanced: { kind: "DISCOVERY", discoveryId: "space.solar", label: "SOLAR ROVER — powered by the Sun" } },
+    "space.earth-gravity-vs-moon-gravity": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "space.mass-same", label: "FAIR TEST — mass stays the same" } },
+    "space.space-duck": { efficient: nothingAdded, advanced: { kind: "DISCOVERY", discoveryId: "secret.space-duck", label: "ORBIT — round the planet" } },
+    "space.the-wobbleworks-explorer": { efficient: budget(4), advanced: wild(3) },
+    "space.broken-launch-tower": { efficient: budget(2), advanced: wild(2) }
 });
 export function evaluateStars(levelId, evidence) {
     const stars = ["solve"];

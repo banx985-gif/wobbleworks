@@ -1,3 +1,4 @@
+import { sunFactor } from "../space/SpaceSystem.js";
 /**
  * Power Lab (M14) — Scientific Truth Contract for electricity (design §8A).
  *
@@ -30,7 +31,9 @@ export function circuitTerminals(part, def) {
     const b = circuitBehaviour(def);
     if (!b)
         return [];
-    const c = Math.cos(part.rotation), s = Math.sin(part.rotation);
+    // A solar panel turns on its stand; its terminals are on the stand, so they don't move when it turns.
+    const turn = def.behaviours.some(x => x.kind === "SOLAR_PANEL") ? 0 : part.rotation;
+    const c = Math.cos(turn), s = Math.sin(turn);
     return b.terminals.map(t => ({ x: part.position.x + t.x * c - t.y * s, y: part.position.y + t.x * s + t.y * c }));
 }
 /** A wire's two end points. */
@@ -81,6 +84,7 @@ export function analyzeCircuit(parts, definition) {
         return { ...pt, node: nodeOf.get(root) };
     });
     const elements = [];
+    const suns = parts.filter(p => definition(p.definitionId)?.behaviours.some(b => b.kind === "SUN"));
     for (const p of parts) {
         const def = definition(p.definitionId);
         if (!def)
@@ -97,6 +101,12 @@ export function analyzeCircuit(parts, definition) {
         }
         if (!c || c.role === "JUNCTION")
             continue;
+        // Solar panels push only as hard as the sunlight on them (facing the sun squarely = full push) and never run down.
+        if (c.role === "BATTERY" && def.behaviours.some(b => b.kind === "SOLAR_PANEL")) {
+            const sun = sunFactor(suns, p.position.x, p.position.y, p.rotation);
+            elements.push({ ...base, kind: "BATTERY", ohms: c.ohms ?? 0.5, volts: Math.round(Number(c.volts ?? ONE_BATTERY_VOLTS) * sun * 1000) / 1000, capacity: 1e9, maxPower: Infinity });
+            continue;
+        }
         if (c.role === "BATTERY")
             elements.push({ ...base, kind: "BATTERY", ohms: c.ohms ?? 0.5, volts: Number(p.parameters.volts ?? c.volts ?? ONE_BATTERY_VOLTS), capacity: Number(p.parameters.capacity ?? c.capacity ?? 400), maxPower: Number(p.parameters.maxPower ?? c.maxPower ?? Infinity) });
         else if (c.role === "SWITCH" || c.role === "BUTTON")

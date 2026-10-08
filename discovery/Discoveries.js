@@ -108,6 +108,23 @@ export const DISCOVERIES = [
     { id: "combo.robot-factory", kind: "COMBINATION", title: "Production line", line: "Robots and machines packed a box together.", art: "robot.arm", truthContractId: "truth.robotics.v1" },
     { id: "secret.robot-dance", kind: "SECRET", title: "Robot Disco", line: "Six beats! The robots can really move.", art: "level.dance-pads", truthContractId: "truth.robotics.v1" },
     { id: "secret.robot-dizzy", kind: "SECRET", title: "Dizzy Robot", line: "Eight turns in one program. The robot needs a sit down.", art: "icon.rotate", truthContractId: "truth.robotics.v1" },
+    // Space Centre (M19) — every one measured by the SpaceSystem (truth.space.v1)
+    { id: "space.rover", kind: "CONCEPT", title: "Rovers", line: "Wheels front and back, a motor and power: it drove itself.", art: "icon.rocket-2", truthContractId: "truth.space.v1" },
+    { id: "space.grip", kind: "CONCEPT", title: "Grip", line: "Grippy wheels pushed up a slope that smooth wheels just spun on.", art: "icon.speed", truthContractId: "truth.space.v1" },
+    { id: "space.low-gravity", kind: "CONCEPT", title: "Low gravity", line: "Where gravity is weaker, things fall more slowly.", art: "sandbox.moon", truthContractId: "truth.space.v1" },
+    { id: "space.mass-same", kind: "CONCEPT", title: "Weight changes, mass doesn't", line: "The same thing weighed less on the Moon — but its mass stayed exactly the same.", art: "icon.planet", truthContractId: "truth.space.v1" },
+    { id: "space.thrust", kind: "CONCEPT", title: "Thrust beats weight", line: "The booster pushed up harder than the rocket's weight, so it lifted off.", art: "icon.launch", truthContractId: "truth.space.v1" },
+    { id: "space.fins", kind: "CONCEPT", title: "Fins keep it straight", line: "Fins at the back kept the rocket pointing the right way in the gust.", art: "icon.rocket", truthContractId: "truth.space.v1" },
+    { id: "space.trajectory", kind: "CONCEPT", title: "Trajectories", line: "Lean the launch and the rocket curves over and comes down far away.", art: "icon.rocket-3", truthContractId: "truth.space.v1" },
+    { id: "space.no-air", kind: "CONCEPT", title: "No air, no parachute", line: "A parachute needs air to push on — and the Moon hasn't got any.", art: "sandbox.moon", truthContractId: "truth.space.v1" },
+    { id: "space.landing", kind: "CONCEPT", title: "Soft landing", line: "Springy legs squashed and soaked up the speed.", art: "icon.rocket-2", truthContractId: "truth.space.v1" },
+    { id: "space.solar", kind: "CONCEPT", title: "Solar power", line: "A panel facing the sun made electricity.", art: "icon.planet", truthContractId: "truth.space.v1" },
+    { id: "space.planet-pull", kind: "CONCEPT", title: "A planet's pull", line: "The planet's pull bent the path into a curve.", art: "icon.planet", truthContractId: "truth.space.v1" },
+    { id: "space.robot-arm", kind: "CONCEPT", title: "Space robots", line: "A programmed robot arm fitted the module.", art: "robot.arm", truthContractId: "truth.space.v1" },
+    { id: "combo.space-stages", kind: "COMBINATION", title: "Stage by stage", line: "One stage finished and started the next one.", art: "icon.launch", truthContractId: "truth.space.v1" },
+    { id: "combo.space-robot-power", kind: "COMBINATION", title: "Robot repair", line: "The robot's repair closed the circuit and the power came back.", art: "robot.arm", truthContractId: "truth.space.v1" },
+    { id: "secret.space-duck", kind: "SECRET", title: "Orbiting Duck", line: "Three quarters of the way round a planet. Quack in space!", art: "sandbox.space-helmet", truthContractId: "truth.space.v1" },
+    { id: "secret.space-sky-high", kind: "SECRET", title: "Sky High", line: "Over 12 metres up — right out of the room!", art: "icon.rocket-3", truthContractId: "truth.space.v1" },
     { id: "secret.sky-tower", kind: "SECRET", title: "Sky Scraper", line: "A tower so tall it nearly touched the ceiling — and it stood firm!", art: "builder.beam-metal", truthContractId: "truth.structures.v1" }
 ];
 export function discoveryById(id) { return DISCOVERIES.find(d => d.id === id); }
