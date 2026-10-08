@@ -1,0 +1,1615 @@
+import { AppShellController } from "./app/AppShellController.js";
+import { activeProfile, completedLevelIds, createDefaultAppSave, currentAssistance, currentLastBuild, currentOpening, currentSettings, mostRecentProfile, titleVisibility, validateAppSave, withActiveProfile, withAssistance, withBuild, withCreatedProfile, withDeletedProfile, withEntitlement, withFirstTest, withLocation, withOpeningMetrics, withOpeningProgress, withEditedProfile, withSettings, DEFAULT_SETTINGS, DEFAULT_ASSISTANCE, withoutActiveProfile, MAX_PROFILES, PAINTED_AVATARS } from "./app/AppState.js";
+import { ParentGate } from "./app/ParentGate.js";
+import { boltArt, renderCampusMap, renderHub, renderLocker, renderProfileSelect, renderShelf, renderTrophies } from "./hub/HubScreens.js";
+import { renderParentDashboard, renderParentGate } from "./parent/ParentArea.js";
+import { OWNERSHIP_CHILD_COPY, regionById, routeToRegion } from "./progression/Campus.js";
+import { addToShelf, equipCosmetic, markRestorationSeen, markRewardsSeen, meetVisitor, recordMissionSuccess } from "./progression/ProgressionManager.js";
+import { pendingRestorationMoments } from "./progression/Restoration.js";
+import { rewardById } from "./progression/Rewards.js";
+import { backupFileName, exportBackup, importBackup, IMPORT_MESSAGES } from "./save/BackupPackage.js";
+import { migrateAppSave } from "./save/Migrations.js";
+import { storageReport } from "./save/StorageMonitor.js";
+import { detectDeviceSupport, storageWarningNeeded } from "./app/DeviceSupport.js";
+import { LifecycleCoordinator } from "./app/LifecycleCoordinator.js";
+import { BuildSystem } from "./build/BuildSystem.js";
+import { FixedClock } from "./core/FixedClock.js";
+import { AudioManager } from "./core/AudioManager.js";
+import { PerformanceMonitor } from "./core/PerformanceMonitor.js";
+import { Telemetry } from "./core/Telemetry.js";
+import { TestSystem } from "./core/TestSystem.js";
+import { createDefaultRegistry, DEFAULT_PARTS } from "./content/defaultParts.js";
+import { loadOpeningLevels } from "./opening/OpeningContent.js";
+import { OpeningDirector, evaluateOpeningSuccess } from "./opening/OpeningDirector.js";
+import { loadMotionYardLevels } from "./motion/MotionContent.js";
+import { MOTION_PERFORMANCE_BUDGET } from "./motion/MotionPerformanceBudget.js";
+import { MOTION_MISSIONS, completeMotionMission, createMotionProgress, evaluateMotionMission, isMotionMissionUnlocked, nextRequiredMotionMission, MOTION_REAL_WORLD_CARDS } from "./motion/MotionYard.js";
+import { InputManager } from "./input/InputManager.js";
+import { CanvasRenderer } from "./render/CanvasRenderer.js";
+import { CameraController } from "./render/CameraController.js";
+import { AutosaveScheduler, IndexedDbStore, SaveManager } from "./save/SaveManager.js";
+import { EditorOverlay } from "./tooling/EditorOverlay.js";
+import { AssetManager } from "./core/AssetManager.js";
+import { discoveryById, evaluateRunDiscoveries } from "./discovery/Discoveries.js";
+import { observePartUses, partTitle, useLabel } from "./discovery/PartMastery.js";
+import { ghostSnap, hintView, HintTracker, MOTION_HINTS } from "./discovery/Hints.js";
+import { diagnoseRun, WHY_CHOICES } from "./discovery/WhyCards.js";
+import { AdaptiveObserver } from "./discovery/AdaptiveAssistance.js";
+import { guidanceHistory, recordRunEvidence, withSolveHistory } from "./discovery/DiscoveryBook.js";
+import { renderDiscoveryBook } from "./discovery/DiscoveryBookView.js";
+const canvas = document.querySelector("#game");
+if (!canvas)
+    throw new Error("Missing #game canvas");
+const registry = createDefaultRegistry();
+const build = new BuildSystem();
+const renderer = new CanvasRenderer(canvas);
+const input = new InputManager(canvas);
+const camera = new CameraController();
+const clock = new FixedClock(60);
+const tests = new TestSystem(registry);
+const audio = new AudioManager();
+const perf = new PerformanceMonitor();
+const telemetry = new Telemetry();
+const editor = new EditorOverlay();
+const shell = new AppShellController();
+const saveManager = new SaveManager(new IndexedDbStore("wobbleworks-app", 1), validateAppSave, {
+    migrate: raw => { const r = migrateAppSave(raw); return r.ok ? { payload: r.save, migrated: r.migrated } : r.reason === "FUTURE_VERSION" ? { futureVersion: true } : undefined; }
+});
+/** True when the stored save came from a newer build: we never overwrite it. */
+let savingBlocked = false;
+const autosave = new AutosaveScheduler(async (payload) => { if (!savingBlocked)
+    await saveManager.save(payload); }, 600);
+const parentGate = new ParentGate();
+const assets = new AssetManager();
+let artManifest = {};
+renderer.setArt(id => assets.getImage(id));
+/** Loads the painted art listed in assets/manifest.json. Anything missing keeps its code-drawn stand-in. */
+async function loadArt() {
+    try {
+        const response = await fetch("./assets/manifest.json");
+        if (response.ok)
+            artManifest = await response.json();
+    }
+    catch {
+        return;
+    }
+    const wanted = Object.keys(artManifest).filter(id => /^(motion|structure|air|level|fx|ui.hint)./.test(id));
+    await Promise.allSettled(wanted.map(id => assets.loadImage(id, artManifest[id])));
+}
+let appSave = createDefaultAppSave();
+let selectedId;
+let dragStart;
+let panStart;
+let dragPreview;
+let testMode = false;
+let pausedByShell = false;
+let lifecyclePaused = false;
+let settingsReturn = "TITLE";
+let infoReturn = "SETTINGS";
+let parentReturn = "TITLE";
+let preRotateScreen = "TITLE";
+let bootNotices = [];
+let openingLevels = new Map();
+let openingDirector = new OpeningDirector(1);
+let openingActive = false;
+let openingSuccessShown = false;
+let selectedAvatar = "BLUE";
+let profileSelectedId;
+let editingProfileId;
+let currentNarration = "";
+let motionLevels = new Map();
+let motionProgress = createMotionProgress();
+let motionActive = false;
+let activeMotionLevel;
+let forceScanner = false;
+let motionResultShown = false;
+let freeBuildActive = false;
+let creatingExtraProfile = false;
+let lockerTab = "avatar";
+let parentNotice = "";
+let lastStorage;
+let hubQueue = [];
+let lastMissionLevelId;
+let resultReturnsToHub = false;
+// ---- M11 guidance state (per attempt; nothing here is read by the simulation)
+let hintTracker;
+let currentHint = { tier: 0, line: "", glowParts: [], ghosts: [] };
+const observer = new AdaptiveObserver(0);
+let lastWhy;
+let bookTab = "DISCOVERIES";
+let bookReturn = "HUB";
+let discoveryFrame = 0;
+const popQueue = [];
+let popBusy = false;
+const appElement = document.querySelector("#app");
+const shellElement = document.querySelector("#shell");
+const transitionShield = document.querySelector("#transition-shield");
+const loadingError = document.querySelector("#loading-error");
+const unsupportedDetail = document.querySelector("#unsupported-detail");
+const profileList = document.querySelector("#profile-list");
+const titleStatus = document.querySelector("#title-status");
+const openingHud = document.querySelector("#opening-hud");
+const openingTitle = document.querySelector("#opening-title");
+const openingPrompt = document.querySelector("#opening-prompt");
+const openingSubtitle = document.querySelector("#opening-subtitle");
+const openingSuccess = document.querySelector("#opening-success");
+const boltAvatar = document.querySelector("#bolt-avatar");
+const inventorName = document.querySelector("#inventor-name");
+const motionHud = document.querySelector("#motion-hud");
+const motionTitle = document.querySelector("#motion-title");
+const motionObjective = document.querySelector("#motion-objective");
+const motionResult = document.querySelector("#motion-result");
+const motionResultTitle = document.querySelector("#motion-result-title");
+const motionResultBody = document.querySelector("#motion-result-body");
+const motionMissionGrid = document.querySelector("#motion-mission-grid");
+const motionProgressLabel = document.querySelector("#motion-progress");
+const forceScannerButton = document.querySelector("#btn-force-scanner");
+const goMotionYardButton = document.querySelector("#btn-go-motion-yard");
+const hubRoot = document.querySelector("#hub-root");
+const mapRoot = document.querySelector("#map-root");
+const mapNote = document.querySelector("#map-note");
+const lockerRoot = document.querySelector("#locker-root");
+const trophyRoot = document.querySelector("#trophy-root");
+const shelfRoot = document.querySelector("#shelf-root");
+const gateRoot = document.querySelector("#gate-root");
+const parentRoot = document.querySelector("#parent-root");
+const hubMoment = document.querySelector("#hub-moment");
+const resultStars = document.querySelector("#motion-result-stars");
+const resultRewards = document.querySelector("#motion-result-rewards");
+const shelfButton = document.querySelector("#btn-motion-shelf");
+const motionBackButton = document.querySelector("#btn-motion-back");
+const hintButton = document.querySelector("#btn-hint");
+const boltTip = document.querySelector("#bolt-tip");
+const discoveryPop = document.querySelector("#discovery-pop");
+const whyCard = document.querySelector("#why-card");
+const whyButton = document.querySelector("#btn-why");
+const keepBuildingButton = document.querySelector("#btn-keep-building");
+const bookRoot = document.querySelector("#book-root");
+const ui = {
+    test: document.querySelector("#btn-test"), stop: document.querySelector("#btn-stop"),
+    pause: document.querySelector("#btn-pause"), menu: document.querySelector("#btn-menu"),
+    undo: document.querySelector("#btn-undo"), redo: document.querySelector("#btn-redo"),
+    del: document.querySelector("#btn-delete"), rotate: document.querySelector("#btn-rotate"),
+    resetCamera: document.querySelector("#btn-camera"), tools: document.querySelector("#btn-tools"),
+    debug: document.querySelector("#debug"), mode: document.querySelector("#mode-label")
+};
+function delay(ms) { return new Promise(resolve => window.setTimeout(resolve, ms)); }
+function now() { return performance.now(); }
+function gameplayAllowed() { return shell.canUseGameplay(now()); }
+function isPortraitBuildLayout() { return window.matchMedia?.("(orientation: portrait) and (max-width: 900px)").matches ?? false; }
+function openingStepFromSave() {
+    const step = currentOpening(appSave).step;
+    return (step >= 1 && step <= 6 ? step : 1);
+}
+/** Every change to the save goes through here: debounced autosave, or an immediate save for milestones. */
+function commit(next, immediate = false) {
+    appSave = next;
+    autosave.request(appSave);
+    return immediate ? autosave.flush() : Promise.resolve();
+}
+function buzz(ms = 25) { if ((currentSettings(appSave).vibration ?? true) && "vibrate" in navigator)
+    try {
+        navigator.vibrate(ms);
+    }
+    catch { /* unsupported */ } }
+function sfx(frequency, duration) { if (currentSettings(appSave).soundEffects)
+    audio.beep(frequency, duration); }
+function applySettings(settings = currentSettings(appSave)) {
+    document.documentElement.style.setProperty("--text-scale", String(settings.textScale));
+    document.documentElement.classList.toggle("reduced-motion", settings.reducedMotion);
+    document.documentElement.classList.toggle("high-contrast", settings.highContrast);
+    document.documentElement.classList.toggle("no-subtitles", !settings.subtitles);
+}
+function syncSettingsForm() {
+    const s = currentSettings(appSave);
+    const a = currentAssistance(appSave);
+    const p = activeProfile(appSave);
+    document.querySelector("#setting-text-scale").value = String(s.textScale);
+    document.querySelector("#setting-reduced-motion").checked = s.reducedMotion;
+    document.querySelector("#setting-high-contrast").checked = s.highContrast;
+    document.querySelector("#setting-narration").checked = s.narration;
+    document.querySelector("#setting-subtitles").checked = s.subtitles;
+    document.querySelector("#setting-sfx").checked = s.soundEffects;
+    document.querySelector("#setting-music").checked = s.music ?? true;
+    document.querySelector("#setting-vibration").checked = s.vibration ?? true;
+    document.querySelector("#setting-hints").checked = a.boltTips;
+    document.querySelector("#setting-hints").closest("label").classList.toggle("hidden", !p);
+    document.querySelector("#setting-snap").checked = a.snapAssist;
+    document.querySelector("#setting-snap-row").classList.toggle("hidden", !p);
+    document.querySelector("#settings-owner").textContent = p ? `Settings for ${p.name}` : "Settings for this device";
+}
+function readSettingsForm() {
+    const num = Number(document.querySelector("#setting-text-scale").value);
+    const chk = (id) => document.querySelector(id).checked;
+    return { textScale: Number.isFinite(num) ? Math.max(0.9, Math.min(1.4, num)) : 1, reducedMotion: chk("#setting-reduced-motion"), highContrast: chk("#setting-high-contrast"), narration: chk("#setting-narration"), subtitles: chk("#setting-subtitles"), soundEffects: chk("#setting-sfx"), music: chk("#setting-music"), vibration: chk("#setting-vibration") };
+}
+function motionCompleted() { return completedLevelIds(appSave).filter(id => id.startsWith("motion.")); }
+function updateOpeningTray(level) {
+    const allowed = level ? new Set(level.availablePartIds) : undefined;
+    document.querySelectorAll("[data-part]").forEach(button => {
+        const hidden = Boolean((openingActive || motionActive || freeBuildActive) && allowed && !allowed.has(button.dataset.part));
+        button.classList.toggle("hidden", hidden);
+        button.disabled = hidden;
+    });
+}
+function speakCurrentLine(force = false) {
+    if (!currentNarration || !("speechSynthesis" in window))
+        return;
+    if (!force && !currentSettings(appSave).narration)
+        return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(currentNarration);
+    utterance.rate = 1.02;
+    utterance.pitch = 1.08;
+    window.speechSynthesis.speak(utterance);
+}
+function presentBolt(line, reaction = false) {
+    currentNarration = line;
+    openingSubtitle.textContent = line;
+    if (reaction) {
+        boltAvatar.classList.remove("react");
+        requestAnimationFrame(() => boltAvatar.classList.add("react"));
+    }
+    sfx(reaction ? 920 : 620, reaction ? 0.08 : 0.045);
+    speakCurrentLine();
+}
+function renderOpeningHud() {
+    openingHud.classList.toggle("hidden", !openingActive);
+    if (!openingActive)
+        return;
+    const meta = openingDirector.current();
+    goMotionYardButton.classList.toggle("hidden", meta.step !== 6);
+    openingTitle.textContent = meta.title;
+    openingPrompt.textContent = meta.prompt;
+}
+function renderMotionMenu() {
+    motionMissionGrid.replaceChildren();
+    const completed = new Set(motionProgress.completed);
+    const requiredNext = nextRequiredMotionMission(motionProgress);
+    motionProgressLabel.textContent = `${completed.size} / ${MOTION_MISSIONS.length} Motion Yard experiences completed`;
+    for (const meta of MOTION_MISSIONS) {
+        const unlocked = isMotionMissionUnlocked(meta.id, motionProgress) || completed.has(meta.id);
+        const button = document.createElement("button");
+        button.className = `motion-mission${completed.has(meta.id) ? " done" : ""}${!unlocked ? " locked" : ""}${requiredNext === meta.id ? " required" : ""}`;
+        button.disabled = !unlocked;
+        const slot = document.createElement("span");
+        slot.className = "slot";
+        slot.textContent = meta.slot === "ORDINARY" ? `MISSION ${meta.ordinaryNumber}` : meta.slot;
+        const title = document.createElement("strong");
+        title.textContent = completed.has(meta.id) ? `✓ ${meta.title}` : meta.title;
+        const objective = document.createElement("span");
+        objective.textContent = meta.objective;
+        button.append(slot, title, objective);
+        button.addEventListener("click", () => loadMotionMission(meta.id));
+        motionMissionGrid.append(button);
+    }
+}
+function showMotionYard() {
+    stopToBuild();
+    openingActive = false;
+    motionActive = false;
+    freeBuildActive = false;
+    activeMotionLevel = undefined;
+    forceScanner = false;
+    motionProgress = createMotionProgress(motionCompleted());
+    if (activeProfile(appSave))
+        void commit(withLocation(appSave, "LAB:motion-yard"));
+    openingHud.classList.add("hidden");
+    openingSuccess.classList.add("hidden");
+    motionHud.classList.add("hidden");
+    motionResult.classList.add("hidden");
+    updateOpeningTray();
+    renderMotionMenu();
+    transition("MOTION_YARD", true);
+}
+function loadMotionMission(id) {
+    if (!isMotionMissionUnlocked(id, motionProgress) && !motionProgress.completed.includes(id))
+        return;
+    const level = motionLevels.get(id);
+    if (!level) {
+        loadingError.textContent = `Motion Yard content is missing: ${id}.`;
+        transition("LOADING_FAILURE", true);
+        return;
+    }
+    stopToBuild();
+    openingActive = false;
+    freeBuildActive = false;
+    openingHud.classList.add("hidden");
+    openingSuccess.classList.add("hidden");
+    build.replaceAll({ parts: [...(level.staticObjects ?? []), ...level.starterParts], connections: level.starterConnections });
+    selectedId = undefined;
+    dragStart = undefined;
+    dragPreview = undefined;
+    panStart = undefined;
+    camera.reset();
+    motionActive = true;
+    activeMotionLevel = level;
+    motionResultShown = false;
+    forceScanner = false;
+    motionResult.classList.add("hidden");
+    const meta = MOTION_MISSIONS.find(m => m.id === id);
+    motionTitle.textContent = meta?.title ?? level.title;
+    motionObjective.textContent = meta?.objective ?? level.title;
+    motionHud.classList.remove("hidden");
+    forceScannerButton.classList.remove("hidden", "force-on");
+    forceScannerButton.setAttribute("aria-pressed", "false");
+    document.querySelector(".motion-badge").textContent = "MOTION YARD";
+    updateOpeningTray(level);
+    resetGuidance(level.id);
+    enterWorkshop();
+}
+function showMotionResult(success, body, stars = [], newStars = [], rewards = []) {
+    motionResultShown = true;
+    motionResult.classList.remove("hidden");
+    motionResult.classList.toggle("success", success);
+    motionResultTitle.textContent = success ? "IT WORKED!" : "GOOD TEST!";
+    motionResultBody.textContent = body;
+    resultStars.replaceChildren();
+    resultRewards.replaceChildren();
+    resultStars.classList.toggle("hidden", !success);
+    resultRewards.classList.toggle("hidden", !rewards.length);
+    shelfButton.classList.toggle("hidden", !success || !activeProfile(appSave));
+    shelfButton.disabled = false;
+    shelfButton.textContent = "Put on Shelf";
+    motionBackButton.textContent = resultReturnsToHub ? "Workshop" : "Motion Yard";
+    whyButton.classList.toggle("hidden", success || !lastWhy);
+    keepBuildingButton.classList.toggle("hidden", success);
+    if (success) {
+        const labels = { solve: "Solved", efficient: "Tiny machine", advanced: "Wild invention" };
+        for (const id of ["solve", "efficient", "advanced"]) {
+            const s = document.createElement("span");
+            const has = stars.includes(id);
+            s.className = `result-star${has ? " on" : ""}${newStars.includes(id) ? " new" : ""}`;
+            s.textContent = `★ ${labels[id]}`;
+            resultStars.append(s);
+        }
+    }
+    for (const id of rewards) {
+        const r = rewardById(id);
+        if (!r)
+            continue;
+        const chip = document.createElement("span");
+        chip.className = "reward-chip";
+        chip.textContent = `${r.icon} ${r.title}`;
+        chip.title = r.description;
+        resultRewards.append(chip);
+    }
+}
+function playerPartCount(level) {
+    const seeded = new Set([...(level.staticObjects ?? []), ...level.starterParts].map(p => p.id));
+    return build.allParts().filter(p => !seeded.has(p.id)).length;
+}
+function maybeCompleteMotionMission() {
+    if (!motionActive || !activeMotionLevel || !testMode || motionResultShown)
+        return;
+    const runtime = tests.active();
+    if (!runtime)
+        return;
+    const result = evaluateMotionMission(activeMotionLevel, build, runtime);
+    if (!result.success)
+        return;
+    if (!tests.isPaused())
+        tests.togglePause();
+    motionProgress = completeMotionMission(motionProgress, activeMotionLevel.id);
+    checkRunDiscoveries();
+    const outcome = recordMissionSuccess(appSave, activeMotionLevel.id, { playerPartCount: playerPartCount(activeMotionLevel), discoveries: result.discoveries });
+    lastMissionLevelId = activeMotionLevel.id;
+    resultReturnsToHub = outcome.labCleared !== undefined;
+    // Help used only tunes how often help is offered later; stars and rewards above never see it.
+    void commit(withSolveHistory(outcome.save, observer.hintsUsed(), observer.failedTests()), true).catch(() => undefined);
+    setHint(undefined);
+    hideBoltTip();
+    hintButton.classList.remove("offer");
+    const card = result.discoveries.map(id => MOTION_REAL_WORLD_CARDS.find(c => c.discoveryId === id)).find(Boolean);
+    const discovered = card ? ` ${card.title}: ${card.example}` : result.discoveries.length ? ` You discovered ${result.discoveries[0].replace("motion.", "").replaceAll("-", " ")}.` : "";
+    const cleared = outcome.labCleared ? ` The ${regionById(outcome.labCleared)?.title ?? "lab"} is restored!` : "";
+    showMotionResult(true, `Nice invention.${discovered}${cleared}`, outcome.stars, outcome.newStars, outcome.newRewards);
+    sfx(980, .09);
+    buzz(60);
+}
+async function saveOpeningProgress(step, complete = false) {
+    await commit(syncOpeningMetrics(withOpeningProgress(appSave, step, complete)), complete);
+}
+function loadOpeningStep(step) {
+    stopToBuild();
+    const meta = openingDirector.currentStep() === step ? openingDirector.current() : (() => { openingDirector.setStep(step); return openingDirector.current(); })();
+    const level = openingLevels.get(meta.levelId);
+    if (!level) {
+        loadingError.textContent = `Opening content is missing: ${meta.levelId}. Your save has not been changed.`;
+        transition("LOADING_FAILURE", true);
+        return;
+    }
+    build.replaceAll({ parts: [...(level.staticObjects ?? []), ...level.starterParts], connections: level.starterConnections });
+    selectedId = undefined;
+    dragStart = undefined;
+    dragPreview = undefined;
+    panStart = undefined;
+    camera.reset();
+    openingActive = true;
+    motionActive = false;
+    freeBuildActive = false;
+    activeMotionLevel = undefined;
+    motionHud.classList.add("hidden");
+    openingSuccessShown = false;
+    openingSuccess.classList.add("hidden");
+    renderOpeningHud();
+    updateOpeningTray(level);
+    presentBolt(meta.boltLine);
+    if (step === 6)
+        void saveOpeningProgress(6, true).catch(() => undefined);
+    else
+        void saveOpeningProgress(step, false).catch(() => undefined);
+    enterWorkshop();
+}
+function startOpening(step = openingStepFromSave()) {
+    openingDirector = new OpeningDirector(step);
+    openingDirector.startSession(now());
+    loadOpeningStep(step);
+}
+function autoSnapOpeningWheel(id) {
+    const openingSnap = openingActive && [1, 4].includes(openingDirector.currentStep());
+    const adaptiveSnap = (motionActive || freeBuildActive) && currentGuidance().wheelSnap;
+    if (!(openingSnap || adaptiveSnap) || !currentAssistance(appSave).snapAssist)
+        return;
+    const wheel = build.getPart(id);
+    if (!wheel || wheel.definitionId !== "motion.wheel")
+        return;
+    const cart = build.allParts().find(p => p.definitionId === "motion.cart");
+    if (!cart)
+        return;
+    if (Math.hypot(wheel.position.x - cart.position.x, wheel.position.y - cart.position.y) > 1.65)
+        return;
+    const connectedWheels = build.allConnections().filter(c => c.fromPartId === cart.id || c.toPartId === cart.id)
+        .map(c => c.fromPartId === cart.id ? c.toPartId : c.fromPartId)
+        .map(wheelId => build.getPart(wheelId)).filter(p => p?.definitionId === "motion.wheel");
+    const side = connectedWheels.length > 0 ? 1 : -1;
+    build.move(id, { x: cart.position.x + side * 0.42, y: Math.min(8.05, cart.position.y + 0.38) }); // placement help only: physics + win rules unchanged
+    const alreadyConnected = build.allConnections().some(c => (c.fromPartId === cart.id && c.toPartId === id) || (c.toPartId === cart.id && c.fromPartId === id));
+    if (!alreadyConnected)
+        build.connect(cart.id, "axle", id, "axle", { kind: "HINGE" });
+    sfx(760, 0.05);
+}
+async function advanceOpening() {
+    if (!openingActive || !openingSuccessShown)
+        return;
+    const result = openingDirector.completeCurrent();
+    stopToBuild();
+    openingSuccess.classList.add("hidden");
+    openingSuccessShown = false;
+    if (!result.next)
+        return;
+    await saveOpeningProgress(result.next, false);
+    if (result.requiresInventor && appSave.profiles.length === 0) {
+        openingActive = false;
+        updateOpeningTray();
+        openingHud.classList.add("hidden");
+        editingProfileId = undefined;
+        creatingExtraProfile = false;
+        selectAvatar("BLUE");
+        document.querySelector("#btn-inventor-cancel").classList.add("hidden");
+        document.querySelector("#inventor-form-title").textContent = "CREATE YOUR INVENTOR";
+        document.querySelector("#btn-create-inventor").textContent = "✔ CREATE INVENTOR";
+        document.querySelector("#inventor-form-lead").textContent = "Bolt wants to remember who helped.";
+        transition("CREATE_INVENTOR", true);
+        return;
+    }
+    loadOpeningStep(result.next);
+}
+function maybeCompleteOpeningChallenge() {
+    if (!openingActive || !testMode || openingSuccessShown || openingDirector.currentStep() === 6)
+        return;
+    if (!evaluateOpeningSuccess(openingDirector.currentStep(), build, tests.active()))
+        return;
+    openingSuccessShown = true;
+    openingSuccess.classList.remove("hidden");
+    if (tests.active() && !tests.isPaused())
+        tests.togglePause();
+    const step = openingDirector.currentStep();
+    presentBolt(step === 3 ? "WHEEEE! ...I meant to do that!" : step === 5 ? "That was YOUR solution!" : "It worked!", true);
+}
+function chooseProfile(id) { void commit(withActiveProfile(appSave, id), true); applySettings(); resumeActiveProfile(); }
+function openInventorForm(editId) {
+    editingProfileId = editId;
+    const p = editId ? appSave.profiles.find(x => x.id === editId) : undefined;
+    creatingExtraProfile = !editId;
+    inventorName.value = p?.name ?? "Inventor";
+    selectAvatar(p && PAINTED_AVATARS.includes(p.avatarStyle) ? p.avatarStyle : "BLUE");
+    document.querySelector("#inventor-form-title").textContent = p ? `EDIT ${p.name.toUpperCase()}` : "CREATE YOUR INVENTOR";
+    document.querySelector("#btn-create-inventor").textContent = p ? "✔ SAVE CHANGES" : "✔ CREATE INVENTOR";
+    document.querySelector("#inventor-form-lead").textContent = p ? "Change your nickname or your look." : "Bolt wants to remember who helped.";
+    document.querySelector("#btn-inventor-cancel").classList.remove("hidden");
+    transition("CREATE_INVENTOR");
+}
+function renderProfiles() {
+    if (!appSave.profiles.some(p => p.id === profileSelectedId))
+        profileSelectedId = mostRecentProfile(appSave)?.id;
+    renderProfileSelect(profileList, appSave, profileSelectedId, {
+        select: id => { profileSelectedId = id; sfx(700, .03); renderProfiles(); },
+        play: id => chooseProfile(id),
+        edit: id => openInventorForm(id),
+        create: () => { if (appSave.profiles.length < MAX_PROFILES)
+            openInventorForm(); }
+    });
+    document.querySelector("#profile-empty").classList.toggle("hidden", appSave.profiles.length > 0);
+    document.querySelector("#btn-profile-continue").disabled = !profileSelectedId;
+}
+document.querySelector("#btn-profile-continue").addEventListener("click", () => { if (profileSelectedId && !shell.isInputLocked(now()))
+    chooseProfile(profileSelectedId); });
+document.querySelector("#btn-inventor-cancel").addEventListener("click", () => { editingProfileId = undefined; creatingExtraProfile = false; transition("PROFILE_SELECT", true); });
+const INFO_TEXT = {
+    privacy: { title: "Privacy", body: ["WobbleWorks keeps everything on this device: inventors, progress and inventions.", "There are no ads, no chat and no accounts for children. Nothing is uploaded.", "The full privacy policy is added before the game is released."] },
+    terms: { title: "Terms of Use", body: ["The full terms of use are added before the game is released."] },
+    help: { title: "Help", body: ["Drag parts from the tray, then press TEST to see what happens. STOP puts everything back.", "Stuck? Change one thing and TEST again: every test teaches something.", "Grown-ups: backups, storage and inventor removal are in Grown-ups."] }
+};
+function showInfo(key) {
+    const info = INFO_TEXT[key] ?? INFO_TEXT.help;
+    document.querySelector("#info-title").textContent = info.title;
+    const body = document.querySelector("#info-body");
+    body.replaceChildren(...info.body.map(t => { const p = document.createElement("p"); p.textContent = t; return p; }));
+    transition("INFO");
+}
+function renderTitle() {
+    titleStatus.textContent = navigator.onLine ? "" : "Offline — cached ownership rules are active.";
+}
+function renderExtras() {
+    const v = titleVisibility(appSave);
+    document.querySelector("#menu-freebuild").classList.toggle("hidden", !v.freeBuild);
+    document.querySelector("#menu-inventions").classList.toggle("hidden", !v.myInventions);
+    document.querySelector("#extras-note").textContent = v.freeBuild ? "" : "Free Build opens after the first few challenges.";
+}
+function renderShell() {
+    const current = shell.current();
+    const inWorkshop = current === "WORKSHOP";
+    appElement.setAttribute("aria-hidden", String(!inWorkshop));
+    shellElement.classList.toggle("workshop-hidden", inWorkshop);
+    for (const card of shellElement.querySelectorAll("[data-screen]"))
+        card.classList.toggle("hidden", card.dataset.screen !== current);
+    if (current === "TITLE")
+        renderTitle();
+    if (current === "EXTRAS")
+        renderExtras();
+    if (current === "PROFILE_SELECT")
+        renderProfiles();
+    if (current === "MOTION_YARD")
+        renderMotionMenu();
+    if (current === "HUB")
+        renderHubScreen();
+    if (current === "CAMPUS_MAP")
+        renderMap();
+    if (current === "LOCKER")
+        renderLockerScreen();
+    if (current === "TROPHIES") {
+        renderTrophies(trophyRoot, appSave);
+        void commit(markRewardsSeen(appSave, (activeProfile(appSave)?.unseenRewards ?? []).filter(id => id.startsWith("badge.") || id.startsWith("sticker."))));
+    }
+    if (current === "SHELF")
+        renderShelf(shelfRoot, appSave, { open: openShelfInvention });
+    if (current === "GROWN_UPS")
+        renderGate("");
+    if (current === "PARENT_DASHBOARD")
+        renderParent();
+    if (current === "SETTINGS")
+        syncSettingsForm();
+    if (current === "DISCOVERY_BOOK")
+        renderBook();
+    const activeCard = shellElement.querySelector(`[data-screen="${current}"]`);
+    if (activeCard && !inWorkshop) {
+        const focusTarget = activeCard.querySelector("button,input") ?? activeCard;
+        if (focusTarget === activeCard)
+            activeCard.tabIndex = -1;
+        window.setTimeout(() => focusTarget.focus(), 0);
+    }
+    transitionShield.classList.add("active");
+    window.setTimeout(() => transitionShield.classList.remove("active"), 190);
+}
+function transition(next, force = false) {
+    const moved = shell.transition(next, now(), force);
+    if (moved)
+        renderShell();
+    return moved;
+}
+function enterWorkshop() {
+    if (isPortraitBuildLayout()) {
+        preRotateScreen = "WORKSHOP";
+        transition("ROTATE_DEVICE", true);
+        return;
+    }
+    transition("WORKSHOP", true);
+}
+function syncOpeningMetrics(save) {
+    if (!openingActive)
+        return save;
+    const metrics = openingDirector.metrics();
+    const firstInteractionDelayMs = metrics.firstInteractionAtMs === undefined ? undefined : Math.max(0, metrics.firstInteractionAtMs - metrics.sessionStartedAtMs);
+    const firstTestDelayMs = metrics.firstTestAtMs === undefined ? undefined : Math.max(0, metrics.firstTestAtMs - metrics.sessionStartedAtMs);
+    return withOpeningMetrics(save, {
+        ...(firstInteractionDelayMs !== undefined ? { firstInteractionDelayMs } : {}),
+        ...(firstTestDelayMs !== undefined ? { firstTestDelayMs } : {}),
+        testPresses: metrics.testPresses, stopPresses: metrics.stopPresses, retries: metrics.retries, completedSteps: metrics.completedSteps
+    });
+}
+async function persistCurrentBuild(markFirstTest = false, immediate = false) {
+    const snapshot = build.snapshot("build.workshop");
+    const next = markFirstTest ? withFirstTest(appSave, snapshot) : withBuild(appSave, snapshot);
+    await commit(syncOpeningMetrics(next), immediate);
+}
+function stopToBuild() {
+    if (!testMode)
+        return;
+    tests.stop();
+    testMode = false;
+    pausedByShell = false;
+    lifecyclePaused = false;
+    ui.mode.textContent = "BUILD";
+}
+function openPause() {
+    if (shell.current() !== "WORKSHOP")
+        return;
+    if (testMode && !tests.isPaused()) {
+        tests.togglePause();
+        pausedByShell = true;
+    }
+    transition("PAUSE", true);
+}
+function resumeFromPause() {
+    transition("WORKSHOP", true);
+    if (testMode && pausedByShell && tests.isPaused())
+        tests.togglePause();
+    pausedByShell = false;
+    lifecyclePaused = false;
+}
+function advanceBootNotice() {
+    const next = bootNotices.shift();
+    if (next)
+        transition(next, true);
+    else
+        transition("TITLE", true);
+}
+async function loadAppState() {
+    transition("LOADING", true);
+    try {
+        const loaded = await saveManager.loadWithRecovery();
+        openingLevels = await loadOpeningLevels(registry);
+        motionLevels = await loadMotionYardLevels(registry);
+        appSave = loaded.payload ?? createDefaultAppSave();
+        savingBlocked = loaded.futureVersion;
+        applySettings();
+        motionProgress = createMotionProgress(motionCompleted());
+        const lastBuild = currentLastBuild(appSave);
+        if (lastBuild)
+            build.replaceAll({ parts: lastBuild.parts, connections: lastBuild.connections });
+        else if (build.allParts().length === 0) {
+            build.add("structure.block", { x: 8, y: 7.65 });
+            build.add("motion.ball", { x: 8, y: 4.2 });
+        }
+        bootNotices = [];
+        const recoveryTitle = document.querySelector("#recovery-title"), recoveryDetail = document.querySelector("#recovery-detail");
+        if (loaded.futureVersion) {
+            recoveryTitle.textContent = "This save is from a newer WobbleWorks";
+            recoveryDetail.textContent = "Update the game to keep playing with it. It hasn't been changed. Anything you do now won't be saved.";
+            bootNotices.push("RECOVERY_NOTICE");
+        }
+        else if (loaded.recovered) {
+            recoveryTitle.textContent = "Your workshop was recovered";
+            recoveryDetail.textContent = "Part of the newest save was damaged, so we restored the last good save.";
+            bootNotices.push("RECOVERY_NOTICE");
+        }
+        else if (loaded.unreadable) {
+            recoveryTitle.textContent = "We couldn't read the old save";
+            recoveryDetail.textContent = "A fresh workshop has been started. The damaged save was kept aside, not deleted.";
+            bootNotices.push("RECOVERY_NOTICE");
+        }
+        lastStorage = await storageReport(appSave);
+        if (lastStorage.level === "NEARLY_FULL" || await storageWarningNeeded())
+            bootNotices.push("STORAGE_WARNING");
+        if (!navigator.onLine)
+            bootNotices.push("OFFLINE_ENTITLEMENT");
+        advanceBootNotice();
+    }
+    catch (error) {
+        loadingError.textContent = error instanceof Error ? `Your save has not been changed. ${error.message}` : "Your save has not been changed.";
+        transition("LOADING_FAILURE", true);
+    }
+}
+// ------------------------------------------------------------------ M10: hub, map, profiles, parent area
+function ensureRecentProfileActive() {
+    if (activeProfile(appSave))
+        return;
+    const recent = mostRecentProfile(appSave);
+    if (recent) {
+        appSave = withActiveProfile(appSave, recent.id);
+        applySettings();
+    }
+}
+/** CONTINUE: the most recent inventor, at their last safe place (never mid-TEST). */
+function continueGame() {
+    ensureRecentProfileActive();
+    resumeActiveProfile();
+}
+function resumeActiveProfile() {
+    const p = activeProfile(appSave);
+    if (!p) {
+        startOpening(openingStepFromSave());
+        return;
+    }
+    const lastBuild = p.lastBuild;
+    if (lastBuild)
+        build.replaceAll({ parts: lastBuild.parts, connections: lastBuild.connections });
+    motionProgress = createMotionProgress(motionCompleted());
+    if (!p.openingComplete) {
+        startOpening(openingStepFromSave());
+        return;
+    }
+    if (p.location === "MAP") {
+        transition("CAMPUS_MAP", true);
+        return;
+    }
+    if (p.location === "LAB:motion-yard") {
+        showMotionYard();
+        return;
+    }
+    showHub();
+}
+function leaveGameplay() {
+    stopToBuild();
+    openingActive = false;
+    motionActive = false;
+    freeBuildActive = false;
+    activeMotionLevel = undefined;
+    forceScanner = false;
+    openingHud.classList.add("hidden");
+    openingSuccess.classList.add("hidden");
+    motionHud.classList.add("hidden");
+    motionResult.classList.add("hidden");
+    updateOpeningTray();
+    resetGuidance(undefined);
+}
+function showHub() {
+    leaveGameplay();
+    if (!activeProfile(appSave)) {
+        transition("TITLE", true);
+        return;
+    }
+    void commit(withLocation(appSave, "HUB"));
+    hubQueue = [];
+    queueHubMoments();
+    transition("HUB", true);
+}
+function queueHubMoments() {
+    const moments = [...pendingRestorationMoments(appSave)];
+    for (const m of moments)
+        hubQueue.push({ kind: "BOLT", title: m.boltLine, body: m.change, onDone: () => { void commit(markRestorationSeen(appSave, [m])); } });
+    const unseen = (activeProfile(appSave)?.unseenRewards ?? []).filter(id => { const k = rewardById(id)?.kind; return k === "PART" || k === "TOOL" || k === "KEY_PIECE" || k === "PROP"; });
+    if (unseen.length)
+        hubQueue.push({ kind: "REWARD", title: "New things for your workshop!", body: unseen.map(id => `${rewardById(id).icon} ${rewardById(id).title}`).join("   "), onDone: () => { void commit(markRewardsSeen(appSave, unseen)); } });
+}
+function showNextHubMoment() {
+    const next = hubQueue[0];
+    hubMoment.classList.toggle("hidden", !next);
+    if (!next)
+        return;
+    document.querySelector("#hub-moment-title").textContent = next.title;
+    document.querySelector("#hub-moment-body").textContent = next.body;
+    const face = document.querySelector("#hub-moment-bolt");
+    face.replaceChildren(boltArt(activeProfile(appSave)?.equipped.bolt));
+    if (next.kind === "BOLT") {
+        currentNarration = next.title;
+        speakCurrentLine();
+    }
+    sfx(next.kind === "REWARD" ? 1040 : 760, .08);
+}
+document.querySelector("#btn-hub-moment").addEventListener("click", () => {
+    const done = hubQueue.shift();
+    done?.onDone?.();
+    renderHubScreen();
+});
+function renderHubScreen() {
+    renderHub(hubRoot, appSave, {
+        openMap: () => { mapNote.textContent = "Tap a building."; transition("CAMPUS_MAP"); void commit(withLocation(appSave, "MAP")); },
+        openWorkbench: () => showMotionYard(),
+        openShelf: () => transition("SHELF"),
+        openTrophies: () => transition("TROPHIES"),
+        openLocker: () => transition("LOCKER"),
+        openFreeBuild: () => startFreeBuild(),
+        pokeBolt: () => { const p = activeProfile(appSave); hubQueue.push({ kind: "BOLT", title: p?.openingComplete ? "Fully charged and ready to wobble!" : "Bzzt… still charging…", body: "Tap the Campus Map to pick where to go next." }); showNextHubMoment(); },
+        pokeSprocket: () => { sfx(1300, .05); window.setTimeout(() => sfx(1500, .05), 90); hubRoot.querySelector(".station-sprocket")?.classList.add("wiggle"); window.setTimeout(() => hubRoot.querySelector(".station-sprocket")?.classList.remove("wiggle"), 600); },
+        meetVisitor: id => {
+            const out = meetVisitor(appSave, id);
+            const v = out.gift ? rewardById(out.gift) : undefined;
+            void commit(out.save, true);
+            hubQueue.push({ kind: "VISITOR", title: "Postie Pip says:", body: `“Heard the test track running! Here — a thank-you from the campus post room.”${v ? `  You got: ${v.icon} ${v.title}` : ""}`, onDone: () => { if (out.gift)
+                    void commit(markRewardsSeen(appSave, [out.gift])); } });
+            renderHubScreen();
+        },
+        openProfiles: () => { settingsReturn = "HUB"; transition("PROFILE_SELECT"); }
+    });
+    showNextHubMoment();
+}
+function renderMap() {
+    renderCampusMap(mapRoot, appSave, {
+        back: () => showHub(),
+        tapRegion: id => {
+            const route = routeToRegion(appSave, id);
+            if (route.kind === "ENTER") {
+                if (id === "workshop-hub")
+                    showHub();
+                else if (id === "motion-yard")
+                    showMotionYard();
+                return;
+            }
+            if (route.kind === "PARENT_GATE") {
+                document.querySelector("#lab-locked-title").textContent = OWNERSHIP_CHILD_COPY.title;
+                document.querySelector("#lab-locked-body").textContent = OWNERSHIP_CHILD_COPY.body;
+                document.querySelector("#lab-locked-button").textContent = OWNERSHIP_CHILD_COPY.button;
+                transition("LAB_LOCKED");
+                return;
+            }
+            mapNote.textContent = route.message;
+            sfx(300, .05);
+        }
+    });
+}
+function renderLockerScreen() {
+    renderLocker(lockerRoot, appSave, lockerTab, {
+        selectTab: t => { lockerTab = t; renderLockerScreen(); },
+        equip: (slot, id) => {
+            try {
+                let next = equipCosmetic(appSave, slot, id);
+                if (id)
+                    next = markRewardsSeen(next, [id]);
+                void commit(next);
+                sfx(880, .04);
+            }
+            catch { /* not owned */ }
+            renderLockerScreen();
+        }
+    });
+}
+function openShelfInvention(id) {
+    const item = activeProfile(appSave)?.shelf.find(s => s.id === id);
+    if (!item)
+        return;
+    startFreeBuild(item.build);
+}
+/** Empty Workshop Free Build (free tier). Tray = the parts this inventor has unlocked. */
+function startFreeBuild(from) {
+    leaveGameplay();
+    const level = openingLevels.get("opening.free-build");
+    const p = activeProfile(appSave);
+    const snapshot = from ?? p?.lastBuild;
+    build.replaceAll(snapshot ? { parts: snapshot.parts, connections: snapshot.connections } : { parts: [], connections: [] });
+    selectedId = undefined;
+    dragStart = undefined;
+    dragPreview = undefined;
+    panStart = undefined;
+    camera.reset();
+    freeBuildActive = true;
+    const allowed = p ? p.unlockedParts : level?.availablePartIds ?? [];
+    updateOpeningTray({ ...level, availablePartIds: [...allowed] });
+    motionHud.classList.remove("hidden");
+    motionTitle.textContent = "Free Build";
+    motionObjective.textContent = "Build anything. TEST it. Change it. TEST again.";
+    document.querySelector(".motion-badge").textContent = "WORKSHOP";
+    resetGuidance(undefined);
+    const scanner = p?.unlockedTools.includes("tool.force-scanner") ?? false;
+    forceScannerButton.classList.toggle("hidden", !scanner);
+    forceScannerButton.classList.remove("force-on");
+    enterWorkshop();
+}
+function returnToModeMenu() {
+    if (motionActive) {
+        showMotionYard();
+        return;
+    }
+    if (freeBuildActive) {
+        showHub();
+        return;
+    }
+    stopToBuild();
+    enterWorkshop();
+}
+// ---- grown-ups
+function renderGate(message) {
+    renderParentGate(gateRoot, parentGate, message, digit => {
+        const result = parentGate.press(digit, now());
+        if (result === "PASS") {
+            parentNotice = "";
+            transition("PARENT_DASHBOARD", true);
+            void storageReport(appSave).then(r => { lastStorage = r; if (shell.current() === "PARENT_DASHBOARD")
+                renderParent(); });
+            return;
+        }
+        renderGate(result === "FAIL" ? "That wasn't it — here's a new number." : result === "LOCKED" ? "Too many tries. Wait a few seconds." : "");
+    }, () => transition(parentReturn, true), () => { parentGate.backspace(); renderGate(""); });
+}
+function renderParent() {
+    renderParentDashboard(parentRoot, appSave, lastStorage, parentNotice, {
+        exportBackup: () => {
+            try {
+                const blob = new Blob([exportBackup(appSave)], { type: "application/json" });
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(blob);
+                a.download = backupFileName();
+                document.body.append(a);
+                a.click();
+                a.remove();
+                window.setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+                parentNotice = `Backup saved as ${a.download}.`;
+            }
+            catch {
+                parentNotice = "The backup couldn't be made. Your save is unchanged.";
+            }
+            renderParent();
+        },
+        importBackup: file => {
+            void file.text().then(async (text) => {
+                const result = importBackup(text);
+                if (!result.ok) {
+                    parentNotice = IMPORT_MESSAGES[result.reason];
+                    renderParent();
+                    return;
+                }
+                if (!window.confirm(`Replace everything on this device with this backup (${result.profileCount} inventor${result.profileCount === 1 ? "" : "s"})?`)) {
+                    parentNotice = "Import cancelled. Nothing changed.";
+                    renderParent();
+                    return;
+                }
+                try {
+                    await autosave.flush();
+                    // Ownership belongs to this device's purchase record, never to a backup file.
+                    const imported = withEntitlement(withoutActiveProfile(result.save), appSave.entitlement);
+                    if (savingBlocked) {
+                        // A newer-version save is on this device: keep it in its own slot, then use the backup.
+                        await saveManager.save(imported, { replaceNewerVersion: true });
+                        savingBlocked = false;
+                    }
+                    else {
+                        await saveManager.save(appSave); // current progress becomes the previous-good safety copy
+                        await saveManager.save(imported);
+                    }
+                    appSave = imported;
+                    applySettings();
+                    motionProgress = createMotionProgress(motionCompleted());
+                    parentNotice = `Backup loaded: ${result.profileCount} inventor${result.profileCount === 1 ? "" : "s"}.`;
+                }
+                catch {
+                    parentNotice = "The backup couldn't be saved on this device. Nothing changed.";
+                }
+                lastStorage = await storageReport(appSave);
+                renderParent();
+            }).catch(() => { parentNotice = IMPORT_MESSAGES.NOT_JSON; renderParent(); });
+        },
+        deleteProfile: id => { void commit(withDeletedProfile(appSave, id), true).then(async () => { applySettings(); parentNotice = "Inventor removed."; lastStorage = await storageReport(appSave); renderParent(); }); },
+        setFullGameForTesting: owned => { void commit(withEntitlement(appSave, owned ? "OWNED" : "LOCKED"), true).then(() => renderParent()); },
+        close: () => transition(parentReturn === "HUB" && activeProfile(appSave) ? "HUB" : parentReturn === "PROFILE_SELECT" ? "PROFILE_SELECT" : "TITLE", true)
+    });
+}
+// ------------------------------------------------------------------ M11: discoveries, clues, why-cards, adaptive help
+function currentGuidance() { return observer.guidance(currentAssistance(appSave), guidanceHistory(appSave), now()); }
+function resetGuidance(levelId) {
+    lastWhy = undefined;
+    hideBoltTip();
+    whyCard.classList.add("hidden");
+    // Retry of the same challenge keeps the clues already opened and what the observer has learned.
+    if (levelId && hintTracker?.levelId === levelId) {
+        setHint(currentHint);
+        return;
+    }
+    hintTracker = levelId && MOTION_HINTS[levelId] ? new HintTracker(levelId) : undefined;
+    observer.reset(now());
+    setHint(undefined);
+    hintButton.classList.toggle("hidden", !hintTracker);
+    hintButton.classList.remove("offer");
+    hintButton.innerHTML = '<span aria-hidden="true">💡</span> Clue';
+}
+function setHint(view) {
+    currentHint = view ?? { tier: 0, line: "", glowParts: [], ghosts: [] };
+    applyTrayGlow();
+}
+function applyTrayGlow() {
+    const glow = new Set(currentHint.glowParts);
+    if (activeMotionLevel && hintTracker && motionActive && currentGuidance().highlightParts)
+        for (const id of MOTION_HINTS[activeMotionLevel.id]?.usefulParts ?? [])
+            glow.add(id);
+    document.querySelectorAll("[data-part]").forEach(b => b.classList.toggle("hint-glow", glow.has(b.dataset.part)));
+}
+function showBoltTip(line) {
+    document.querySelector("#bolt-tip-text").textContent = line;
+    boltTip.classList.remove("hidden");
+    currentNarration = line;
+    speakCurrentLine();
+    sfx(620, .045);
+}
+function hideBoltTip() { boltTip.classList.add("hidden"); }
+/** After a failed TEST: maybe a gentle Bolt tip, a pulsing clue button, glowing parts. Never changes the challenge. */
+function offerAdaptiveHelp() {
+    const g = currentGuidance();
+    hintButton.classList.toggle("offer", g.offerHint && Boolean(hintTracker) && (hintTracker?.tier() ?? 3) < 3);
+    applyTrayGlow();
+    if (g.boltTip) {
+        showBoltTip(g.boltTip);
+        observer.markTipShown(g.boltTip);
+    }
+    else if (g.replayInstruction && activeMotionLevel)
+        showBoltTip(`Remember the job: ${motionObjective.textContent ?? ""}`);
+}
+function askForHint() {
+    if (!hintTracker || !activeMotionLevel || testMode)
+        return;
+    const tier = hintTracker.next();
+    observer.noteHint();
+    const view = hintView(activeMotionLevel.id, activeMotionLevel, tier);
+    setHint(view);
+    hintButton.classList.remove("offer");
+    hintButton.innerHTML = `<span aria-hidden="true">💡</span> Clue <span class="tier">${tier}/3</span>`;
+    showBoltTip(view.line);
+}
+function snapToGhost(id) {
+    if (!currentHint.ghosts.length)
+        return;
+    const radius = currentGuidance().snapRadius;
+    if (radius <= 0)
+        return;
+    const part = build.getPart(id);
+    if (!part)
+        return;
+    const ghost = ghostSnap(part.definitionId, part.position, currentHint.ghosts, radius);
+    if (!ghost)
+        return;
+    build.move(id, { x: ghost.x, y: ghost.y }); // placement help only: the same spot the child could drag to by hand
+    if (Math.abs(ghost.rotation - part.rotation) > 1e-6)
+        build.rotate(id, ghost.rotation - part.rotation);
+    sfx(760, .05);
+}
+/** Reads the running TEST and writes anything really observed into the Discovery Book. */
+function checkRunDiscoveries() {
+    const runtime = tests.active();
+    if (!runtime)
+        return;
+    const result = recordRunEvidence(appSave, evaluateRunDiscoveries(build, runtime), observePartUses(build, runtime));
+    if (!result.newDiscoveries.length && !result.newUses.length)
+        return;
+    void commit(result.save).catch(() => undefined);
+    for (const award of result.newDiscoveries) {
+        const d = discoveryById(award.id);
+        popQueue.push({ kind: d.kind === "SECRET" ? "SECRET" : "NEW", title: d.title, line: d.line });
+    }
+    for (const use of result.newUses)
+        popQueue.push({ kind: "USE", title: `${partTitle(use.partId)}: ${useLabel(use.partId, use.useId)}`, line: "New use on its Part Card!" });
+    showNextPop();
+}
+function showNextPop() {
+    if (popBusy)
+        return;
+    const next = popQueue.shift();
+    if (!next) {
+        discoveryPop.classList.add("hidden");
+        return;
+    }
+    popBusy = true;
+    discoveryPop.className = `discovery-pop${next.kind === "SECRET" ? " secret" : next.kind === "USE" ? " use" : ""}`;
+    document.querySelector("#discovery-pop-fx").src = next.kind === "SECRET" ? "./assets/fx/fx.star-splash.webp" : "./assets/fx/fx.star-pop.webp";
+    document.querySelector("#discovery-pop-kicker").textContent = next.kind === "SECRET" ? "SECRET EXPERIMENT! ⭐" : next.kind === "USE" ? "PART CARD" : "NEW DISCOVERY!";
+    document.querySelector("#discovery-pop-title").textContent = next.title;
+    document.querySelector("#discovery-pop-line").textContent = next.line;
+    if (next.kind === "SECRET") {
+        sfx(880, .08);
+        window.setTimeout(() => sfx(1320, .12), 120);
+        buzz(80);
+    }
+    else
+        sfx(next.kind === "USE" ? 760 : 1040, .07);
+    window.setTimeout(() => { popBusy = false; discoveryPop.classList.add("hidden"); window.setTimeout(showNextPop, 180); }, next.kind === "SECRET" ? 3400 : next.kind === "USE" ? 1800 : 2600);
+}
+function openWhyCard() {
+    if (!lastWhy)
+        return;
+    const card = lastWhy;
+    const choices = document.querySelector("#why-choices");
+    const answer = document.querySelector("#why-answer");
+    choices.replaceChildren();
+    answer.classList.add("hidden");
+    for (const reason of card.choices) {
+        const b = document.createElement("button");
+        const icon = document.createElement("span");
+        icon.className = "icon";
+        icon.textContent = WHY_CHOICES[reason].icon;
+        b.append(icon, document.createTextNode(WHY_CHOICES[reason].label));
+        b.addEventListener("click", () => {
+            // Never graded or saved: every answer gets the real evidence straight away.
+            choices.querySelectorAll("button").forEach(x => { x.classList.remove("picked"); x.disabled = true; });
+            b.classList.add("picked");
+            choices.querySelectorAll("button")[card.choices.indexOf(card.reason)]?.classList.add("measured");
+            answer.textContent = `${reason === card.reason ? "You spotted it!" : "Good thinking!"} Bolt's scanner saw: ${card.evidence}`;
+            answer.classList.remove("hidden");
+            currentNarration = answer.textContent;
+            speakCurrentLine();
+            sfx(reason === card.reason ? 980 : 700, .06);
+        });
+        choices.append(b);
+    }
+    currentNarration = "Why did that happen?";
+    speakCurrentLine();
+    whyCard.classList.remove("hidden");
+}
+function keepBuilding() { whyCard.classList.add("hidden"); motionResult.classList.add("hidden"); motionResultShown = false; stopToBuild(); }
+function renderBook() {
+    renderDiscoveryBook(bookRoot, appSave, id => artManifest[id], bookTab, tab => { bookTab = tab; renderBook(); });
+}
+hintButton.addEventListener("click", () => { if (gameplayAllowed())
+    askForHint(); });
+document.querySelector("#btn-bolt-tip-close").addEventListener("click", hideBoltTip);
+whyButton.addEventListener("click", openWhyCard);
+keepBuildingButton.addEventListener("click", keepBuilding);
+document.querySelector("#btn-why-build").addEventListener("click", keepBuilding);
+window.setInterval(() => { if (motionActive && !testMode && shell.current() === "WORKSHOP" && hintTracker) {
+    if (currentGuidance().offerHint && hintTracker.tier() < 3)
+        hintButton.classList.add("offer");
+    applyTrayGlow();
+} }, 5000);
+async function boot() {
+    renderShell();
+    const support = detectDeviceSupport();
+    if (!support.supported) {
+        unsupportedDetail.textContent = `WobbleWorks needs modern browser features: ${support.reasons.join(", ")}.`;
+        transition("UNSUPPORTED_DEVICE", true);
+        return;
+    }
+    void loadArt();
+    await delay(220);
+    await loadAppState();
+}
+const lifecycle = new LifecycleCoordinator(() => {
+    if (testMode && !tests.isPaused()) {
+        tests.togglePause();
+        lifecyclePaused = true;
+    }
+}, async () => {
+    if (shell.current() === "WORKSHOP" || shell.current() === "PAUSE")
+        await persistCurrentBuild(false, true);
+    else
+        await autosave.flush();
+}, () => {
+    if (lifecyclePaused && shell.current() === "WORKSHOP") {
+        pausedByShell = true;
+        transition("PAUSE", true);
+    }
+});
+document.addEventListener("visibilitychange", () => { if (document.hidden)
+    void lifecycle.background();
+else
+    lifecycle.foreground(); });
+window.addEventListener("wobbleworks:native-background", () => void lifecycle.background());
+window.addEventListener("wobbleworks:native-foreground", () => lifecycle.foreground());
+window.addEventListener("offline", () => { if (shell.current() === "TITLE")
+    renderTitle(); });
+window.addEventListener("online", () => { if (shell.current() === "TITLE")
+    renderTitle(); });
+const orientationQuery = window.matchMedia?.("(orientation: portrait) and (max-width: 900px)");
+orientationQuery?.addEventListener("change", event => {
+    if (event.matches && shell.current() === "WORKSHOP") {
+        preRotateScreen = "WORKSHOP";
+        transition("ROTATE_DEVICE", true);
+    }
+    else if (!event.matches && shell.current() === "ROTATE_DEVICE")
+        transition(preRotateScreen, true);
+});
+document.querySelectorAll("[data-shell-action]").forEach(button => button.addEventListener("click", async () => {
+    if (shell.isInputLocked(now()))
+        return;
+    const action = button.dataset.shellAction;
+    if (action === "start") {
+        startOpening(1);
+        return;
+    }
+    if (action === "continue") {
+        continueGame();
+        return;
+    }
+    if (action === "play") {
+        if (titleVisibility(appSave).startBuilding)
+            startOpening(1);
+        else
+            continueGame();
+        return;
+    }
+    if (action === "info") {
+        infoReturn = shell.current() === "PAUSE" ? "PAUSE" : "SETTINGS";
+        showInfo(button.dataset.info ?? "help");
+        return;
+    }
+    if (action === "info-back") {
+        transition(infoReturn, true);
+        return;
+    }
+    if (action === "extras") {
+        settingsReturn = "TITLE";
+        transition("EXTRAS");
+        return;
+    }
+    if (action === "free-build") {
+        ensureRecentProfileActive();
+        startFreeBuild();
+        return;
+    }
+    if (action === "my-inventions") {
+        ensureRecentProfileActive();
+        transition("SHELF");
+        return;
+    }
+    if (action === "profiles") {
+        settingsReturn = "TITLE";
+        transition("PROFILE_SELECT");
+        return;
+    }
+    if (action === "settings") {
+        settingsReturn = "TITLE";
+        transition("SETTINGS");
+        return;
+    }
+    if (action === "settings-from-hub") {
+        settingsReturn = "HUB";
+        transition("SETTINGS");
+        return;
+    }
+    if (action === "grown-ups") {
+        parentReturn = shell.current() === "HUB" ? "HUB" : "TITLE";
+        parentGate.reset();
+        transition("GROWN_UPS");
+        return;
+    }
+    if (action === "manage-profiles") {
+        parentReturn = "PROFILE_SELECT";
+        parentGate.reset();
+        transition("GROWN_UPS");
+        return;
+    }
+    if (action === "back-title") {
+        if (shell.current() === "GROWN_UPS") {
+            transition(parentReturn, true);
+            return;
+        }
+        transition(settingsReturn, true);
+        settingsReturn = "TITLE";
+        return;
+    }
+    if (action === "open-hub") {
+        showHub();
+        return;
+    }
+    if (action === "discovery-book") {
+        ensureRecentProfileActive();
+        bookReturn = shell.current() === "MOTION_YARD" ? "MOTION_YARD" : "HUB";
+        transition("DISCOVERY_BOOK");
+        return;
+    }
+    if (action === "book-back") {
+        transition(bookReturn, true);
+        return;
+    }
+    if (action === "open-map") {
+        mapNote.textContent = "Tap a building.";
+        transition("CAMPUS_MAP", true);
+        if (activeProfile(appSave))
+            void commit(withLocation(appSave, "MAP"));
+        return;
+    }
+    if (action === "save-quit-hub") {
+        await autosave.flush();
+        transition("TITLE", true);
+        return;
+    }
+    if (action === "recovery-ok" || action === "warning-ok" || action === "offline-ok") {
+        advanceBootNotice();
+        return;
+    }
+    if (action === "retry-load") {
+        await loadAppState();
+        return;
+    }
+    if (action === "resume") {
+        resumeFromPause();
+        return;
+    }
+    if (action === "return-workshop") {
+        returnToModeMenu();
+        return;
+    }
+    if (action === "settings-from-pause") {
+        settingsReturn = "PAUSE";
+        transition("SETTINGS", true);
+        return;
+    }
+    if (action === "save-quit") {
+        stopToBuild();
+        try {
+            await persistCurrentBuild(false, true);
+            if (autosave.lastError)
+                throw autosave.lastError;
+            transition("TITLE", true);
+        }
+        catch (error) {
+            loadingError.textContent = error instanceof Error ? `Save failed: ${error.message}` : "Save failed.";
+            transition("LOADING_FAILURE", true);
+        }
+    }
+}));
+function selectAvatar(style) {
+    selectedAvatar = style;
+    const preview = document.querySelector("#creator-preview-img");
+    if (preview)
+        preview.src = `./assets/avatars/avatar.${style.toLowerCase()}.webp`;
+    document.querySelectorAll(".avatar-choice").forEach(choice => choice.classList.toggle("selected", choice.dataset.avatar === style));
+}
+document.querySelectorAll(".avatar-choice").forEach(button => button.addEventListener("click", () => selectAvatar(button.dataset.avatar ?? "BLUE")));
+document.querySelector("#btn-create-inventor").addEventListener("click", async () => {
+    if (shell.isInputLocked(now()))
+        return;
+    if (editingProfileId) {
+        const id = editingProfileId;
+        editingProfileId = undefined;
+        await commit(withEditedProfile(appSave, id, inventorName.value, selectedAvatar), true);
+        profileSelectedId = id;
+        transition("PROFILE_SELECT", true);
+        return;
+    }
+    const extra = creatingExtraProfile;
+    creatingExtraProfile = false;
+    document.querySelector("#btn-inventor-cancel").classList.add("hidden");
+    try {
+        await commit(withCreatedProfile(appSave, inventorName.value, selectedAvatar), true);
+    }
+    catch {
+        transition("PROFILE_SELECT", true);
+        return;
+    }
+    applySettings();
+    if (extra) {
+        startOpening(1);
+        return;
+    } // a new inventor plays their own opening
+    openingDirector.setStep(4);
+    loadOpeningStep(4);
+});
+document.querySelector("#btn-replay-line").addEventListener("click", () => speakCurrentLine(true));
+document.querySelector("#btn-skip-line").addEventListener("click", () => {
+    if ("speechSynthesis" in window)
+        window.speechSynthesis.cancel();
+    openingSubtitle.textContent = "";
+});
+document.querySelector("#btn-opening-next").addEventListener("click", () => void advanceOpening());
+goMotionYardButton.addEventListener("click", () => { void saveOpeningProgress(6, true).then(() => showHub()); });
+forceScannerButton.addEventListener("click", () => { forceScanner = !forceScanner; forceScannerButton.classList.toggle("force-on", forceScanner); forceScannerButton.setAttribute("aria-pressed", String(forceScanner)); });
+document.querySelector("#btn-motion-retry").addEventListener("click", () => { if (activeMotionLevel)
+    loadMotionMission(activeMotionLevel.id); });
+motionBackButton.addEventListener("click", () => { if (freeBuildActive || resultReturnsToHub) {
+    resultReturnsToHub = false;
+    showHub();
+}
+else
+    showMotionYard(); });
+shelfButton.addEventListener("click", () => {
+    const meta = MOTION_MISSIONS.find(m => m.id === lastMissionLevelId);
+    const out = addToShelf(appSave, meta?.title ?? "My Invention", build.snapshot("shelf"), lastMissionLevelId);
+    if (out.full) {
+        shelfButton.textContent = "Shelf is full";
+        shelfButton.disabled = true;
+        return;
+    }
+    void commit(out.save, true);
+    shelfButton.textContent = "On the shelf ✓";
+    shelfButton.disabled = true;
+    sfx(840, .06);
+});
+for (const id of ["#setting-text-scale", "#setting-reduced-motion", "#setting-high-contrast", "#setting-narration", "#setting-subtitles", "#setting-sfx", "#setting-music", "#setting-vibration"]) {
+    document.querySelector(id).addEventListener(id === "#setting-text-scale" ? "input" : "change", () => { const s = readSettingsForm(); applySettings(s); void commit(withSettings(appSave, s)); });
+}
+document.querySelector("#setting-hints").addEventListener("change", event => {
+    void commit(withAssistance(appSave, { ...currentAssistance(appSave), boltTips: event.target.checked }));
+});
+document.querySelector("#btn-settings-reset").addEventListener("click", () => {
+    let next = withSettings(appSave, { ...DEFAULT_SETTINGS });
+    if (activeProfile(next))
+        next = withAssistance(next, { ...DEFAULT_ASSISTANCE });
+    void commit(next);
+    applySettings();
+    syncSettingsForm();
+    sfx(660, .05);
+});
+document.querySelector("#setting-snap").addEventListener("change", event => {
+    void commit(withAssistance(appSave, { ...currentAssistance(appSave), snapAssist: event.target.checked }));
+});
+document.querySelectorAll("[data-part]").forEach(button => button.addEventListener("click", () => {
+    if (testMode || !gameplayAllowed())
+        return;
+    if (openingActive)
+        openingDirector.noteInteraction(now());
+    const id = button.dataset.part;
+    const surfacePart = ["motion.friction-high", "motion.friction-low", "motion.bounce-pad"].includes(id);
+    const placed = build.add(id, { x: 8 + Math.random() * 1.5 - 0.75, y: surfacePart ? 8.32 : 3 });
+    if ((openingActive || motionActive) && id === "motion.ramp")
+        build.rotate(placed.id, -0.18);
+    selectedId = placed.id;
+    sfx(520, 0.035);
+}));
+ui.test.addEventListener("click", () => {
+    if (testMode || !gameplayAllowed())
+        return;
+    if (openingActive)
+        openingDirector.noteTest(now());
+    telemetry.inc("testPresses");
+    tests.start(build.snapshot());
+    testMode = true;
+    selectedId = undefined;
+    ui.mode.textContent = "TEST";
+    sfx(700, 0.06);
+    void persistCurrentBuild(true).catch(() => undefined);
+});
+ui.stop.addEventListener("click", () => {
+    if (!gameplayAllowed())
+        return;
+    if (openingActive)
+        openingDirector.noteStop();
+    if ((motionActive || freeBuildActive) && testMode)
+        checkRunDiscoveries();
+    if (motionActive && activeMotionLevel && testMode && !motionResultShown) {
+        const runtime = tests.active();
+        const result = evaluateMotionMission(activeMotionLevel, build, runtime);
+        if (!result.success) {
+            lastWhy = diagnoseRun(activeMotionLevel, build, runtime);
+            if (runtime)
+                observer.noteFailure(runtime.snapshotSignature);
+            showMotionResult(false, "Change one thing, then TEST again. Fast failure is useful evidence.");
+            offerAdaptiveHelp();
+        }
+    }
+    stopToBuild();
+    sfx(360, 0.04);
+});
+ui.pause.addEventListener("click", () => { if (testMode && gameplayAllowed())
+    tests.togglePause(); });
+ui.menu.addEventListener("click", () => { if (gameplayAllowed())
+    openPause(); });
+ui.undo.addEventListener("click", () => { if (!testMode && gameplayAllowed())
+    build.undo(); });
+ui.redo.addEventListener("click", () => { if (!testMode && gameplayAllowed())
+    build.redo(); });
+ui.del.addEventListener("click", () => { if (!testMode && selectedId && gameplayAllowed()) {
+    build.delete(selectedId);
+    selectedId = undefined;
+} });
+ui.rotate.addEventListener("click", () => { if (!testMode && selectedId && gameplayAllowed())
+    build.rotate(selectedId, Math.PI / 12); });
+ui.resetCamera.addEventListener("click", () => { if (gameplayAllowed())
+    camera.reset(); });
+ui.tools.addEventListener("click", () => { if (gameplayAllowed())
+    editor.toggle(); });
+window.addEventListener("wobbleworks:preview-level", (event) => {
+    if (!gameplayAllowed())
+        return;
+    const level = event.detail;
+    tests.stop();
+    testMode = false;
+    build.replaceAll({ parts: [...(level.staticObjects ?? []), ...level.starterParts], connections: level.starterConnections });
+    tests.start(build.snapshot(`preview.${level.id}`));
+    testMode = true;
+    selectedId = undefined;
+    ui.mode.textContent = "TEST";
+    telemetry.inc("testPresses");
+});
+window.addEventListener("keydown", event => {
+    if (event.key === "F8") {
+        event.preventDefault();
+        shell.nextSmokeScreen(now());
+        renderShell();
+        return;
+    }
+    if (event.key === "Escape" && shell.current() === "WORKSHOP") {
+        event.preventDefault();
+        openPause();
+        return;
+    }
+    if (event.key === "F2" && gameplayAllowed()) {
+        event.preventDefault();
+        editor.toggle();
+    }
+    if (event.key === "Delete" && selectedId && !testMode && gameplayAllowed()) {
+        build.delete(selectedId);
+        selectedId = undefined;
+    }
+});
+canvas.addEventListener("wheel", event => { if (!gameplayAllowed())
+    return; event.preventDefault(); camera.setZoom(camera.zoom * (event.deltaY > 0 ? 0.92 : 1.08)); }, { passive: false });
+window.addEventListener("pointerdown", () => void audio.unlock(), { once: true });
+function pointerWorld(sample) { const logical = renderer.viewport.screenToLogical(sample.x, sample.y); const worldLogical = camera.logicalToWorld(logical); return { x: worldLogical.x / 100, y: worldLogical.y / 100 }; }
+function hitPart(x, y, padding = (motionActive || freeBuildActive) ? currentGuidance().touchPadding : 0.18) {
+    const parts = [...build.allParts()].reverse();
+    return parts.find(p => { if (p.parameters.locked === true)
+        return false; const d = registry.get(p.definitionId); const rigid = d.behaviours.find(b => b.kind === "RIGID_BODY"); const w = rigid?.kind === "RIGID_BODY" ? rigid.width : 0.9; const h = rigid?.kind === "RIGID_BODY" ? rigid.height : 0.7; return Math.abs(p.position.x - x) <= w / 2 + padding && Math.abs(p.position.y - y) <= h / 2 + padding; })?.id;
+}
+input.on((event, sample) => {
+    if (testMode || !gameplayAllowed())
+        return;
+    const w = pointerWorld(sample);
+    if (event === "down") {
+        if (openingActive)
+            openingDirector.noteInteraction(now());
+        const hit = hitPart(w.x, w.y);
+        selectedId = hit;
+        if (hit) {
+            const p = build.getPart(hit);
+            dragStart = { id: hit, startWorldX: w.x, startWorldY: w.y, originalX: p.position.x, originalY: p.position.y };
+            dragPreview = { ...p.position };
+            telemetry.inc("dragAttempts");
+        }
+        else {
+            panStart = { x: sample.x, y: sample.y };
+            if (hitPart(w.x, w.y, 0.6))
+                observer.noteSelectMiss();
+        }
+    }
+    else if (event === "move") {
+        if (dragStart)
+            dragPreview = { x: dragStart.originalX + (w.x - dragStart.startWorldX), y: dragStart.originalY + (w.y - dragStart.startWorldY) };
+        else if (panStart) {
+            camera.pan(sample.x - panStart.x, sample.y - panStart.y);
+            panStart = { x: sample.x, y: sample.y };
+        }
+    }
+    else {
+        if (dragStart && dragPreview) {
+            const droppedId = dragStart.id;
+            const dropped = build.getPart(droppedId);
+            const openingRamp = openingActive && dropped?.definitionId === "motion.ramp" && [2, 5].includes(openingDirector.currentStep());
+            const surfacePart = dropped && ["motion.friction-high", "motion.friction-low", "motion.bounce-pad"].includes(dropped.definitionId);
+            if (dragPreview.x < 0.4 || dragPreview.x > 15.6 || dragPreview.y < 0.5 || dragPreview.y > 9)
+                observer.noteDragError();
+            build.move(droppedId, { x: Math.max(0.4, Math.min(15.6, dragPreview.x)), y: openingRamp ? 7.95 : surfacePart ? 8.32 : Math.max(0.5, Math.min(8.2, dragPreview.y)) });
+            snapToGhost(droppedId);
+            autoSnapOpeningWheel(droppedId);
+        }
+        dragStart = undefined;
+        dragPreview = undefined;
+        panStart = undefined;
+    }
+});
+function render() {
+    maybeCompleteOpeningChallenge();
+    maybeCompleteMotionMission();
+    renderer.begin(camera);
+    if (motionActive)
+        renderer.drawMotionYardBackdrop();
+    const runtime = tests.active();
+    const states = runtime?.physics.states();
+    const parts = build.allParts().map(p => p.id === dragStart?.id && dragPreview ? { ...p, position: dragPreview } : p);
+    renderer.drawParts(parts, registry, states, selectedId);
+    if (!testMode && currentHint.ghosts.length)
+        renderer.drawGhostParts(currentHint.ghosts, registry, now() / 1000);
+    if ((motionActive || freeBuildActive) && forceScanner && runtime && states)
+        renderer.drawForceVectors(runtime.physics.forceVectors(), states, currentGuidance().showMeasurements);
+    if (testMode && (motionActive || freeBuildActive) && ++discoveryFrame % 15 === 0)
+        checkRunDiscoveries();
+    renderer.end();
+    const enabled = gameplayAllowed();
+    ui.undo.disabled = !enabled || testMode || !build.canUndo();
+    ui.redo.disabled = !enabled || testMode || !build.canRedo();
+    ui.test.disabled = !enabled || testMode;
+    ui.stop.disabled = !enabled || !testMode;
+    const t = telemetry.snapshot();
+    const budgetFlag = motionActive && perf.simulationMs > MOTION_PERFORMANCE_BUDGET.targetSimulationMs ? " | ⚠ SIM BUDGET" : "";
+    ui.debug.textContent = `FPS ${perf.fps} | frame ${perf.frameMs.toFixed(1)}ms | sim ${perf.simulationMs.toFixed(2)}ms | 60 Hz | parts ${build.allParts().length} | TEST ${t.testPresses} | drags ${t.dragAttempts}${runtime ? ` | tick ${runtime.tick}` : ""}${budgetFlag}`;
+}
+function frame(frameNow) {
+    perf.frame(frameNow);
+    perf.measureSimulation(() => clock.consume(frameNow, dt => tests.step(dt)));
+    render();
+    requestAnimationFrame(frame);
+}
+const resizeObserver = new ResizeObserver(() => renderer.resize());
+resizeObserver.observe(canvas);
+clock.reset(performance.now());
+requestAnimationFrame(frame);
+if ("serviceWorker" in navigator)
+    navigator.serviceWorker.register("./sw.js").catch(() => undefined);
+console.info(`WobbleWorks Milestones 0-11 discoveries and guidance loaded: ${DEFAULT_PARTS.length} technical part definitions`);
+void boot();

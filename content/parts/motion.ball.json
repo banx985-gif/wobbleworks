@@ -1,0 +1,8 @@
+{
+  "id": "motion.ball",
+  "familyId": "motion.ball",
+  "displayName": "Ball",
+  "category": "MOTION",
+  "behaviours": [{"kind":"RIGID_BODY","bodyType":"DYNAMIC","shape":"CIRCLE","width":0.6,"height":0.6,"density":1,"friction":0.25,"restitution":0.55}],
+  "ports": []
+}

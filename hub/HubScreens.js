@@ -1,0 +1,375 @@
+import { activeProfile, MAX_PROFILES } from "../app/AppState.js";
+import { MAIN_LABS } from "../progression/CampaignData.js";
+import { CAMPUS_REGIONS, regionStatus } from "../progression/Campus.js";
+import { labCompletionCount } from "../progression/LabProgression.js";
+import { lockerItems, progressSummary } from "../progression/ProgressionManager.js";
+import { hubFeatures, restorationStage, dueVisitors } from "../progression/Restoration.js";
+import { REWARDS, rewardById, MISSION_STARS } from "../progression/Rewards.js";
+/**
+ * DOM views for the Milestone 10 screens: Workshop Hub, Campus Map, Customisation Locker,
+ * Trophy Shelf, Invention Shelf and Profile Select. Views only — every change goes back to main.ts
+ * through callbacks, so all saving stays in one place.
+ *
+ * Art: procedural vector placeholders in the existing WobbleWorks toy style.
+ * Final character/prop art replaces these in the art pass (see docs/ART_NEEDED.md).
+ */
+const SVG_NS = "http://www.w3.org/2000/svg";
+function el(tag, className = "", text) {
+    const node = document.createElement(tag);
+    if (className)
+        node.className = className;
+    if (text !== undefined)
+        node.textContent = text;
+    return node;
+}
+function svg(markup, viewBox, className = "", stretch = false) {
+    const node = document.createElementNS(SVG_NS, "svg");
+    node.setAttribute("viewBox", viewBox);
+    node.setAttribute("aria-hidden", "true");
+    if (stretch)
+        node.setAttribute("preserveAspectRatio", "none");
+    if (className)
+        node.setAttribute("class", className);
+    node.innerHTML = markup;
+    return node;
+}
+export const AVATAR_COLOURS = { ORANGE: "#ff922b", BLUE: "#339af0", GREEN: "#40c057", PURPLE: "#9775fa", PINK: "#f06595" };
+/** Painted inventor portraits (cropped from Aaron's inventor-select art). */
+export const AVATAR_PORTRAITS = { BLUE: "./assets/avatars/avatar.blue.webp", PINK: "./assets/avatars/avatar.pink.webp", GREEN: "./assets/avatars/avatar.green.webp" };
+export function avatarBadge(profile, size = 54) {
+    const wrap = el("span", "avatar-badge");
+    wrap.style.setProperty("--avatar", AVATAR_COLOURS[profile.avatarStyle] ?? "#ff922b");
+    wrap.style.width = wrap.style.height = `${size}px`;
+    const portrait = AVATAR_PORTRAITS[profile.avatarStyle];
+    if (portrait) {
+        const img = el("img", "avatar-portrait");
+        img.src = portrait;
+        img.alt = "";
+        wrap.append(img);
+    }
+    else
+        wrap.append(svg(`<circle cx="32" cy="36" r="24" fill="var(--avatar)" stroke="#18323f" stroke-width="5"/><circle cx="24" cy="34" r="4" fill="#18323f"/><circle cx="40" cy="34" r="4" fill="#18323f"/><path d="M23 45 q9 7 18 0" fill="none" stroke="#18323f" stroke-width="4" stroke-linecap="round"/>`, "0 0 64 64"));
+    const hat = profile.equipped?.avatar ? rewardById(profile.equipped.avatar) : undefined;
+    if (hat) {
+        const h = el("span", "avatar-hat", hat.icon);
+        wrap.append(h);
+    }
+    return wrap;
+}
+export function boltArt(costume) {
+    const c = costume ? rewardById(costume)?.id : undefined;
+    const stripes = c === "bolt.racing-stripes" ? `<rect x="40" y="38" width="8" height="46" fill="#fff"/><rect x="52" y="38" width="8" height="46" fill="#fff"/>` : "";
+    const floatie = c === "bolt.duck-floatie" ? `<ellipse cx="50" cy="84" rx="44" ry="11" fill="#ffd43b" stroke="#18323f" stroke-width="5"/><circle cx="88" cy="74" r="9" fill="#ffd43b" stroke="#18323f" stroke-width="4"/><path d="M95 74 l8 2 -8 3z" fill="#ff922b" stroke="#18323f" stroke-width="2"/>` : "";
+    return svg(`<line x1="50" y1="18" x2="50" y2="34" stroke="#18323f" stroke-width="5"/><circle cx="50" cy="14" r="7" fill="#ffd43b" stroke="#18323f" stroke-width="4"/>
+    <rect x="18" y="34" width="64" height="54" rx="20" fill="#ff922b" stroke="#18323f" stroke-width="6"/>${stripes}
+    <rect x="26" y="44" width="48" height="24" rx="10" fill="#fffdf5" stroke="#18323f" stroke-width="4"/>
+    <circle cx="40" cy="56" r="6" fill="#18323f"/><circle cx="60" cy="56" r="6" fill="#18323f"/>
+    <path d="M12 60 q-8 6 -2 14" fill="none" stroke="#18323f" stroke-width="5" stroke-linecap="round"/><path d="M88 60 q8 6 2 14" fill="none" stroke="#18323f" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="50" cy="96" r="10" fill="#495057" stroke="#18323f" stroke-width="5"/>${floatie}`, "0 0 110 110", "bolt-art");
+}
+/** Sprocket = the robot puppy from Aaron's key art: white, blue patches, floppy blue ears (orange inside),
+ *  blue robot joints, brown collar with an orange gear tag. Code placeholder until his Sprocket art is filed. */
+export function sprocketArt(accessory, awake = true) {
+    const O = `stroke="#18323f" stroke-width="4" stroke-linejoin="round"`;
+    const eyes = awake
+        ? `<ellipse cx="62" cy="30" rx="5" ry="6" fill="#18323f"/><circle cx="63.5" cy="28" r="1.8" fill="#fff"/><ellipse cx="76" cy="30" rx="4.5" ry="5.5" fill="#18323f"/><circle cx="77.3" cy="28" r="1.6" fill="#fff"/>`
+        : `<path d="M57 31 q5 4 10 0" fill="none" stroke="#18323f" stroke-width="3.5" stroke-linecap="round"/><path d="M71 31 q5 4 10 0" fill="none" stroke="#18323f" stroke-width="3.5" stroke-linecap="round"/>`;
+    const mouth = awake
+        ? `<path d="M63 44 q6 6 12 0" fill="#18323f"/><path d="M66 46 q3 7 6 0" fill="#f06595" stroke="#18323f" stroke-width="2"/>`
+        : `<path d="M64 44 q5 3 10 0" fill="none" stroke="#18323f" stroke-width="3" stroke-linecap="round"/>`;
+    const acc = accessory === "sprocket.bandana" ? `<path d="M56 54 l26 0 -12 14z" fill="#fa5252" ${O}/>`
+        : accessory === "sprocket.spring-collar" ? `<path d="M56 54 q4 -6 8 0 q4 6 8 0 q4 -6 8 0" fill="none" stroke="#845ef7" stroke-width="5"/>` : "";
+    return svg(`
+    <path d="M18 60 q-12 -6 -8 -20" fill="none" stroke="#18323f" stroke-width="9" stroke-linecap="round" class="sprocket-tail"/>
+    <path d="M18 60 q-12 -6 -8 -20" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" class="sprocket-tail"/>
+    <ellipse cx="38" cy="64" rx="24" ry="17" fill="#fff" ${O}/>
+    <path d="M24 56 q8 -8 18 -2 q-6 8 -18 2z" fill="#4dabf7"/>
+    <circle cx="24" cy="74" r="6" fill="#4dabf7" ${O}/>
+    <rect x="18" y="74" width="13" height="10" rx="5" fill="#fff" ${O}/>
+    <rect x="48" y="66" width="11" height="18" rx="5" fill="#fff" ${O}/><circle cx="53.5" cy="70" r="3.5" fill="#4dabf7" stroke="#18323f" stroke-width="2"/>
+    <rect x="61" y="66" width="11" height="18" rx="5" fill="#fff" ${O}/><circle cx="66.5" cy="70" r="3.5" fill="#4dabf7" stroke="#18323f" stroke-width="2"/>
+    <path d="M55 12 q-14 -2 -14 16 q0 10 6 12 q2 -14 10 -22z" fill="#1c7ed6" ${O}/>
+    <ellipse cx="69" cy="34" rx="18" ry="17" fill="#fff" ${O}/>
+    <path d="M54 24 q6 -10 14 -6 q-2 10 -12 12z" fill="#4dabf7"/>
+    <path d="M80 14 q14 0 14 18 q0 10 -5 12 q-3 -14 -10 -22z" fill="#1c7ed6" ${O}/><path d="M84 20 q7 3 6 16" fill="none" stroke="#ff922b" stroke-width="4" stroke-linecap="round"/>
+    ${eyes}
+    <ellipse cx="69" cy="39" rx="5" ry="3.6" fill="#18323f"/>
+    ${mouth}
+    <path d="M55 51 q14 8 28 0" fill="none" stroke="#a0522d" stroke-width="5" stroke-linecap="round"/>
+    <g transform="translate(69 58)"><circle r="5.5" fill="#ff922b" stroke="#18323f" stroke-width="2"/>${Array.from({ length: 6 }, (_, i) => `<rect x="-1.6" y="-8" width="3.2" height="3.5" fill="#ff922b" stroke="#18323f" stroke-width="1" transform="rotate(${i * 60})"/>`).join("")}<circle r="2" fill="#ffd43b"/></g>
+    ${acc}`, "0 0 100 90", "sprocket-art");
+}
+let hubActions;
+export function renderHub(root, save, cb) {
+    const p = activeProfile(save);
+    root.replaceChildren();
+    if (!p)
+        return;
+    const stage = restorationStage(save);
+    const features = hubFeatures(stage);
+    const summary = progressSummary(save);
+    const visitors = dueVisitors(save);
+    const top = el("div", "hub-top");
+    const who = el("button", "hub-who");
+    who.append(avatarBadge(p, 46), el("strong", "", p.name));
+    who.addEventListener("click", cb.openProfiles);
+    who.setAttribute("aria-label", `${p.name} — switch inventor`);
+    const stars = el("div", "hub-stat");
+    stars.append(el("span", "star on", "★"), el("strong", "", String(summary.totalStars)));
+    const title = el("h1", "hub-title", "Workshop");
+    const right = el("div", "hub-right");
+    right.append(stars);
+    hubActions ??= document.querySelector("#hub-actions") ?? undefined;
+    if (hubActions)
+        right.append(hubActions);
+    top.append(who, title, right);
+    const scene = el("div", "hub-scene");
+    scene.classList.add(`stage-${stage.toLowerCase()}`);
+    for (const f of features)
+        scene.classList.add(`f-${f}`);
+    scene.append(svg(`
+    <defs><linearGradient id="hubWall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe8cc"/><stop offset="1" stop-color="#ffd8a8"/></linearGradient></defs>
+    <rect width="1000" height="560" fill="url(#hubWall)"/>
+    ${Array.from({ length: 11 }, (_, i) => `<line x1="${i * 100}" y1="0" x2="${i * 100}" y2="380" stroke="#f0c48c" stroke-width="4"/>`).join("")}
+    <rect y="380" width="1000" height="180" fill="#c5d6dd"/><rect y="372" width="1000" height="14" fill="#18323f"/>
+    ${Array.from({ length: 10 }, (_, i) => `<line x1="${i * 110 - 30}" y1="386" x2="${i * 140 - 160}" y2="560" stroke="#a9bec7" stroke-width="3"/>`).join("")}
+    <g class="hub-window"><rect x="380" y="40" width="240" height="150" rx="16" fill="#a5d8ff" stroke="#18323f" stroke-width="8"/>
+      <path d="M388 160 l50 -40 40 26 50 -50 50 40 34 -20 v62 h-224z" fill="#8ce99a" stroke="#18323f" stroke-width="4"/>
+      <line x1="500" y1="40" x2="500" y2="190" stroke="#18323f" stroke-width="6"/></g>
+    <g class="hub-sign"><rect x="390" y="208" width="220" height="40" rx="12" fill="#fffdf5" stroke="#18323f" stroke-width="5"/>
+      <text x="500" y="236" text-anchor="middle" font-size="22" font-weight="900" fill="#18323f" font-family="system-ui">WOBBLEWORKS</text></g>
+    <g class="wall-gear" transform="translate(70 70)"><g class="spin"><circle r="44" fill="#ced4da" stroke="#18323f" stroke-width="6"/>
+      ${Array.from({ length: 8 }, (_, i) => `<rect x="-8" y="-58" width="16" height="18" rx="3" fill="#ced4da" stroke="#18323f" stroke-width="5" transform="rotate(${i * 45})"/>`).join("")}<circle r="12" fill="#18323f"/></g></g>
+    <g class="test-track"><rect x="0" y="520" width="1000" height="26" fill="#f7b731" stroke="#18323f" stroke-width="5"/>
+      <g class="track-dashes">${Array.from({ length: 22 }, (_, i) => `<rect x="${i * 50}" y="528" width="26" height="10" rx="3" fill="#18323f"/>`).join("")}</g></g>
+    <rect class="hub-dim" width="1000" height="560" fill="#0b1a24"/>
+  `, "0 0 1000 560", "hub-backdrop", true));
+    const unseen = new Set(p.unseenRewards);
+    const shelfBadge = p.shelf.length ? String(p.shelf.length) : undefined;
+    const lockerNew = p.unseenRewards.some(id => { const k = rewardById(id)?.kind; return k === "AVATAR" || k === "BOLT_COSTUME" || k === "SPROCKET_ACCESSORY" || k === "FRAME"; });
+    const trophyNew = p.unseenRewards.some(id => id.startsWith("badge.") || id.startsWith("sticker."));
+    const stations = [
+        { id: "map", label: "Campus Map", x: 15, y: 9, w: 19, h: 33, onTap: cb.openMap, art: () => svg(`<rect x="6" y="6" width="108" height="78" rx="8" fill="#fffdf5" stroke="#18323f" stroke-width="6"/><path d="M18 70 C40 30 60 70 80 34 S104 30 104 18" fill="none" stroke="#fa5252" stroke-width="5" stroke-dasharray="8 7"/><circle cx="18" cy="70" r="7" fill="#ffd43b" stroke="#18323f" stroke-width="4"/><circle cx="104" cy="18" r="7" fill="#74c0fc" stroke="#18323f" stroke-width="4"/>`, "0 0 120 90") },
+        { id: "workbench", label: "Workbench", x: 39, y: 52, w: 23, h: 26, onTap: cb.openWorkbench, art: () => svg(`<rect x="6" y="20" width="148" height="20" rx="6" fill="#e8590c" stroke="#18323f" stroke-width="6"/><rect x="18" y="40" width="12" height="44" fill="#a0522d" stroke="#18323f" stroke-width="5"/><rect x="130" y="40" width="12" height="44" fill="#a0522d" stroke="#18323f" stroke-width="5"/><circle cx="58" cy="10" r="10" fill="#74c0fc" stroke="#18323f" stroke-width="4"/><path d="M84 18 l22 -16 16 16z" fill="#ffd43b" stroke="#18323f" stroke-width="4" stroke-linejoin="round"/>`, "0 0 160 90") },
+        { id: "shelf", label: "Invention Shelf", x: 66, y: 8, w: 17, h: 30, onTap: cb.openShelf, ...(shelfBadge ? { badge: shelfBadge } : {}), art: () => svg(`<rect x="6" y="30" width="108" height="10" rx="3" fill="#a0522d" stroke="#18323f" stroke-width="5"/><rect x="6" y="72" width="108" height="10" rx="3" fill="#a0522d" stroke="#18323f" stroke-width="5"/>${p.shelf.slice(0, 3).map((_, i) => `<rect x="${14 + i * 34}" y="6" width="26" height="24" rx="4" fill="#fffdf5" stroke="#18323f" stroke-width="4"/>`).join("")}${p.shelf.slice(3, 6).map((_, i) => `<rect x="${14 + i * 34}" y="48" width="26" height="24" rx="4" fill="#fffdf5" stroke="#18323f" stroke-width="4"/>`).join("")}`, "0 0 120 90") },
+        { id: "trophies", label: "Trophy Shelf", x: 84, y: 8, w: 14, h: 30, onTap: cb.openTrophies, ...(trophyNew ? { badge: "NEW" } : {}), art: () => svg(`<rect x="4" y="60" width="92" height="10" rx="3" fill="#a0522d" stroke="#18323f" stroke-width="5"/>${summary.trophies.length ? `<path d="M30 24 h40 v8 q0 20 -20 22 q-20 -2 -20 -22z" fill="#ffd43b" stroke="#18323f" stroke-width="5"/><rect x="42" y="52" width="16" height="8" fill="#ffd43b" stroke="#18323f" stroke-width="4"/>` : `<path d="M30 30 h40 v6 q0 18 -20 20 q-20 -2 -20 -20z" fill="none" stroke="#18323f" stroke-width="4" stroke-dasharray="6 5"/>`}`, "0 0 100 80") },
+        { id: "locker", label: "Locker", x: 1.5, y: 44, w: 11, h: 40, onTap: cb.openLocker, ...(lockerNew ? { badge: "NEW" } : {}), art: () => svg(`<rect x="8" y="4" width="64" height="126" rx="8" fill="#4dabf7" stroke="#18323f" stroke-width="6"/><line x1="40" y1="4" x2="40" y2="130" stroke="#18323f" stroke-width="5"/>${[20, 30, 40].map(y => `<line x1="16" y1="${y}" x2="32" y2="${y}" stroke="#18323f" stroke-width="4"/><line x1="48" y1="${y}" x2="64" y2="${y}" stroke="#18323f" stroke-width="4"/>`).join("")}<circle cx="34" cy="74" r="4" fill="#18323f"/><circle cx="46" cy="74" r="4" fill="#18323f"/>`, "0 0 80 134") },
+        { id: "bolt", label: "Bolt", x: 15, y: 50, w: 13, h: 34, onTap: cb.pokeBolt, art: () => { const g = el("div", "station-stack"); const pad = svg(`<rect x="6" y="6" width="88" height="18" rx="9" fill="#495057" stroke="#18323f" stroke-width="5"/><rect class="charge-light" x="38" y="10" width="24" height="10" rx="5" fill="#69db7c"/>`, "0 0 100 30", "charge-pad"); g.append(boltArt(p.equipped.bolt), pad); return g; } },
+        { id: "sprocket", label: "Sprocket", x: 66, y: 58, w: 14, h: 26, onTap: cb.pokeSprocket, art: () => { const g = el("div", "station-stack"); g.append(sprocketArt(p.equipped.sprocket, features.includes("sprocket-awake")), svg(`<ellipse cx="50" cy="14" rx="46" ry="11" fill="#e64980" stroke="#18323f" stroke-width="5"/>`, "0 0 100 28", "sprocket-bed")); return g; } },
+        { id: "door", label: visitors[0] ? visitors[0].name : "Visitor Door", x: 86, y: 44, w: 12, h: 40, onTap: () => { if (visitors[0])
+                cb.meetVisitor(visitors[0].id); }, ...(visitors[0] ? { badge: "!" } : {}), art: () => svg(`<rect x="6" y="4" width="72" height="128" rx="10" fill="#a0522d" stroke="#18323f" stroke-width="6"/><circle cx="62" cy="70" r="5" fill="#ffd43b" stroke="#18323f" stroke-width="3"/><rect x="18" y="18" width="48" height="30" rx="6" fill="#a5d8ff" stroke="#18323f" stroke-width="4"/>${visitors[0] ? `<text x="42" y="42" text-anchor="middle" font-size="22">${visitors[0].icon}</text>` : ""}`, "0 0 84 136") }
+    ];
+    if (p.freeBuildUnlocked)
+        stations.push({ id: "freebuild", label: "Free Build", x: 40, y: 81, w: 21, h: 14, onTap: cb.openFreeBuild, art: () => svg(`<rect x="6" y="6" width="148" height="34" rx="12" fill="#69db7c" stroke="#18323f" stroke-width="6"/><text x="80" y="30" text-anchor="middle" font-size="15" font-weight="900" fill="#18323f" font-family="system-ui">BUILD ANYTHING</text>`, "0 0 160 46") });
+    for (const s of stations) {
+        const b = el("button", `hub-station station-${s.id}`);
+        b.style.left = `${s.x}%`;
+        b.style.top = `${s.y}%`;
+        b.style.width = `${s.w}%`;
+        b.style.height = `${s.h}%`;
+        b.setAttribute("aria-label", s.label);
+        const art = s.art();
+        art.classList.add("station-art");
+        b.append(art, el("span", "station-label", s.label));
+        if (s.badge)
+            b.append(el("span", "station-badge", s.badge));
+        b.addEventListener("click", s.onTap);
+        scene.append(b);
+    }
+    void unseen;
+    root.append(top, scene);
+}
+const STATUS_LABEL = { OPEN: "Open", CLEARED: "Restored!", LOCKED_PROGRESS: "Locked", LOCKED_OWNERSHIP: "Closed", UNDER_REPAIR: "Being fixed" };
+export function renderCampusMap(root, save, cb) {
+    root.replaceChildren();
+    const p = activeProfile(save);
+    const done = new Set(p ? Object.entries(p.levels).filter(([, r]) => r.completed).map(([id]) => id) : []);
+    const map = el("div", "campus-map");
+    const pts = CAMPUS_REGIONS.filter(r => r.kind !== "SECRET").map(r => r.map);
+    map.append(svg(`<rect width="1000" height="560" rx="30" fill="#b2f2bb"/>
+    <path d="M0 470 C200 420 260 520 480 470 S800 430 1000 500 V560 H0z" fill="#8ce99a"/>
+    <path d="M760 0 C820 120 940 120 1000 90 V0z" fill="#a5d8ff"/>
+    <polyline points="${pts.map(q => `${q.x},${q.y}`).join(" ")}" fill="none" stroke="#fffdf5" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+    <polyline points="${pts.map(q => `${q.x},${q.y}`).join(" ")}" fill="none" stroke="#e9c46a" stroke-width="8" stroke-dasharray="2 18" stroke-linecap="round"/>
+    ${[[24, 540], [520, 548], [978, 548], [980, 24]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="26" fill="#51cf66" stroke="#18323f" stroke-width="5"/>`).join("")}`, "0 0 1000 560", "map-backdrop", true));
+    for (const region of CAMPUS_REGIONS) {
+        const status = regionStatus(save, region.id);
+        const b = el("button", `map-node status-${status.toLowerCase().replace("_", "-")} kind-${region.kind.toLowerCase()}`);
+        b.style.left = `${region.map.x / 10}%`;
+        b.style.top = `${region.map.y / 5.6}%`;
+        b.style.setProperty("--region", region.colour);
+        const icon = el("span", "map-icon", status === "LOCKED_PROGRESS" && region.kind === "SECRET" ? "?" : region.icon);
+        const name = el("strong", "map-name", region.kind === "SECRET" && status === "LOCKED_PROGRESS" ? "???" : region.title);
+        const tag = el("span", "map-status", STATUS_LABEL[status]);
+        b.append(icon, name, tag);
+        if (region.lab) {
+            const c = labCompletionCount(region.lab, done);
+            if (c.done > 0)
+                b.append(el("span", "map-count", `${c.done}/${c.total}`));
+        }
+        b.setAttribute("aria-label", `${region.title}: ${STATUS_LABEL[status]}`);
+        b.addEventListener("click", () => cb.tapRegion(region.id));
+        map.append(b);
+    }
+    root.append(map);
+}
+const LOCKER_TABS = [
+    { slot: "avatar", label: "Inventor", empty: "Earn hats and goggles by finishing missions with all three stars." },
+    { slot: "bolt", label: "Bolt", empty: "Bolt's costumes come from big builds and silly missions." },
+    { slot: "sprocket", label: "Sprocket", empty: "Sprocket's accessories come from emergencies and bouncy missions." },
+    { slot: "frame", label: "Frames", empty: "Frames for your invention shelf come from delivery missions." }
+];
+export function renderLocker(root, save, tab, cb) {
+    root.replaceChildren();
+    const p = activeProfile(save);
+    if (!p)
+        return;
+    const tabs = el("div", "locker-tabs");
+    tabs.setAttribute("role", "tablist");
+    for (const t of LOCKER_TABS) {
+        const b = el("button", t.slot === tab ? "selected" : "", t.label);
+        b.setAttribute("role", "tab");
+        b.setAttribute("aria-selected", String(t.slot === tab));
+        b.addEventListener("click", () => cb.selectTab(t.slot));
+        tabs.append(b);
+    }
+    const preview = el("div", "locker-preview");
+    if (tab === "avatar")
+        preview.append(avatarBadge(p, 120));
+    else if (tab === "bolt")
+        preview.append(boltArt(p.equipped.bolt));
+    else if (tab === "sprocket")
+        preview.append(sprocketArt(p.equipped.sprocket));
+    else
+        preview.append(el("div", "frame-preview", p.equipped.frame ? rewardById(p.equipped.frame)?.icon ?? "🖼️" : "🖼️"));
+    const grid = el("div", "locker-grid");
+    const owned = lockerItems(save, tab);
+    const none = el("button", `locker-item${p.equipped[tab] === undefined ? " selected" : ""}`);
+    none.append(el("span", "locker-icon", "✖"), el("span", "", "None"));
+    none.addEventListener("click", () => cb.equip(tab, undefined));
+    grid.append(none);
+    for (const id of owned) {
+        const r = rewardById(id);
+        const b = el("button", `locker-item${p.equipped[tab] === id ? " selected" : ""}`);
+        b.append(el("span", "locker-icon", r.icon), el("span", "", r.title));
+        if (p.unseenRewards.includes(id))
+            b.append(el("span", "station-badge", "NEW"));
+        b.addEventListener("click", () => cb.equip(tab, id));
+        grid.append(b);
+    }
+    const allForSlot = REWARDS.filter(r => ({ AVATAR: "avatar", BOLT_COSTUME: "bolt", SPROCKET_ACCESSORY: "sprocket", FRAME: "frame" }[r.kind] === tab));
+    for (const r of allForSlot.filter(r => !owned.includes(r.id))) {
+        const b = el("div", "locker-item locked");
+        b.append(el("span", "locker-icon", "?"), el("span", "", "Not found yet"));
+        grid.append(b);
+    }
+    const hint = el("p", "muted", owned.length ? "Tap to wear it." : LOCKER_TABS.find(t => t.slot === tab).empty);
+    root.append(tabs, el("div", "locker-body"));
+    root.lastElementChild.append(preview, grid);
+    root.append(hint);
+}
+// ------------------------------------------------------------------ trophies + shelf
+export function renderTrophies(root, save) {
+    root.replaceChildren();
+    const p = activeProfile(save);
+    if (!p)
+        return;
+    const summary = progressSummary(save);
+    const head = el("p", "trophy-head");
+    head.append(el("span", "star on", "★"), el("strong", "", ` ${summary.totalStars} stars · ${summary.missionsDone} missions · ${summary.labsCleared} labs restored`));
+    const badges = el("div", "trophy-grid");
+    for (const r of REWARDS.filter(x => x.kind === "BADGE" || x.kind === "STICKER")) {
+        const has = p.rewards.includes(r.id);
+        const card = el("div", `trophy${has ? "" : " missing"}${r.kind === "BADGE" ? " badge" : ""}`);
+        card.append(el("span", "trophy-icon", has ? r.icon : "?"), el("strong", "", has ? r.title : "???"));
+        if (has)
+            card.title = r.description;
+        if (p.unseenRewards.includes(r.id))
+            card.append(el("span", "station-badge", "NEW"));
+        badges.append(card);
+    }
+    const labs = el("div", "trophy-labs");
+    for (const lab of MAIN_LABS) {
+        const levels = lab.missions.map(m => p.levels[m.id]).filter(Boolean);
+        if (!levels.length)
+            continue;
+        const got = levels.reduce((n, r) => n + (r?.stars.length ?? 0), 0);
+        const row = el("div", "trophy-lab");
+        row.append(el("span", "", lab.icon), el("strong", "", lab.title), el("span", "star on", "★"), el("span", "", `${got} of ${lab.missions.length * 3}`));
+        labs.append(row);
+    }
+    root.append(head, labs, badges);
+}
+export function renderShelf(root, save, cb) {
+    root.replaceChildren();
+    const p = activeProfile(save);
+    if (!p)
+        return;
+    if (!p.shelf.length) {
+        root.append(el("p", "", "Nothing on the shelf yet. After an invention works, tap “Put on Shelf”."));
+        return;
+    }
+    const grid = el("div", "shelf-grid");
+    for (const item of [...p.shelf].reverse()) {
+        const b = el("button", `shelf-item${item.frameId === "frame.gold" ? " gold" : item.frameId ? " wood" : ""}`);
+        const thumb = el("div", "shelf-thumb");
+        thumb.append(miniBuild(item.build.parts.map(x => ({ x: x.position.x, y: x.position.y, id: x.definitionId }))));
+        b.append(thumb, el("strong", "", item.title), el("span", "muted", `${item.build.parts.length} parts`));
+        b.addEventListener("click", () => cb.open(item.id));
+        grid.append(b);
+    }
+    root.append(grid);
+}
+function miniBuild(parts) {
+    const colour = (id) => id.includes("ramp") ? "#ffa94d" : id.includes("ball") || id.includes("marble") ? "#4dabf7" : id.includes("spring") ? "#e64980" : id.includes("wheel") ? "#495057" : id.includes("friction") ? "#a0522d" : "#ffd43b";
+    return svg(`<rect width="160" height="90" fill="#e7f5ff"/><rect y="80" width="160" height="10" fill="#c5d6dd"/>${parts.slice(0, 40).map(q => `<rect x="${Math.max(0, Math.min(146, q.x * 10 - 7))}" y="${Math.max(0, Math.min(76, q.y * 9.4 - 7))}" width="14" height="14" rx="4" fill="${colour(q.id)}" stroke="#18323f" stroke-width="2"/>`).join("")}`, "0 0 160 90");
+}
+/** Inventor select cards, styled after Aaron's "Choose your inventor" art. Tap = select, tap again = play. */
+export function renderProfileSelect(root, save, selectedId, cb) {
+    root.replaceChildren();
+    const ordered = [...save.profiles].sort((a, b) => b.lastPlayedAtMs - a.lastPlayedAtMs);
+    for (const p of ordered) {
+        const card = el("div", `inventor-card${p.id === selectedId ? " selected" : ""}`);
+        card.style.setProperty("--card", AVATAR_COLOURS[p.avatarStyle] ?? "#339af0");
+        const pick = el("button", "inventor-pick");
+        pick.setAttribute("aria-label", `${p.name}${p.id === selectedId ? " — selected, tap to play" : ""}`);
+        const art = el("div", "inventor-art");
+        const portrait = AVATAR_PORTRAITS[p.avatarStyle];
+        if (portrait) {
+            const img = el("img");
+            img.src = portrait;
+            img.alt = "";
+            art.append(img);
+        }
+        else
+            art.append(avatarBadge(p, 110));
+        const hat = p.equipped.avatar ? rewardById(p.equipped.avatar) : undefined;
+        if (hat)
+            art.append(el("span", "inventor-hat", hat.icon));
+        const stars = Object.values(p.levels).reduce((n, r) => n + r.stars.length, 0);
+        const trophies = p.rewards.filter(id => id.startsWith("badge.") || id.startsWith("sticker.")).length;
+        const stats = el("div", "inventor-stats");
+        for (const [icon, label, value] of [["⭐", "Stars", stars], ["⚙️", "Inventions", p.shelf.length], ["🏆", "Trophies", trophies]]) {
+            const row = el("div");
+            row.append(el("span", "", icon), el("span", "", label), el("strong", "", String(value)));
+            stats.append(row);
+        }
+        pick.append(art, el("div", "inventor-name-bar", p.name), stats);
+        pick.addEventListener("click", () => (p.id === selectedId ? cb.play(p.id) : cb.select(p.id)));
+        const pencil = el("button", "inventor-edit", "✏️");
+        pencil.setAttribute("aria-label", `Change ${p.name}'s name or look`);
+        pencil.addEventListener("click", () => cb.edit(p.id));
+        card.append(pick, pencil);
+        root.append(card);
+    }
+    if (save.profiles.length < MAX_PROFILES) {
+        const add = el("button", "inventor-card create");
+        add.append(el("span", "create-plus", "+"), el("strong", "", "CREATE NEW INVENTOR"));
+        add.addEventListener("click", cb.create);
+        root.append(add);
+    }
+}
+export function starGoalLabels(levelId) {
+    const g = MISSION_STARS[levelId];
+    return g ? ["Solve it", g.efficient.label, g.advanced.label] : ["Solve it"];
+}

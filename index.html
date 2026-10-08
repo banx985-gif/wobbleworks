@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#2b8a3e" />
+  <link rel="icon" href="./assets/brand/icon-192.png" />
+  <link rel="apple-touch-icon" href="./assets/brand/icon-192.png" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="stylesheet" href="./styles.css" />
+  <link rel="preload" as="image" href="./assets/brand/brand.loading.webp" />
+  <link rel="preload" as="image" href="./assets/brand/brand.title.webp" />
+  <title>WobbleWorks</title>
+</head>
+<body>
+  <main id="app" aria-hidden="true">
+    <header class="topbar">
+      <strong>WOBBLEWORKS</strong>
+      <span id="mode-label" class="mode">BUILD</span>
+      <div class="top-actions"><button id="btn-menu">☰ Menu</button><button id="btn-tools">Part / Level Tools</button></div>
+    </header>
+    <section class="stage">
+      <canvas id="game" aria-label="WobbleWorks build and test playfield"></canvas>
+      <div id="debug" class="debug" aria-live="polite"></div>
+      <aside id="opening-hud" class="opening-hud hidden" aria-live="polite">
+        <div id="bolt-avatar" class="bolt-avatar" aria-hidden="true"><span class="bolt-eye left"></span><span class="bolt-eye right"></span><span class="bolt-mouth"></span></div>
+        <div class="opening-copy"><strong id="opening-title">Give It a Wheel</strong><span id="opening-prompt">Drag the wheel onto the cart, then TEST.</span><span id="opening-subtitle" class="subtitle"></span></div>
+        <div class="opening-actions"><button id="btn-replay-line" title="Replay Bolt narration">↻ Voice</button><button id="btn-skip-line" title="Skip narration">Skip</button><button id="btn-go-motion-yard" class="primary hidden">Workshop</button></div>
+      </aside>
+      <div id="opening-success" class="opening-success hidden"><strong>IT WORKED!</strong><button id="btn-opening-next" class="primary">Next</button></div>
+      <aside id="motion-hud" class="motion-hud hidden" aria-live="polite">
+        <div class="motion-badge">MOTION YARD</div>
+        <div class="motion-copy"><strong id="motion-title">Roll With It</strong><span id="motion-objective">Get the ball to the bucket.</span></div>
+        <div class="motion-tools"><button id="btn-hint" class="hint-btn" aria-label="Get a clue"><span aria-hidden="true">💡</span> Clue</button><button id="btn-force-scanner" aria-pressed="false">Force Scanner</button></div>
+      </aside>
+      <div id="bolt-tip" class="bolt-tip hidden" aria-live="polite"><img src="./assets/ui/ui.hint.arrow.webp" alt="" class="bolt-tip-arrow" /><span id="bolt-tip-text"></span><button id="btn-bolt-tip-close" aria-label="Close tip">OK</button></div>
+      <div id="discovery-pop" class="discovery-pop hidden" aria-live="assertive"><img id="discovery-pop-fx" src="./assets/fx/fx.star-pop.webp" alt="" /><div><strong id="discovery-pop-kicker">NEW DISCOVERY!</strong><span id="discovery-pop-title"></span><small id="discovery-pop-line"></small></div></div>
+      <div id="why-card" class="why-card hidden" role="dialog" aria-labelledby="why-title"><strong id="why-title">WHY DID THAT HAPPEN?</strong><div id="why-choices" class="why-choices"></div><p id="why-answer" class="why-answer hidden"></p><div class="why-actions"><button id="btn-why-build" class="primary">Keep building</button></div></div>
+      <div id="motion-result" class="motion-result hidden" aria-live="assertive">
+        <strong id="motion-result-title">NICE TEST!</strong><span id="motion-result-body">Change one thing and try again.</span>
+        <div id="motion-result-stars" class="result-stars hidden"></div><div id="motion-result-rewards" class="result-rewards hidden"></div>
+        <div><button id="btn-why" class="hidden">🤔 Why did that happen?</button><button id="btn-keep-building" class="hidden">Keep building</button><button id="btn-motion-retry">Retry</button><button id="btn-motion-shelf" class="hidden">Put on Shelf</button><button id="btn-motion-back" class="primary">Motion Yard</button></div>
+      </div>
+    </section>
+    <nav class="tray" aria-label="Part tray">
+      <button data-part="motion.ball"><img class="part-icon" src="./assets/parts/motion.ball.webp" alt="" />Ball</button><button data-part="motion.cart"><img class="part-icon" src="./assets/parts/motion.cart.webp" alt="" />Cart</button><button data-part="motion.wheel"><img class="part-icon" src="./assets/parts/motion.wheel.webp" alt="" />Wheel</button><button data-part="motion.axle"><img class="part-icon" src="./assets/parts/motion.axle.webp" alt="" />Axle</button><button data-part="motion.roller"><img class="part-icon" src="./assets/parts/motion.roller.webp" alt="" />Roller</button><button data-part="motion.ramp"><img class="part-icon" src="./assets/parts/motion.ramp.webp" alt="" />Ramp</button><button data-part="motion.spring"><img class="part-icon" src="./assets/parts/motion.spring.webp" alt="" />Spring</button><button data-part="motion.friction-high"><img class="part-icon" src="./assets/parts/motion.friction-high.webp" alt="" />Grip Pad</button><button data-part="motion.friction-low"><img class="part-icon" src="./assets/parts/motion.friction-low.webp" alt="" />Slide Pad</button><button data-part="motion.bounce-pad"><img class="part-icon" src="./assets/parts/motion.bounce-pad.webp" alt="" />Bounce Pad</button><button data-part="structure.block"><img class="part-icon" src="./assets/parts/structure.block.webp" alt="" />Block</button><button data-part="power.motor">Motor</button><button data-part="gear.gear">Gear</button><button data-part="air.fan">Fan</button>
+    </nav>
+    <nav class="controls" aria-label="Build and test controls">
+      <button id="btn-undo">Undo</button><button id="btn-redo">Redo</button><button id="btn-rotate">Rotate</button><button id="btn-delete">Delete</button><button id="btn-camera">Reset View</button><button id="btn-test" class="primary">TEST ▶</button><button id="btn-pause">Pause Test</button><button id="btn-stop" class="danger">STOP ■</button>
+    </nav>
+  </main>
+
+  <section id="shell" class="shell" aria-live="polite">
+    <article class="shell-card splash-card" data-screen="SPLASH"><img class="keyart" src="./assets/brand/brand.keyart.webp" alt="WobbleWorks — Build, Play, Discover" /></article>
+    <article class="shell-card hidden splash-card" data-screen="LOADING"><img class="keyart loading-art" src="./assets/brand/brand.loading.webp" alt="WobbleWorks is loading. Great ideas take a little time!" /><p id="loading-detail" class="visually-hidden">Checking your inventions.</p></article>
+    <article class="shell-card hidden" data-screen="RECOVERY_NOTICE"><h1 id="recovery-title">Your workshop was recovered</h1><p id="recovery-detail">We found the previous good save and restored it safely.</p><button data-shell-action="recovery-ok" class="primary">OK</button></article>
+    <article class="hidden title-screen" data-screen="TITLE">
+      <div class="title-stage">
+        <img class="title-art" src="./assets/brand/brand.title.webp" alt="" />
+        <h1 class="visually-hidden">WobbleWorks — Build, Play, Discover</h1>
+        <button class="title-hot hot-play" data-shell-action="play" aria-label="Play"></button>
+        <button class="title-hot hot-inventors" data-shell-action="profiles" aria-label="Inventors"></button>
+        <button class="title-hot hot-settings" data-shell-action="settings" aria-label="Settings"></button>
+        <button class="title-hot hot-extras" data-shell-action="extras" aria-label="Extras"></button>
+      </div>
+      <div id="title-status" class="title-status" aria-live="polite"></div>
+    </article>
+    <article class="shell-card hidden" data-screen="EXTRAS"><h1>Extras</h1><div class="menu-stack">
+        <button id="menu-freebuild" data-shell-action="free-build">FREE BUILD</button>
+        <button id="menu-inventions" data-shell-action="my-inventions">MY INVENTIONS</button>
+        <button data-shell-action="grown-ups">GROWN-UPS</button>
+        <p id="extras-note" class="muted"></p>
+        <button data-shell-action="back-title">Back</button></div></article>
+    <article class="shell-card hidden motion-menu-card" data-screen="MOTION_YARD">
+      <div class="motion-menu-head"><div class="motion-badge">LAB 1</div><h1>Motion Yard</h1><p>Build, TEST, watch what happens, then change it.</p><div id="motion-progress" class="motion-progress"></div></div>
+      <div id="motion-mission-grid" class="motion-mission-grid"></div>
+      <div class="row-buttons"><button data-shell-action="discovery-book">📖 Discovery Book</button><button data-shell-action="open-map">Campus Map</button><button data-shell-action="open-hub" class="primary">Workshop</button></div>
+    </article>
+    <article class="shell-card hidden hub-card" data-screen="HUB"><div id="hub-root"></div>
+      <div id="hub-moment" class="hub-moment hidden" aria-live="polite"><div id="hub-moment-bolt" class="hub-moment-bolt"></div><div><strong id="hub-moment-title"></strong><span id="hub-moment-body"></span></div><button id="btn-hub-moment" class="primary">OK!</button></div>
+      <div id="hub-actions" class="hub-actions"><button data-shell-action="discovery-book" aria-label="Discovery Book"><span aria-hidden="true">📖</span><span class="lbl">Discoveries</span></button><button data-shell-action="settings-from-hub" aria-label="Settings"><span aria-hidden="true">⚙️</span><span class="lbl">Settings</span></button><button data-shell-action="grown-ups" aria-label="Grown-ups"><span aria-hidden="true">👪</span><span class="lbl">Grown-ups</span></button><button data-shell-action="save-quit-hub" aria-label="Save and quit"><span aria-hidden="true">💾</span><span class="lbl">Save &amp; Quit</span></button></div>
+    </article>
+    <article class="shell-card hidden map-card" data-screen="CAMPUS_MAP"><div class="card-head"><button data-shell-action="open-hub" class="back-btn" aria-label="Back to Workshop">← Workshop</button><h1>Campus Map</h1><span></span></div><div id="map-root"></div><p id="map-note" class="map-note" aria-live="polite">Tap a building.</p></article>
+    <article class="shell-card hidden wide-card" data-screen="LOCKER"><div class="card-head"><button data-shell-action="open-hub" class="back-btn">← Workshop</button><h1>Locker</h1><span></span></div><div id="locker-root"></div></article>
+    <article class="shell-card hidden wide-card" data-screen="TROPHIES"><div class="card-head"><button data-shell-action="open-hub" class="back-btn">← Workshop</button><h1>Trophy Shelf</h1><span></span></div><div id="trophy-root"></div></article>
+    <article class="shell-card hidden wide-card book-card-screen" data-screen="DISCOVERY_BOOK"><div class="card-head"><button data-shell-action="book-back" class="back-btn">← Back</button><h1>Discovery Book</h1><span></span></div><div id="book-root"></div></article>
+    <article class="shell-card hidden wide-card" data-screen="SHELF"><div class="card-head"><button data-shell-action="open-hub" class="back-btn">← Workshop</button><h1>Invention Shelf</h1><span></span></div><div id="shelf-root"></div></article>
+    <article class="shell-card hidden" data-screen="LAB_LOCKED"><h1 id="lab-locked-title">This lab is closed for now</h1><p id="lab-locked-body"></p><button data-shell-action="open-map" id="lab-locked-button" class="primary">Back to the map</button></article>
+    <article class="hidden art-screen gate-screen" data-screen="GROWN_UPS"><div class="wood-sign"><h1>GROWN-UPS ONLY 🔒</h1></div><div id="gate-root" class="gate-root"></div></article>
+    <article class="shell-card hidden wide-card" data-screen="PARENT_DASHBOARD"><h1>Grown-ups</h1><div id="parent-root"></div></article>
+    <article class="hidden inventor-screen" data-screen="PROFILE_SELECT">
+      <div class="wood-sign"><h1>CHOOSE YOUR INVENTOR</h1><span>Every big idea starts with you!</span></div>
+      <div id="profile-list" class="inventor-row"></div>
+      <p id="profile-empty" class="inventor-empty hidden">No inventors yet. Press PLAY on the title screen to start — you'll make one after your first few builds.</p>
+      <div class="inventor-actions">
+        <button data-shell-action="back-title" class="big-btn back">⬅ Back</button>
+        <button id="btn-profile-continue" class="big-btn go">▶ CONTINUE</button>
+        <button data-shell-action="manage-profiles" class="big-btn manage">👥 MANAGE PROFILES</button>
+      </div>
+    </article>
+    <article class="hidden art-screen creator" data-screen="CREATE_INVENTOR">
+      <div class="wood-sign"><h1 id="inventor-form-title">CREATE YOUR INVENTOR</h1><span id="inventor-form-lead">Bolt wants to remember who helped.</span></div>
+      <div class="creator-body">
+        <div class="creator-preview"><img id="creator-preview-img" src="./assets/avatars/avatar.blue.webp" alt="" /><span class="preview-tag">PREVIEW</span></div>
+        <div class="blue-panel creator-looks"><h2>CHOOSE YOUR LOOK</h2><div class="avatar-options" role="group" aria-label="Choose your inventor"><button class="avatar-choice selected" data-avatar="BLUE" aria-label="Blue inventor"><img src="./assets/avatars/avatar.blue.webp" alt="" /></button><button class="avatar-choice" data-avatar="PINK" aria-label="Pink inventor"><img src="./assets/avatars/avatar.pink.webp" alt="" /></button><button class="avatar-choice" data-avatar="GREEN" aria-label="Green inventor"><img src="./assets/avatars/avatar.green.webp" alt="" /></button></div><p class="creator-more">More hair, outfits and hats arrive with the inventor maker art.</p></div>
+      </div>
+      <label class="name-field"><span>Inventor Name</span><input id="inventor-name" maxlength="16" autocomplete="off" inputmode="text" value="Inventor" /><span aria-hidden="true">✏️</span></label>
+      <div class="art-actions"><button id="btn-inventor-cancel" class="big-btn back hidden">⬅ Back</button><button id="btn-create-inventor" class="big-btn go">✔ CREATE INVENTOR</button><span></span></div>
+    </article>
+    <article class="hidden art-screen" data-screen="SETTINGS">
+      <div class="wood-sign"><h1>⚙️ SETTINGS</h1><span id="settings-owner"></span></div>
+      <div class="blue-panel set-list"><label class="set-row"><span class="set-icon" aria-hidden="true">🎵</span><span class="set-label">Music<small>Music arrives in a later build</small></span><input id="setting-music" type="checkbox" class="toggle" /></label><label class="set-row"><span class="set-icon" aria-hidden="true">🔊</span><span class="set-label">Sound Effects</span><input id="setting-sfx" type="checkbox" class="toggle" /></label><label class="set-row"><span class="set-icon" aria-hidden="true">🗣️</span><span class="set-label">Bolt's Voice</span><input id="setting-narration" type="checkbox" class="toggle" /></label><label class="set-row"><span class="set-icon" aria-hidden="true">💬</span><span class="set-label">Subtitles</span><input id="setting-subtitles" type="checkbox" class="toggle" /></label><label class="set-row"><span class="set-icon" aria-hidden="true">📳</span><span class="set-label">Vibration<small>Phones and tablets that support it</small></span><input id="setting-vibration" type="checkbox" class="toggle" /></label><label class="set-row"><span class="set-icon" aria-hidden="true">💡</span><span class="set-label">Tutorial Hints<small>Bolt gives little tips</small></span><input id="setting-hints" type="checkbox" class="toggle" /></label><label class="set-row" id="setting-snap-row"><span class="set-icon" aria-hidden="true">🧲</span><span class="set-label">Building Help<small>Parts snap into place</small></span><input id="setting-snap" type="checkbox" class="toggle" /></label><label class="set-row"><span class="set-icon" aria-hidden="true">🔠</span><span class="set-label">Text Size</span><input id="setting-text-scale" type="range" min="0.9" max="1.4" value="1" step="0.1" class="set-slider" /></label><label class="set-row"><span class="set-icon" aria-hidden="true">🎨</span><span class="set-label">Strong Colours<small>Extra-clear high contrast</small></span><input id="setting-high-contrast" type="checkbox" class="toggle" /></label><label class="set-row"><span class="set-icon" aria-hidden="true">🐢</span><span class="set-label">Calm Motion<small>Less wobble and flashing</small></span><input id="setting-reduced-motion" type="checkbox" class="toggle" /></label><div class="set-row"><span class="set-icon" aria-hidden="true">🌐</span><span class="set-label">Language</span><span class="set-pick"><button disabled aria-label="Previous language">‹</button><strong>English</strong><button disabled aria-label="Next language">›</button></span></div><div class="set-sep"></div><button class="set-row link" data-shell-action="info" data-info="privacy"><span class="set-icon" aria-hidden="true">📄</span><span class="set-label">Privacy Policy</span><span aria-hidden="true">›</span></button><button class="set-row link" data-shell-action="info" data-info="terms"><span class="set-icon" aria-hidden="true">📄</span><span class="set-label">Terms of Use</span><span aria-hidden="true">›</span></button><button class="set-row link" data-shell-action="info" data-info="help"><span class="set-icon" aria-hidden="true">❓</span><span class="set-label">Help &amp; Support</span><span aria-hidden="true">›</span></button></div>
+      <div class="art-actions"><button data-shell-action="back-title" class="big-btn back">⬅ Back</button><span></span><button id="btn-settings-reset" class="big-btn manage">🔄 Reset to Default</button></div>
+    </article>
+    <article class="shell-card hidden" data-screen="INFO"><h1 id="info-title">Help</h1><div id="info-body" class="info-body"></div><button data-shell-action="info-back" class="primary">Back</button></article>
+    
+    <article class="hidden title-screen pause-screen" data-screen="PAUSE">
+      <div class="title-stage">
+        <img class="title-art" src="./assets/brand/brand.pause.webp" alt="" />
+        <h1 class="visually-hidden">Paused. Your invention is safe.</h1>
+        <button class="title-hot" style="left:37%;top:34.4%;width:26%;height:9.8%" data-shell-action="resume" aria-label="Resume"></button>
+        <button class="title-hot" style="left:37%;top:45.7%;width:26%;height:8.2%" data-shell-action="return-workshop" aria-label="Main menu: back to the workshop"></button>
+        <button class="title-hot" style="left:37%;top:55%;width:26%;height:8.5%" data-shell-action="settings-from-pause" aria-label="Settings"></button>
+        <button class="title-hot" style="left:37%;top:64.5%;width:26%;height:8.4%" data-shell-action="info" data-info="help" aria-label="How to play"></button>
+        <button class="title-hot" style="left:37%;top:74%;width:26%;height:8.8%" data-shell-action="save-quit" aria-label="Exit game: save and quit"></button>
+      </div>
+    </article>
+    <article class="shell-card hidden" data-screen="LOADING_FAILURE"><h1>Workshop couldn’t load</h1><p id="loading-error">Your save has not been changed.</p><button data-shell-action="retry-load" class="primary">Retry</button></article>
+    <article class="shell-card hidden" data-screen="STORAGE_WARNING"><h1>Storage is nearly full</h1><p>WobbleWorks can still run, but there may not be room for new inventions.</p><button data-shell-action="warning-ok" class="primary">Continue</button></article>
+    <article class="shell-card hidden" data-screen="OFFLINE_ENTITLEMENT"><h1>You’re offline</h1><p>Owned content can use its cached offline entitlement. Online-only checks will wait until connection returns.</p><button data-shell-action="offline-ok" class="primary">Continue</button></article>
+    <article class="shell-card hidden" data-screen="UNSUPPORTED_DEVICE"><h1>This device needs an update</h1><p id="unsupported-detail">WobbleWorks needs modern browser features to keep builds and saves reliable.</p></article>
+    <article class="hidden rotate-screen" data-screen="ROTATE_DEVICE"><img src="./assets/brand/brand.rotate.webp" alt="Please rotate your device. WobbleWorks is best played in landscape." /></article>
+    <article class="shell-card hidden" data-screen="WORKSHOP"><h1>Workshop</h1></article>
+  </section>
+
+  <div id="transition-shield" class="transition-shield" aria-hidden="true"></div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

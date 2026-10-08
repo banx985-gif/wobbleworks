@@ -1,0 +1,592 @@
+{
+  "schemaVersion": 1,
+  "trayEntryCount": 117,
+  "productionFamilyCap": 96,
+  "entries": [
+    {
+      "category": "Structures",
+      "trayEntry": "wooden beam short",
+      "familyId": "structure.wood-beam"
+    },
+    {
+      "category": "Structures",
+      "trayEntry": "wooden beam long",
+      "familyId": "structure.wood-beam"
+    },
+    {
+      "category": "Structures",
+      "trayEntry": "metal beam short",
+      "familyId": "structure.metal-beam"
+    },
+    {
+      "category": "Structures",
+      "trayEntry": "metal beam long",
+      "familyId": "structure.metal-beam"
+    },
+    {
+      "category": "Structures",
+      "trayEntry": "platform",
+      "familyId": "structures.platform"
+    },
+    {
+      "category": "Structures",
+      "trayEntry": "small block",
+      "familyId": "structure.block"
+    },
+    {
+      "category": "Structures",
+      "trayEntry": "large block",
+      "familyId": "structure.block"
+    },
+    {
+      "category": "Structures",
+      "trayEntry": "triangle brace",
+      "familyId": "structures.triangle-brace"
+    },
+    {
+      "category": "Structures",
+      "trayEntry": "support column",
+      "familyId": "structures.support-column"
+    },
+    {
+      "category": "Structures",
+      "trayEntry": "hinge",
+      "familyId": "structure.pivot-joint"
+    },
+    {
+      "category": "Structures",
+      "trayEntry": "pivot",
+      "familyId": "structure.pivot-joint"
+    },
+    {
+      "category": "Structures",
+      "trayEntry": "rope",
+      "familyId": "structure.tension-link"
+    },
+    {
+      "category": "Structures",
+      "trayEntry": "chain",
+      "familyId": "structure.tension-link"
+    },
+    {
+      "category": "Structures",
+      "trayEntry": "hook",
+      "familyId": "structure.connector-hardware"
+    },
+    {
+      "category": "Structures",
+      "trayEntry": "clamp",
+      "familyId": "structure.connector-hardware"
+    },
+    {
+      "category": "Structures",
+      "trayEntry": "lightweight frame",
+      "familyId": "structure.frame"
+    },
+    {
+      "category": "Structures",
+      "trayEntry": "heavy frame",
+      "familyId": "structure.frame"
+    },
+    {
+      "category": "Motion",
+      "trayEntry": "small wheel",
+      "familyId": "motion.wheel"
+    },
+    {
+      "category": "Motion",
+      "trayEntry": "medium wheel",
+      "familyId": "motion.wheel"
+    },
+    {
+      "category": "Motion",
+      "trayEntry": "large wheel",
+      "familyId": "motion.wheel"
+    },
+    {
+      "category": "Motion",
+      "trayEntry": "axle",
+      "familyId": "motion.axle"
+    },
+    {
+      "category": "Motion",
+      "trayEntry": "roller",
+      "familyId": "motion.roller"
+    },
+    {
+      "category": "Motion",
+      "trayEntry": "ramp short",
+      "familyId": "motion.ramp"
+    },
+    {
+      "category": "Motion",
+      "trayEntry": "ramp long",
+      "familyId": "motion.ramp"
+    },
+    {
+      "category": "Motion",
+      "trayEntry": "curved ramp",
+      "familyId": "motion.ramp"
+    },
+    {
+      "category": "Motion",
+      "trayEntry": "spring soft",
+      "familyId": "motion.spring"
+    },
+    {
+      "category": "Motion",
+      "trayEntry": "spring strong",
+      "familyId": "motion.spring"
+    },
+    {
+      "category": "Motion",
+      "trayEntry": "seesaw",
+      "familyId": "motion.seesaw"
+    },
+    {
+      "category": "Motion",
+      "trayEntry": "conveyor",
+      "familyId": "motion.conveyor"
+    },
+    {
+      "category": "Motion",
+      "trayEntry": "trampoline",
+      "familyId": "motion.trampoline"
+    },
+    {
+      "category": "Motion",
+      "trayEntry": "bumper",
+      "familyId": "motion.bumper"
+    },
+    {
+      "category": "Gears & Mechanical",
+      "trayEntry": "tiny gear",
+      "familyId": "gear.spur"
+    },
+    {
+      "category": "Gears & Mechanical",
+      "trayEntry": "small gear",
+      "familyId": "gear.spur"
+    },
+    {
+      "category": "Gears & Mechanical",
+      "trayEntry": "medium gear",
+      "familyId": "gear.spur"
+    },
+    {
+      "category": "Gears & Mechanical",
+      "trayEntry": "large gear",
+      "familyId": "gear.spur"
+    },
+    {
+      "category": "Gears & Mechanical",
+      "trayEntry": "rack gear",
+      "familyId": "gears.rack-gear"
+    },
+    {
+      "category": "Gears & Mechanical",
+      "trayEntry": "worm gear",
+      "familyId": "gears.worm-gear"
+    },
+    {
+      "category": "Gears & Mechanical",
+      "trayEntry": "pulley wheel",
+      "familyId": "gears.pulley-wheel"
+    },
+    {
+      "category": "Gears & Mechanical",
+      "trayEntry": "belt",
+      "familyId": "gears.belt"
+    },
+    {
+      "category": "Gears & Mechanical",
+      "trayEntry": "hand crank",
+      "familyId": "gears.hand-crank"
+    },
+    {
+      "category": "Gears & Mechanical",
+      "trayEntry": "flywheel",
+      "familyId": "gears.flywheel"
+    },
+    {
+      "category": "Gears & Mechanical",
+      "trayEntry": "piston",
+      "familyId": "mechanical.actuator"
+    },
+    {
+      "category": "Gears & Mechanical",
+      "trayEntry": "mechanical arm",
+      "familyId": "mechanical.actuator"
+    },
+    {
+      "category": "Gears & Mechanical",
+      "trayEntry": "grabber",
+      "familyId": "mechanical.actuator"
+    },
+    {
+      "category": "Power & Electrical",
+      "trayEntry": "battery small",
+      "familyId": "power.battery"
+    },
+    {
+      "category": "Power & Electrical",
+      "trayEntry": "battery large",
+      "familyId": "power.battery"
+    },
+    {
+      "category": "Power & Electrical",
+      "trayEntry": "wire",
+      "familyId": "power.wire"
+    },
+    {
+      "category": "Power & Electrical",
+      "trayEntry": "switch",
+      "familyId": "power.switch"
+    },
+    {
+      "category": "Power & Electrical",
+      "trayEntry": "button",
+      "familyId": "power.button"
+    },
+    {
+      "category": "Power & Electrical",
+      "trayEntry": "bulb",
+      "familyId": "power.bulb"
+    },
+    {
+      "category": "Power & Electrical",
+      "trayEntry": "buzzer",
+      "familyId": "power.buzzer"
+    },
+    {
+      "category": "Power & Electrical",
+      "trayEntry": "motor",
+      "familyId": "power.motor"
+    },
+    {
+      "category": "Power & Electrical",
+      "trayEntry": "splitter",
+      "familyId": "power.splitter"
+    },
+    {
+      "category": "Power & Electrical",
+      "trayEntry": "solar panel",
+      "familyId": "power.solar-panel"
+    },
+    {
+      "category": "Power & Electrical",
+      "trayEntry": "wind turbine",
+      "familyId": "power.wind-turbine"
+    },
+    {
+      "category": "Power & Electrical",
+      "trayEntry": "generator",
+      "familyId": "power.generator"
+    },
+    {
+      "category": "Power & Electrical",
+      "trayEntry": "power meter",
+      "familyId": "power.power-meter"
+    },
+    {
+      "category": "Magnetism",
+      "trayEntry": "rotatable bar magnet preset",
+      "familyId": "magnetism.rotatable-bar-magnet-preset"
+    },
+    {
+      "category": "Magnetism",
+      "trayEntry": "horseshoe magnet",
+      "familyId": "magnetism.horseshoe-magnet"
+    },
+    {
+      "category": "Magnetism",
+      "trayEntry": "electromagnet",
+      "familyId": "magnetism.electromagnet"
+    },
+    {
+      "category": "Magnetism",
+      "trayEntry": "magnetic material target",
+      "familyId": "magnetism.magnetic-material-target"
+    },
+    {
+      "category": "Magnetism",
+      "trayEntry": "magnetic switch",
+      "familyId": "magnetism.magnetic-switch"
+    },
+    {
+      "category": "Magnetism",
+      "trayEntry": "magnetic rail",
+      "familyId": "magnetism.magnetic-rail"
+    },
+    {
+      "category": "Water",
+      "trayEntry": "straight pipe",
+      "familyId": "water.pipe"
+    },
+    {
+      "category": "Water",
+      "trayEntry": "pipe bend",
+      "familyId": "water.pipe"
+    },
+    {
+      "category": "Water",
+      "trayEntry": "T-junction",
+      "familyId": "water.t-junction"
+    },
+    {
+      "category": "Water",
+      "trayEntry": "valve",
+      "familyId": "water.valve"
+    },
+    {
+      "category": "Water",
+      "trayEntry": "pump",
+      "familyId": "water.pump"
+    },
+    {
+      "category": "Water",
+      "trayEntry": "small tank",
+      "familyId": "water.tank"
+    },
+    {
+      "category": "Water",
+      "trayEntry": "large tank",
+      "familyId": "water.tank"
+    },
+    {
+      "category": "Water",
+      "trayEntry": "nozzle",
+      "familyId": "water.nozzle"
+    },
+    {
+      "category": "Water",
+      "trayEntry": "water wheel",
+      "familyId": "water.water-wheel"
+    },
+    {
+      "category": "Water",
+      "trayEntry": "drain",
+      "familyId": "water.drain"
+    },
+    {
+      "category": "Water",
+      "trayEntry": "sprinkler",
+      "familyId": "water.sprinkler"
+    },
+    {
+      "category": "Air & Flight",
+      "trayEntry": "fan",
+      "familyId": "air.rotor"
+    },
+    {
+      "category": "Air & Flight",
+      "trayEntry": "propeller",
+      "familyId": "air.rotor"
+    },
+    {
+      "category": "Air & Flight",
+      "trayEntry": "wing small",
+      "familyId": "air.wing"
+    },
+    {
+      "category": "Air & Flight",
+      "trayEntry": "wing large",
+      "familyId": "air.wing"
+    },
+    {
+      "category": "Air & Flight",
+      "trayEntry": "tail",
+      "familyId": "air.tail"
+    },
+    {
+      "category": "Air & Flight",
+      "trayEntry": "balloon",
+      "familyId": "air.balloon"
+    },
+    {
+      "category": "Air & Flight",
+      "trayEntry": "parachute",
+      "familyId": "air.parachute"
+    },
+    {
+      "category": "Air & Flight",
+      "trayEntry": "air pump",
+      "familyId": "air.air-pump"
+    },
+    {
+      "category": "Air & Flight",
+      "trayEntry": "rocket booster",
+      "familyId": "air.rocket-booster"
+    },
+    {
+      "category": "Air & Flight",
+      "trayEntry": "glider body",
+      "familyId": "air.glider-body"
+    },
+    {
+      "category": "Robotics & Logic",
+      "trayEntry": "robot chassis",
+      "familyId": "robotics.robot-chassis"
+    },
+    {
+      "category": "Robotics & Logic",
+      "trayEntry": "powered wheel module",
+      "familyId": "robotics.powered-wheel-module"
+    },
+    {
+      "category": "Robotics & Logic",
+      "trayEntry": "distance sensor",
+      "familyId": "logic.sensor"
+    },
+    {
+      "category": "Robotics & Logic",
+      "trayEntry": "touch sensor",
+      "familyId": "logic.sensor"
+    },
+    {
+      "category": "Robotics & Logic",
+      "trayEntry": "colour sensor",
+      "familyId": "logic.sensor"
+    },
+    {
+      "category": "Robotics & Logic",
+      "trayEntry": "light sensor",
+      "familyId": "logic.sensor"
+    },
+    {
+      "category": "Robotics & Logic",
+      "trayEntry": "timer",
+      "familyId": "robotics.timer"
+    },
+    {
+      "category": "Robotics & Logic",
+      "trayEntry": "logic controller",
+      "familyId": "robotics.logic-controller"
+    },
+    {
+      "category": "Robotics & Logic",
+      "trayEntry": "IF block",
+      "familyId": "logic.program-block"
+    },
+    {
+      "category": "Robotics & Logic",
+      "trayEntry": "loop block",
+      "familyId": "logic.program-block"
+    },
+    {
+      "category": "Robotics & Logic",
+      "trayEntry": "action block",
+      "familyId": "logic.program-block"
+    },
+    {
+      "category": "Robotics & Logic",
+      "trayEntry": "motor controller",
+      "familyId": "robotics.motor-controller"
+    },
+    {
+      "category": "Robotics & Logic",
+      "trayEntry": "indicator light",
+      "familyId": "robotics.indicator-light"
+    },
+    {
+      "category": "Space",
+      "trayEntry": "rocket body",
+      "familyId": "space.rocket-body"
+    },
+    {
+      "category": "Space",
+      "trayEntry": "landing leg",
+      "familyId": "space.landing-leg"
+    },
+    {
+      "category": "Space",
+      "trayEntry": "rover wheel",
+      "familyId": "space.rover-wheel"
+    },
+    {
+      "category": "Space",
+      "trayEntry": "satellite panel",
+      "familyId": "space.satellite-panel"
+    },
+    {
+      "category": "Space",
+      "trayEntry": "robotic arm",
+      "familyId": "space.robotic-arm"
+    },
+    {
+      "category": "Space",
+      "trayEntry": "low-gravity test module",
+      "familyId": "space.low-gravity-test-module"
+    },
+    {
+      "category": "Musical",
+      "trayEntry": "bell",
+      "familyId": "musical.resonator"
+    },
+    {
+      "category": "Musical",
+      "trayEntry": "drum",
+      "familyId": "musical.drum"
+    },
+    {
+      "category": "Musical",
+      "trayEntry": "chime",
+      "familyId": "musical.resonator"
+    },
+    {
+      "category": "Musical",
+      "trayEntry": "horn",
+      "familyId": "musical.horn"
+    },
+    {
+      "category": "Musical",
+      "trayEntry": "tone block",
+      "familyId": "musical.tone-block"
+    },
+    {
+      "category": "Silly",
+      "trayEntry": "boxing glove",
+      "familyId": "silly.striker"
+    },
+    {
+      "category": "Silly",
+      "trayEntry": "giant boot",
+      "familyId": "silly.striker"
+    },
+    {
+      "category": "Silly",
+      "trayEntry": "rubber duck launcher cup",
+      "familyId": "silly.rubber-duck-launcher-cup"
+    },
+    {
+      "category": "Silly",
+      "trayEntry": "confetti cannon",
+      "familyId": "silly.confetti-cannon"
+    },
+    {
+      "category": "Silly",
+      "trayEntry": "toaster",
+      "familyId": "silly.toaster"
+    },
+    {
+      "category": "Silly",
+      "trayEntry": "giant spoon",
+      "familyId": "silly.giant-spoon"
+    },
+    {
+      "category": "Silly",
+      "trayEntry": "squeaky hammer",
+      "familyId": "silly.striker"
+    },
+    {
+      "category": "Silly",
+      "trayEntry": "bubble blower",
+      "familyId": "silly.bubble-blower"
+    },
+    {
+      "category": "Silly",
+      "trayEntry": "party horn",
+      "familyId": "silly.party-horn"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "motion.graybox",
+  "title": "Motion Yard Graybox",
+  "environmentId": "env.motion-yard",
+  "availablePartIds": ["motion.ball","motion.cart","motion.wheel","structure.block"],
+  "starterParts": [
+    {"id":"graybox-floor","definitionId":"structure.block","position":{"x":8,"y":7.7},"rotation":0,"parameters":{}},
+    {"id":"graybox-ball","definitionId":"motion.ball","position":{"x":8,"y":3.5},"rotation":0,"parameters":{}}
+  ],
+  "starterConnections": [],
+  "staticObjects": [],
+  "spawns": [{"id":"spawn-ball","definitionId":"motion.ball","position":{"x":5,"y":2.5},"rotation":0}],
+  "constraints": [{"id":"constraint-parts","kind":"MAX_PARTS","value":12}],
+  "environmentModifiers": [],
+  "goals": [{"id":"goal-distance","kind":"METRIC","metric":"distanceTravelled","comparator":"GTE","value":3}],
+  "evidenceRules": [{"id":"evidence-motion","conceptId":"motion.slope-effects","eventKind":"OBJECT_MOVED","minimumCount":1,"truthContractId":"truth.motion"}],
+  "hints": ["Try changing the ramp."],
+  "narrationCues": []
+}

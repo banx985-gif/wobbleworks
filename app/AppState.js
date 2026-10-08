@@ -1,0 +1,337 @@
+import { completionRewardIds, grantRewardsTo } from "../progression/Rewards.js";
+/**
+ * WobbleWorks root save — schema version 2 (Milestone 10).
+ *
+ * Root fields that are not inside a profile are the *guest* progress made before the
+ * first inventor is created (the opening is played before any profile exists).
+ * When the first inventor is created, that guest progress moves into the profile.
+ * Every later profile owns its own campaign, unlocks, rewards, shelf, settings and assistance.
+ */
+export const CURRENT_SAVE_SCHEMA = 2;
+/** BLUE, PINK and GREEN are the three painted inventors (Aaron's art, 8 Oct). ORANGE/PURPLE remain valid for older saves. */
+export const AVATAR_STYLES = ["ORANGE", "BLUE", "GREEN", "PURPLE", "PINK"];
+export const PAINTED_AVATARS = ["BLUE", "PINK", "GREEN"];
+export const DEFAULT_SETTINGS = Object.freeze({ textScale: 1, reducedMotion: false, highContrast: false, subtitles: true, narration: true, soundEffects: true, music: true, vibration: true });
+export const DEFAULT_ASSISTANCE = Object.freeze({ snapAssist: true, boltTips: true });
+export const MAX_PROFILES = 6;
+export const MAX_SHELF_ITEMS = 24;
+export const PROFILE_NAME_MAX = 16;
+export const OPENING_STARTER_PARTS = ["motion.ball", "motion.cart", "motion.wheel", "motion.ramp", "motion.spring", "structure.block"];
+export function createDefaultAppSave() {
+    return {
+        schemaVersion: CURRENT_SAVE_SCHEMA,
+        revision: 0,
+        firstLaunchCompleted: false,
+        firstTestCompleted: false,
+        entitlement: "UNKNOWN",
+        profiles: [],
+        deviceSettings: { ...DEFAULT_SETTINGS },
+        freeBuildUnlocked: false,
+        myInventionsCount: 0,
+        openingStep: 1,
+        openingComplete: false,
+        motionCompletedLevelIds: [],
+        motionDiscoveries: []
+    };
+}
+export function sanitizeProfileName(raw) {
+    return raw.replace(/[^\p{L}\p{N} _-]/gu, "").replace(/\s+/g, " ").trim().slice(0, PROFILE_NAME_MAX) || "Inventor";
+}
+let idCounter = 0;
+export function newId(prefix) {
+    const random = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `${Date.now().toString(36)}-${(idCounter++).toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    return `${prefix}-${random}`;
+}
+export function createProfile(name, avatarStyle, nowMs = Date.now(), id = newId("profile")) {
+    const style = AVATAR_STYLES.includes(avatarStyle) ? avatarStyle : "ORANGE";
+    return {
+        id, name: sanitizeProfileName(name), avatarStyle: style, createdAtMs: nowMs, lastPlayedAtMs: nowMs,
+        openingStep: 1, openingComplete: false, levels: {}, discoveries: [], unlockedParts: [], unlockedTools: [],
+        rewards: [], unseenRewards: [], equipped: {}, shelf: [], records: {}, settings: { ...DEFAULT_SETTINGS },
+        assistance: { ...DEFAULT_ASSISTANCE }, location: "OPENING", freeBuildUnlocked: false, restorationSeen: [], visitorsMet: []
+    };
+}
+// ------------------------------------------------------------------ validation
+const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._:_-]{0,95}$/;
+export function isSafeId(value) { return typeof value === "string" && SAFE_ID.test(value); }
+function isStringArray(v, idsOnly = false) { return Array.isArray(v) && v.every(x => typeof x === "string" && (!idsOnly || isSafeId(x))); }
+function isBool(v) { return typeof v === "boolean"; }
+function isCount(v) { return Number.isInteger(v) && v >= 0; }
+function isBuild(v) {
+    const b = v;
+    return Boolean(b && typeof b === "object" && Array.isArray(b.parts) && Array.isArray(b.connections));
+}
+function isLocation(v) {
+    return v === "OPENING" || v === "HUB" || v === "MAP" || (typeof v === "string" && /^LAB:[a-z0-9-]{1,48}$/.test(v));
+}
+export function validateSettings(s) {
+    const v = s;
+    return Boolean(v) && typeof v.textScale === "number" && v.textScale >= 0.8 && v.textScale <= 1.6 &&
+        isBool(v.reducedMotion) && isBool(v.highContrast) && isBool(v.subtitles) && isBool(v.narration) && isBool(v.soundEffects) &&
+        (v.music === undefined || isBool(v.music)) && (v.vibration === undefined || isBool(v.vibration));
+}
+function validateMetrics(m) {
+    if (!isCount(m.testPresses) || !isCount(m.stopPresses) || !isCount(m.retries))
+        return false;
+    if (m.firstInteractionDelayMs !== undefined && (!Number.isFinite(m.firstInteractionDelayMs) || m.firstInteractionDelayMs < 0))
+        return false;
+    if (m.firstTestDelayMs !== undefined && (!Number.isFinite(m.firstTestDelayMs) || m.firstTestDelayMs < 0))
+        return false;
+    return Array.isArray(m.completedSteps) && m.completedSteps.every(step => Number.isInteger(step) && step >= 1 && step <= 6);
+}
+export function validateProfile(p) {
+    if (!p || typeof p !== "object")
+        return false;
+    if (!isSafeId(p.id) || typeof p.name !== "string" || p.name.length < 1 || p.name.length > PROFILE_NAME_MAX)
+        return false;
+    if (sanitizeProfileName(p.name) !== p.name)
+        return false;
+    if (!AVATAR_STYLES.includes(p.avatarStyle))
+        return false;
+    if (!Number.isFinite(p.createdAtMs) || !Number.isFinite(p.lastPlayedAtMs))
+        return false;
+    if (!Number.isInteger(p.openingStep) || p.openingStep < 1 || p.openingStep > 6 || !isBool(p.openingComplete))
+        return false;
+    if (p.openingMetrics !== undefined && !validateMetrics(p.openingMetrics))
+        return false;
+    if (!p.levels || typeof p.levels !== "object" || Array.isArray(p.levels))
+        return false;
+    for (const [id, rec] of Object.entries(p.levels)) {
+        if (!isSafeId(id) || !rec || !isBool(rec.completed) || !isStringArray(rec.stars, true) || rec.stars.length > 3 || !isCount(rec.completions))
+            return false;
+        if (rec.bestPartCount !== undefined && !isCount(rec.bestPartCount))
+            return false;
+    }
+    if (!isStringArray(p.discoveries, true) || !isStringArray(p.unlockedParts, true) || !isStringArray(p.unlockedTools, true))
+        return false;
+    if (!isStringArray(p.rewards, true) || !isStringArray(p.unseenRewards, true))
+        return false;
+    if (!p.equipped || typeof p.equipped !== "object")
+        return false;
+    for (const slot of ["avatar", "bolt", "sprocket", "frame"]) {
+        const item = p.equipped[slot];
+        if (item !== undefined && (!isSafeId(item) || !p.rewards.includes(item)))
+            return false;
+    }
+    if (!Array.isArray(p.shelf) || p.shelf.length > MAX_SHELF_ITEMS)
+        return false;
+    if (!p.shelf.every(s => isSafeId(s.id) && typeof s.title === "string" && s.title.length <= 40 && Number.isFinite(s.savedAtMs) && isBuild(s.build) && (s.frameId === undefined || isSafeId(s.frameId)) && (s.sourceLevelId === undefined || isSafeId(s.sourceLevelId))))
+        return false;
+    if (new Set(p.shelf.map(s => s.id)).size !== p.shelf.length)
+        return false;
+    if (!p.records || typeof p.records !== "object" || !Object.entries(p.records).every(([k, v]) => isSafeId(k) && Number.isFinite(v)))
+        return false;
+    if (!validateSettings(p.settings))
+        return false;
+    if (!p.assistance || !isBool(p.assistance.snapAssist) || !isBool(p.assistance.boltTips))
+        return false;
+    if (!isLocation(p.location))
+        return false;
+    if (p.lastBuild !== undefined && !isBuild(p.lastBuild))
+        return false;
+    if (!isBool(p.freeBuildUnlocked))
+        return false;
+    if (!isStringArray(p.restorationSeen, true) || !isStringArray(p.visitorsMet, true))
+        return false;
+    if (p.mastery !== undefined) {
+        if (!p.mastery || typeof p.mastery !== "object" || Array.isArray(p.mastery))
+            return false;
+        const entries = Object.entries(p.mastery);
+        if (entries.length > 200 || !entries.every(([k, v]) => isSafeId(k) && isStringArray(v, true) && v.length <= 24))
+            return false;
+    }
+    if (p.guidance !== undefined && (!p.guidance || !isCount(p.guidance.unaidedSolves) || !isCount(p.guidance.helpedSolves) || !isCount(p.guidance.hintsUsed)))
+        return false;
+    return true;
+}
+export function validateAppSave(value) {
+    if (!value || typeof value !== "object" || value.schemaVersion !== CURRENT_SAVE_SCHEMA)
+        return false;
+    if (!isCount(value.revision))
+        return false;
+    if (!isBool(value.firstLaunchCompleted) || !isBool(value.firstTestCompleted))
+        return false;
+    if (!["UNKNOWN", "OWNED", "OFFLINE_GRACE", "LOCKED"].includes(value.entitlement))
+        return false;
+    if (!Array.isArray(value.profiles) || value.profiles.length > MAX_PROFILES || !value.profiles.every(validateProfile))
+        return false;
+    if (new Set(value.profiles.map(p => p.id)).size !== value.profiles.length)
+        return false;
+    if (value.activeProfileId !== undefined && !value.profiles.some(p => p.id === value.activeProfileId))
+        return false;
+    if (!validateSettings(value.deviceSettings))
+        return false;
+    if (!isBool(value.freeBuildUnlocked))
+        return false;
+    if (!isCount(value.myInventionsCount))
+        return false;
+    if (value.openingStep !== undefined && (!Number.isInteger(value.openingStep) || value.openingStep < 1 || value.openingStep > 6))
+        return false;
+    if (value.openingComplete !== undefined && !isBool(value.openingComplete))
+        return false;
+    if (value.openingMetrics !== undefined && !validateMetrics(value.openingMetrics))
+        return false;
+    if (value.motionCompletedLevelIds !== undefined && !isStringArray(value.motionCompletedLevelIds))
+        return false;
+    if (value.motionDiscoveries !== undefined && !isStringArray(value.motionDiscoveries))
+        return false;
+    if (value.lastBuild !== undefined && !isBuild(value.lastBuild))
+        return false;
+    return true;
+}
+// ------------------------------------------------------------------ profile access
+export function activeProfile(save) {
+    return save.activeProfileId ? save.profiles.find(p => p.id === save.activeProfileId) : undefined;
+}
+export function mostRecentProfile(save) {
+    return activeProfile(save) ?? [...save.profiles].sort((a, b) => b.lastPlayedAtMs - a.lastPlayedAtMs)[0];
+}
+export function updateProfile(save, id, change) {
+    if (!save.profiles.some(p => p.id === id))
+        throw new Error(`Unknown profile ${id}`);
+    return { ...save, profiles: save.profiles.map(p => p.id === id ? change(p) : p) };
+}
+function updateActive(save, change) {
+    const p = activeProfile(save);
+    return p ? updateProfile(save, p.id, change) : undefined;
+}
+export function profileSummaries(save) {
+    return save.profiles.map(p => ({ id: p.id, name: p.name, avatarStyle: p.avatarStyle }));
+}
+/** Completed lab level ids for the active profile, or guest progress when none. */
+export function completedLevelIds(save) {
+    const p = activeProfile(save);
+    if (!p)
+        return save.motionCompletedLevelIds ?? [];
+    return Object.entries(p.levels).filter(([, r]) => r.completed).map(([id]) => id);
+}
+export function currentOpening(save) {
+    const p = activeProfile(save);
+    return p ? { step: p.openingStep, complete: p.openingComplete } : { step: save.openingStep ?? 1, complete: save.openingComplete ?? false };
+}
+export function currentSettings(save) {
+    return activeProfile(save)?.settings ?? save.deviceSettings;
+}
+export function currentAssistance(save) {
+    return activeProfile(save)?.assistance ?? DEFAULT_ASSISTANCE;
+}
+export function currentLastBuild(save) {
+    const p = activeProfile(save);
+    return p ? p.lastBuild : save.lastBuild;
+}
+export function titleVisibility(save) {
+    const hasProfiles = save.profiles.length > 0;
+    const recent = mostRecentProfile(save);
+    // Guest progress that still exists (a build, or opening beats past the first). Deleting the last
+    // inventor clears it, so the title correctly falls back to START BUILDING instead of an empty menu.
+    const guestStarted = save.lastBuild !== undefined || (save.openingStep ?? 1) > 1 || save.openingComplete === true;
+    const returning = guestStarted || hasProfiles;
+    return {
+        startBuilding: !returning,
+        continueGame: returning && (recent !== undefined || guestStarted),
+        profiles: returning && hasProfiles,
+        freeBuild: returning && (recent ? recent.freeBuildUnlocked : save.freeBuildUnlocked),
+        myInventions: returning && (recent ? recent.shelf.length > 0 : save.myInventionsCount > 0)
+    };
+}
+// ------------------------------------------------------------------ mutations (pure)
+export function withBuild(save, lastBuild) {
+    const base = { ...save, firstLaunchCompleted: true };
+    return updateActive(base, p => ({ ...p, lastBuild })) ?? { ...base, lastBuild };
+}
+export function withFirstTest(save, lastBuild) {
+    return withBuild({ ...save, firstTestCompleted: true }, lastBuild);
+}
+export function withOpeningProgress(save, openingStep, openingComplete = false) {
+    const updated = updateActive(save, p => {
+        const complete = p.openingComplete || openingComplete;
+        return {
+            ...p, openingStep, openingComplete: complete, location: complete ? p.location === "OPENING" ? "HUB" : p.location : "OPENING",
+            freeBuildUnlocked: p.freeBuildUnlocked || complete,
+            unlockedParts: complete ? [...new Set([...p.unlockedParts, ...OPENING_STARTER_PARTS])] : p.unlockedParts
+        };
+    });
+    return updated ?? ({ ...save, openingStep, openingComplete: (save.openingComplete ?? false) || openingComplete, freeBuildUnlocked: save.freeBuildUnlocked || openingComplete });
+}
+export function withOpeningMetrics(save, metrics) {
+    const copy = { ...metrics, completedSteps: [...metrics.completedSteps] };
+    return updateActive(save, p => ({ ...p, openingMetrics: copy })) ?? { ...save, openingMetrics: copy };
+}
+/**
+ * Creates an inventor and makes it active. The very first inventor inherits the guest progress made
+ * during the opening (Create Inventor appears after opening beat 3), and the guest slot is cleared.
+ */
+export function withCreatedProfile(save, name, avatarStyle, nowMs = Date.now()) {
+    if (save.profiles.length >= MAX_PROFILES)
+        throw new Error("Profile limit reached");
+    let profile = createProfile(name, avatarStyle, nowMs);
+    const inheritsGuest = save.profiles.length === 0;
+    if (inheritsGuest) {
+        const levels = {};
+        for (const id of save.motionCompletedLevelIds ?? [])
+            levels[id] = { completed: true, stars: ["solve"], completions: 1 };
+        const complete = save.openingComplete ?? false;
+        profile = {
+            ...profile,
+            openingStep: save.openingStep ?? 1, openingComplete: complete,
+            ...(save.openingMetrics ? { openingMetrics: save.openingMetrics } : {}),
+            ...(save.lastBuild ? { lastBuild: save.lastBuild } : {}),
+            levels, discoveries: [...new Set(save.motionDiscoveries ?? [])], settings: { ...save.deviceSettings },
+            freeBuildUnlocked: save.freeBuildUnlocked, location: complete ? "HUB" : "OPENING",
+            unlockedParts: complete ? [...OPENING_STARTER_PARTS] : []
+        };
+        profile = grantRewardsTo(profile, completionRewardIds(save.motionCompletedLevelIds ?? [])).profile;
+    }
+    const base = inheritsGuest
+        ? (() => {
+            const { lastBuild: _lb, openingMetrics: _om, ...rest } = save;
+            return { ...rest, openingStep: 1, openingComplete: false, motionCompletedLevelIds: [], motionDiscoveries: [], freeBuildUnlocked: false, myInventionsCount: 0 };
+        })()
+        : save;
+    return { ...base, profiles: [...base.profiles, profile], activeProfileId: profile.id };
+}
+/** Edit an inventor's nickname and look (the pencil on the inventor card). */
+export function withEditedProfile(save, id, name, avatarStyle) {
+    const style = AVATAR_STYLES.includes(avatarStyle) ? avatarStyle : undefined;
+    return updateProfile(save, id, p => ({ ...p, name: sanitizeProfileName(name), ...(style ? { avatarStyle: style } : {}) }));
+}
+export function withActiveProfile(save, id, nowMs = Date.now()) {
+    return { ...updateProfile(save, id, p => ({ ...p, lastPlayedAtMs: nowMs })), activeProfileId: id };
+}
+export function withoutActiveProfile(save) {
+    const { activeProfileId: _a, ...rest } = save;
+    return rest;
+}
+export function withDeletedProfile(save, id) {
+    const profiles = save.profiles.filter(p => p.id !== id);
+    const next = { ...save, profiles };
+    return save.activeProfileId === id ? withoutActiveProfile(next) : next;
+}
+export function withSettings(save, settings) {
+    if (!validateSettings(settings))
+        throw new Error("Invalid settings");
+    return updateActive(save, p => ({ ...p, settings: { ...settings } })) ?? { ...save, deviceSettings: { ...settings } };
+}
+export function withAssistance(save, assistance) {
+    return updateActive(save, p => ({ ...p, assistance: { ...assistance } })) ?? save;
+}
+export function withLocation(save, location) {
+    return updateActive(save, p => ({ ...p, location })) ?? save;
+}
+/** Legacy M9 entry point: records completed Motion ids + discoveries on the active profile or guest. */
+export function withMotionProgress(save, completedLevelIds, discoveries) {
+    const updated = updateActive(save, p => {
+        const levels = { ...p.levels };
+        for (const id of completedLevelIds) {
+            const prev = levels[id];
+            levels[id] = prev?.completed ? prev : { completed: true, stars: ["solve"], completions: Math.max(1, prev?.completions ?? 0) };
+        }
+        return { ...p, levels, discoveries: [...new Set([...p.discoveries, ...discoveries])] };
+    });
+    return updated ?? { ...save, motionCompletedLevelIds: [...new Set(completedLevelIds)], motionDiscoveries: [...new Set(discoveries)] };
+}
+export function withEntitlement(save, entitlement) {
+    return { ...save, entitlement };
+}
