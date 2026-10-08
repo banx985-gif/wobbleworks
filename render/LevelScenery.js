@@ -46,7 +46,12 @@ export const LEVEL_SCENERY = {
     "flight.through-the-hoops": [S("hoops", 14.4, 8.2, 1.8)],
     "flight.falling-cargo": [S("cargo-parachute", 13.6, 8.2, 1.8)],
     "flight.flying-sprocket": [S("hover-pads", 13.6, 8.2, 2.2)],
-    "flight.safe-landing": [S("cargo-parachute", 3, 8.2, 1.6)]
+    "flight.safe-landing": [S("cargo-parachute", 3, 8.2, 1.6)],
+    // Robot Lab (top-down floor: scenery sits in spare corners of the arena)
+    "robot.press-the-button": [S("robot-gate", 13.5, 3.2, 1.8)],
+    "robot.robot-dance-party": [S("dance-stage", 14.3, 3.4, 1.8)],
+    "robot.carry-the-box": [S("supply-crates", 13.6, 8.3, 1.8)],
+    "robot.automated-factory": [S("supply-crates", 13.8, 8.3, 1.8)]
 };
 /** Picture aspect ratios (width / height), so the layout can be checked without loading pictures. */
 export const SCENERY_ASPECT = {

@@ -23,6 +23,7 @@ export const PART_CARDS = [
     { partId: "circuit.motor", title: "Electric Motor", uses: [{ id: "turn", label: "Turn gears with electricity" }] },
     { partId: "plumb.pipe", title: "Pipe", uses: [{ id: "carry", label: "Carry water" }, { id: "down", label: "Send water downhill" }] },
     { partId: "plumb.valve", title: "Valve", uses: [{ id: "shut", label: "Hold water back" }] },
+    { partId: "robot.bot", title: "Robot", uses: [{ id: "sequence", label: "Follow steps in order" }, { id: "decide", label: "Decide with a sensor" }, { id: "loop", label: "Repeat with a loop" }, { id: "carry", label: "Carry a box" }] },
     { partId: "magnetic.bar", title: "Bar Magnet", uses: [{ id: "pull", label: "Pull without touching" }, { id: "push", label: "Push without touching" }, { id: "lift", label: "Lift metal up" }] }
 ];
 const HEAVY = new Set(["motion.cart", "motion.parcel", "silly.bolt"]);
@@ -270,6 +271,18 @@ export function observePartUses(build, runtime) {
             if (part.definitionId === "circuit.motor" && (runtime.gears.state(part.id)?.runTicks ?? 0) >= 30)
                 add(part.definitionId, "turn");
         }
+    }
+    // Robot Lab: what each robot's program actually did this run.
+    for (const v of runtime.robots.robotViews()) {
+        const mine = (k) => events.filter(e => e.kind === k && e.sourceId === v.id);
+        if (v.done && !v.crashed && mine("ROBOT_MOVED").length && mine("ROBOT_TURNED").length)
+            add("robot.bot", "sequence");
+        if (mine("SENSOR_DECISION").length)
+            add("robot.bot", "decide");
+        if (mine("LOOP_REPEAT").length >= 2)
+            add("robot.bot", "loop");
+        if (mine("BOX_GRABBED").length)
+            add("robot.bot", "carry");
     }
     return uses.filter(u => PART_CARDS.some(c => c.partId === u.partId && c.uses.some(x => x.id === u.useId)));
 }

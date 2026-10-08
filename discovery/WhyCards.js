@@ -1,3 +1,4 @@
+import { blockCount, parseProgram, usesBlock } from "../robots/RobotProgram.js";
 export const WHY_CHOICES = {
     TOO_FAST: { label: "Too fast", icon: "💨" },
     NOT_ENOUGH_FORCE: { label: "Not enough push", icon: "🪶" },
@@ -22,7 +23,11 @@ export const WHY_CHOICES = {
     TOO_HIGH: { label: "Too high to reach", icon: "⛰️" },
     LEAKING: { label: "Leaking", icon: "💧" },
     MISSED: { label: "Missed the target", icon: "🎯" },
-    NO_LIFT: { label: "Nothing holding it up", icon: "🪽" }
+    NO_LIFT: { label: "Nothing holding it up", icon: "🪽" },
+    BAD_TIMING: { label: "Bad timing", icon: "⏱️" },
+    WRONG_TURN: { label: "Wrong turn", icon: "↪️" },
+    TOO_MANY_BLOCKS: { label: "Too many blocks", icon: "🧱" },
+    NO_SENSOR: { label: "Didn't check first", icon: "👀" }
 };
 function tagged(build, tag) { return build.allParts().find(p => p.tags?.includes(tag)); }
 function state(runtime, id) { try {
@@ -38,6 +43,12 @@ function nameOf(part) {
 const m = (v) => `${v.toFixed(1)} m`;
 /** Picks two other answers deterministically so the same failure shows the same card. */
 function choicesFor(reason) {
+    if (["BAD_TIMING", "WRONG_TURN", "TOO_MANY_BLOCKS", "NO_SENSOR"].includes(reason)) {
+        const pool = ["BAD_TIMING", "WRONG_TURN", "TOO_MANY_BLOCKS", "NO_SENSOR", "BLOCKED", "TOO_SLOW"].filter(r => r !== reason);
+        const seed = reason.length;
+        const three = [reason, pool[seed % pool.length], pool[(seed + 2) % pool.length]];
+        return [three[seed % 3], three[(seed + 1) % 3], three[(seed + 2) % 3]];
+    }
     if (["NO_LIFT"].includes(reason)) {
         const pool = ["NO_LIFT", "UNSTABLE", "TOO_FAST", "TOO_HEAVY", "NOT_CONNECTED", "TOO_SLOW"].filter(r => r !== reason);
         const seed = reason.length;
@@ -88,6 +99,9 @@ export function diagnoseRun(level, build, runtime) {
     const flightCard = diagnoseFlight(rules, build, runtime, card);
     if (flightCard)
         return flightCard;
+    const robotCard = diagnoseRobots(rules, build, runtime, card);
+    if (robotCard)
+        return robotCard;
     // Builder Bay: the structure's own measurements.
     const structureCard = diagnoseStructures(rules, build, runtime, card);
     if (structureCard)
@@ -498,6 +512,48 @@ function diagnoseWater(rules, build, runtime, card) {
             return card("NOT_CONNECTED", "No water reached the water wheel, so it never turned.");
         if (rules.some(r => r.kind === "GEAR_OUTPUT"))
             return card("NOT_CONNECTED", "The water wheel turned, but nothing passed its turning on to the machine.");
+    }
+    return undefined;
+}
+/** Robot Lab: only what the robots actually did in this run (truth.robotics.v1). */
+function diagnoseRobots(rules, build, runtime, card) {
+    const r = runtime.robots;
+    if (!r.hasRobots())
+        return undefined;
+    const events = runtime.causalEvents;
+    const tag = (t) => build.allParts().filter(p => p.tags?.includes(t));
+    for (const v of r.robotViews()) {
+        if (v.crashed)
+            return card("BAD_TIMING", "A moving sweeper hit the robot. It went at the wrong moment — try waiting first.");
+        if (v.bumps > 0) {
+            const sensed = events.some(e => e.kind === "SENSOR_DECISION" && e.sourceId === v.id);
+            return card(sensed ? "WRONG_TURN" : "BLOCKED", `The robot bumped into something ${v.bumps === 1 ? "once" : `${v.bumps} times`}. It drove exactly where its program told it to.`);
+        }
+    }
+    for (const rule of rules) {
+        if (rule.kind === "PROGRAM_USES")
+            for (const p of tag(rule.robotTag))
+                if (!usesBlock(parseProgram(p.parameters.program), rule.op))
+                    return card("NO_SENSOR", `This job needs a ${rule.op} block in the program — the robot has to decide for itself.`);
+        if (rule.kind === "ROBOT_AT")
+            for (const p of tag(rule.robotTag)) {
+                const v = r.robot(p.id);
+                if (!v)
+                    continue;
+                const n = blockCount(parseProgram(p.parameters.program));
+                if (rule.maxBlocks !== undefined && n > rule.maxBlocks)
+                    return card("TOO_MANY_BLOCKS", `The program used ${n} blocks. This job allows ${rule.maxBlocks} — a loop could do the repeating.`);
+                if (!n)
+                    return card("NOT_CONNECTED", "The robot had no program, so it didn't move.");
+                if (v.done) {
+                    const goals = tag(rule.zoneTag);
+                    const g = goals[0];
+                    if (g && !goals.some(z => Math.round(z.position.x) === Math.round(v.x) && Math.round(z.position.y) === Math.round(v.y))) {
+                        const off = Math.abs(Math.round(g.position.x) - Math.round(v.x)) + Math.abs(Math.round(g.position.y) - Math.round(v.y));
+                        return card(off <= 2 ? "MISSED" : "WRONG_TURN", `The robot stopped ${off} square${off === 1 ? "" : "s"} away from the flag.`);
+                    }
+                }
+            }
     }
     return undefined;
 }

@@ -2,6 +2,8 @@ import { POWER_HINTS } from "../power/PowerHints.js";
 import { MAGNET_HINTS } from "../magnets/MagnetHints.js";
 import { WATER_HINTS } from "../water/WaterHints.js";
 import { FLIGHT_HINTS } from "../flight/FlightHints.js";
+import { ROBOT_HINTS } from "../robots/RobotHints.js";
+import { describeBlock } from "../robots/BlockEditor.js";
 const g = (definitionId, x, y, rotation = 0) => ({ definitionId, x, y, rotation });
 export const MOTION_HINTS = {
     "motion.roll-with-it": { concept: "Something could ROLL down to the bucket…", usefulParts: ["motion.ramp"], solution: [g("motion.ramp", 3.5, 4, 0.25)], ghostCount: 1 },
@@ -47,8 +49,8 @@ export const BUILDER_HINTS = {
     "builder.collapsing-workshop-roof": { concept: "TEST it first: what gives way? Then support the middle from above and below.", usefulParts: ["builder.beam-metal", "builder.brace", "builder.rope"], solution: [{ definitionId: "builder.beam-metal", x: 6.5, y: 4.5, rotation: 0, length: 3 }, { definitionId: "builder.beam-wood", x: 6.5, y: 5.25, rotation: 0.463648, length: 3.354102 }, { definitionId: "builder.beam-wood", x: 9.5, y: 5.25, rotation: 2.677945, length: 3.354102 }, { definitionId: "builder.brace", x: 8, y: 5.25, rotation: -1.570796, length: 1.5 }, { definitionId: "builder.rope", x: 3.5, y: 3, rotation: 0.785398, length: 4.242641 }, { definitionId: "builder.rope", x: 12.5, y: 3, rotation: 2.356194, length: 4.242641 }], ghostCount: 3, remove: ["roof-2"] }
 };
 /** Every lab's hints, by level id. */
-export const LEVEL_HINTS = { ...MOTION_HINTS, ...GEAR_HINTS, ...BUILDER_HINTS, ...POWER_HINTS, ...MAGNET_HINTS, ...WATER_HINTS, ...FLIGHT_HINTS };
-export { POWER_HINTS, MAGNET_HINTS, WATER_HINTS, FLIGHT_HINTS };
+export const LEVEL_HINTS = { ...MOTION_HINTS, ...GEAR_HINTS, ...BUILDER_HINTS, ...POWER_HINTS, ...MAGNET_HINTS, ...WATER_HINTS, ...FLIGHT_HINTS, ...ROBOT_HINTS };
+export { POWER_HINTS, MAGNET_HINTS, WATER_HINTS, FLIGHT_HINTS, ROBOT_HINTS };
 /** What each tier shows. Tiers are cumulative: Hint 3 still shows the idea and the glowing parts. */
 export function hintView(levelId, level, tier) {
     const h = LEVEL_HINTS[levelId];
@@ -61,6 +63,12 @@ export function hintView(levelId, level, tier) {
     const partLine = parts.length ? "These parts could help — look for the glow!" : (h?.noPartsLine ?? concept);
     if (tier === 2)
         return { tier, line: partLine, glowParts: parts, ghosts: [] };
+    // Robot Lab: show the first blocks of one working program (never the whole program).
+    const firstProgram = h?.programs ? Object.values(h.programs)[0] : undefined;
+    if (firstProgram?.length) {
+        const shown = firstProgram.slice(0, Math.min(2, Math.max(1, firstProgram.length - 1))).map(describeBlock).join(", then ");
+        return { tier, line: `One working program starts like this: ${shown}…`, glowParts: parts, ghosts: [] };
+    }
     const ghosts = h ? h.solution.slice(0, h.ghostCount) : [];
     return { tier, line: ghosts.length ? "Here's a piece of one idea. Drag a real part onto the ghost, then TEST!" : (h?.noPartsLine ?? concept), glowParts: parts, ghosts };
 }

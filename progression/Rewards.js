@@ -173,6 +173,23 @@ export const REWARDS = [
     { id: "avatar.aviator-cap", kind: "AVATAR", title: "Aviator Cap", icon: "🧑‍✈️", description: "Chocks away!" },
     { id: "badge.canyon-flyer", kind: "BADGE", title: "Canyon Flyer", icon: "🛩️", description: "Crossed the workshop canyon and landed softly." },
     { id: "badge.flight-hangar", kind: "BADGE", title: "Flight Hangar Restored", icon: "🏅", description: "Planes are flying again!" },
+    // Robot Lab (M18)
+    { id: "part.robot.bot", kind: "PART", title: "Robot", icon: "🤖", description: "Program it with blocks." },
+    { id: "tool.program-debugger", kind: "TOOL", title: "Program Debugger", icon: "🐞", description: "Shows which block each robot is running — now in Free Build too." },
+    { id: "sticker.first-program", kind: "STICKER", title: "First Program", icon: "🤖", description: "One block, one flag." },
+    { id: "sticker.corner", kind: "STICKER", title: "Round the Bend", icon: "↩️", description: "Turned the corner." },
+    { id: "sticker.patience", kind: "STICKER", title: "Patience", icon: "⏱️", description: "Waited for the right moment." },
+    { id: "sticker.wall-sense", kind: "STICKER", title: "Wall Sense", icon: "🧱", description: "A rule that never bumps." },
+    { id: "sticker.colour-coder", kind: "STICKER", title: "Colour Coder", icon: "🌈", description: "Followed the colours." },
+    { id: "sticker.button-bot", kind: "STICKER", title: "Button Bot", icon: "🔴", description: "Pressed the button." },
+    { id: "sticker.delivery-bot", kind: "STICKER", title: "Delivery Bot", icon: "📦", description: "Delivered the box." },
+    { id: "sticker.factory-bot", kind: "STICKER", title: "Factory Bot", icon: "🏭", description: "Ran the packing cell." },
+    { id: "sticker.route-scientist", kind: "STICKER", title: "Route Scientist", icon: "🔬", description: "Raced two routes fairly." },
+    { id: "prop.disco-ball", kind: "PROP", title: "Disco Ball", icon: "🪩", description: "For robot dance parties." },
+    { id: "sprocket.antenna", kind: "SPROCKET_ACCESSORY", title: "Robot Antenna", icon: "📡", description: "Sprocket receives signals now. Mostly about snacks." },
+    { id: "avatar.coder-visor", kind: "AVATAR", title: "Coder Visor", icon: "🥽", description: "See the code in everything." },
+    { id: "badge.automated-factory", kind: "BADGE", title: "Factory Automator", icon: "🏭", description: "The Automated Factory runs itself." },
+    { id: "badge.robot-lab", kind: "BADGE", title: "Robot Lab Restored", icon: "🏅", description: "The robots are back to work!" },
     { id: "badge.power-lab", kind: "BADGE", title: "Power Lab Restored", icon: "🏅", description: "The lights are on in the Power Lab!" },
     // hidden prototype lab key pieces — one from a silly mission in each of the first three labs (exploration, never stars)
     { id: "key.prototype-1", kind: "KEY_PIECE", title: "Strange Key Piece", icon: "🗝️", description: "A piece of something. It hums." },
@@ -265,7 +282,19 @@ export const MISSION_REWARDS = Object.freeze({
     "flight.which-wing-flies-farther": { onComplete: ["sticker.wing-scientist"] },
     "flight.flying-sprocket": { onComplete: ["prop.toy-plane"], onAllStars: ["sprocket.flying-goggles"] },
     "flight.the-canyon-flyer": { onComplete: ["badge.canyon-flyer", "avatar.aviator-cap"] },
-    "flight.falling-cargo": { onComplete: ["badge.flight-hangar"] }
+    "flight.falling-cargo": { onComplete: ["badge.flight-hangar"] },
+    "robot.move-forward": { onComplete: ["sticker.first-program", "part.robot.bot"] },
+    "robot.turn-the-corner": { onComplete: ["sticker.corner"] },
+    "robot.wait-for-it": { onComplete: ["sticker.patience", "tool.program-debugger"] },
+    "robot.avoid-the-wall": { onComplete: ["sticker.wall-sense"] },
+    "robot.follow-the-colour": { onComplete: ["sticker.colour-coder"] },
+    "robot.press-the-button": { onComplete: ["sticker.button-bot"] },
+    "robot.carry-the-box": { onComplete: ["sticker.delivery-bot"] },
+    "robot.factory-robot": { onComplete: ["sticker.factory-bot"] },
+    "robot.which-route-is-faster": { onComplete: ["sticker.route-scientist"] },
+    "robot.robot-dance-party": { onComplete: ["prop.disco-ball"], onAllStars: ["sprocket.antenna"] },
+    "robot.automated-factory": { onComplete: ["badge.automated-factory", "avatar.coder-visor"] },
+    "robot.robot-traffic-jam": { onComplete: ["badge.robot-lab"] }
 });
 /** Rewards owed for missions already completed (used when old saves or guest progress move into a profile). */
 export function completionRewardIds(levelIds) {
@@ -368,7 +397,19 @@ export const MISSION_STARS = Object.freeze({
     "flight.which-wing-flies-farther": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "flight.lift", label: "LIFT — see wings hold it up" } },
     "flight.flying-sprocket": { efficient: budget(4), advanced: { kind: "DISCOVERY", discoveryId: "secret.flight-sprocket", label: "SKY PUPPY — through a hoop" } },
     "flight.the-canyon-flyer": { efficient: budget(4), advanced: wild(3) },
-    "flight.falling-cargo": { efficient: budget(2), advanced: wild(2) }
+    "flight.falling-cargo": { efficient: budget(2), advanced: wild(2) },
+    "robot.move-forward": { efficient: nothingAdded, advanced: { kind: "DISCOVERY", discoveryId: "robot.literal", label: "TOO FAR — see the robot do exactly what it's told" } },
+    "robot.turn-the-corner": { efficient: nothingAdded, advanced: { kind: "DISCOVERY", discoveryId: "robot.sequence", label: "IN ORDER — drive, turn, drive" } },
+    "robot.wait-for-it": { efficient: nothingAdded, advanced: { kind: "DISCOVERY", discoveryId: "robot.timing", label: "PERFECT TIMING — wait, then go" } },
+    "robot.avoid-the-wall": { efficient: nothingAdded, advanced: { kind: "DISCOVERY", discoveryId: "robot.condition", label: "SMART RULE — IF wall, turn; ELSE go" } },
+    "robot.follow-the-colour": { efficient: nothingAdded, advanced: { kind: "DISCOVERY", discoveryId: "combo.robot-conveyor", label: "OLD MEETS NEW — start the old conveyor" } },
+    "robot.press-the-button": { efficient: nothingAdded, advanced: { kind: "DISCOVERY", discoveryId: "robot.actuator", label: "PRESS — use the pusher" } },
+    "robot.carry-the-box": { efficient: nothingAdded, advanced: { kind: "DISCOVERY", discoveryId: "robot.actuator", label: "GRIPPER — grab and drop" } },
+    "robot.factory-robot": { efficient: nothingAdded, advanced: { kind: "DISCOVERY", discoveryId: "combo.robot-factory", label: "PACKED — the machine packs a box" } },
+    "robot.which-route-is-faster": { efficient: nothingAdded, advanced: { kind: "DISCOVERY", discoveryId: "robot.sequence", label: "TWO PROGRAMS — race them" } },
+    "robot.robot-dance-party": { efficient: nothingAdded, advanced: { kind: "DISCOVERY", discoveryId: "secret.robot-dance", label: "DISCO — six beats" } },
+    "robot.automated-factory": { efficient: nothingAdded, advanced: wild(3) },
+    "robot.robot-traffic-jam": { efficient: nothingAdded, advanced: wild(2) }
 });
 export function evaluateStars(levelId, evidence) {
     const stars = ["solve"];

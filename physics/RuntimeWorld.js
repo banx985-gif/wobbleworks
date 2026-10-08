@@ -8,6 +8,7 @@ import { CircuitSystem } from "../power/CircuitSystem.js";
 import { MagnetSystem } from "../magnets/MagnetSystem.js";
 import { FluidSystem } from "../water/FluidSystem.js";
 import { FlightSystem } from "../flight/FlightSystem.js";
+import { RobotSystem } from "../robots/RobotSystem.js";
 export class RuntimeWorld {
     snapshotSignature;
     physics = new PhysicsWorld();
@@ -23,6 +24,8 @@ export class RuntimeWorld {
     water;
     /** Flight Hangar (M17): gliders and their wings, tails, propellers, balloons and parachutes; fans' wind. */
     flight;
+    /** Robot Lab (M18): programmed robots on the top-down arena floor. */
+    robots;
     /** Buttons held down by a finger during this TEST, and switches flipped since the last tick. */
     fingerPressed = new Set();
     flips = new Set();
@@ -64,6 +67,7 @@ export class RuntimeWorld {
         this.structures = new StructureSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.gears = new GearSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined, this.snapshot.connections, extraLoads);
         this.circuits = new CircuitSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
+        this.robots = new RobotSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.flight = new FlightSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.water = new FluidSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.magnets = new MagnetSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
@@ -101,7 +105,11 @@ export class RuntimeWorld {
         this.pipeline.on("TICK_BEGIN", () => { this.pendingEvents = []; });
         this.pipeline.on("NETWORK_TOPOLOGY", ({ dt }) => { this.resolveNetworks(); this.stepCircuits(dt); });
         this.pipeline.on("PRE_PHYSICS_SENSORS", () => this.sampleSensors());
-        this.pipeline.on("LOGIC_EVALUATION", () => this.evaluateLogic());
+        this.pipeline.on("LOGIC_EVALUATION", ({ dt }) => { this.evaluateLogic(); if (this.robots.hasRobots()) {
+            this.robots.step(dt, id => this.circuits.motorDrive(id));
+            for (const e of this.robots.drainEvents())
+                this.event(e.kind, e.sourceId, e.targetId, e.data);
+        } });
         this.pipeline.on("ACTUATOR_RESOLUTION", () => this.resolveActuators());
         this.pipeline.on("FORCE_AND_COUPLING", ({ dt }) => { this.stepMagnets(dt); this.applyJets(); this.stepFlight(dt); this.applyCouplings(); this.gears.step(dt); this.applyGearCouplings(); this.stepStructures(dt); });
         this.pipeline.on("PHYSICS_STEP", ({ dt }) => this.physics.step(dt));
@@ -142,6 +150,8 @@ export class RuntimeWorld {
     /** Is this button held down: by a finger, by Bolt's scheduled press, or by something resting on it? */
     buttonPressed(id) {
         if (this.fingerPressed.has(id))
+            return true;
+        if (this.robots.linkPressed(id))
             return true;
         const part = this.snapshot.parts.find(p => p.id === id);
         if (!part)

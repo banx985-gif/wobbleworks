@@ -1,4 +1,8 @@
 import { isMagnetic } from "../magnets/MagnetSystem.js";
+/** Does a program contain this block (with a sensor starting with the prefix, for IF/UNTIL)? */
+function programUses(blocks, op, sensorPrefix) {
+    return blocks.some(b => (b.op === op && (!sensorPrefix || ((b.op === "IF" || b.op === "UNTIL") && b.sensor.startsWith(sensorPrefix)))) || ((b.op === "REPEAT" || b.op === "UNTIL") && programUses(b.body, op, sensorPrefix)) || (b.op === "IF" && (programUses(b.then, op, sensorPrefix) || programUses(b.else, op, sensorPrefix))));
+}
 function tagged(build, tag) {
     return build.allParts().filter(part => part.tags?.includes(tag));
 }
@@ -229,6 +233,38 @@ export function evaluateOutcomeRule(rule, build, runtime) {
             return false;
         return Math.max(da, db) / Math.min(da, db) >= rule.minRatio;
     }
+    if (rule.kind === "ROBOT_AT" || rule.kind === "ROBOT_NO_CRASH" || rule.kind === "ROBOT_RACE") {
+        const zoneCells = (tag) => tagged(build, tag).map(z => `${Math.round(z.position.x)},${Math.round(z.position.y)}`);
+        if (rule.kind === "ROBOT_AT") {
+            const cells = new Set(zoneCells(rule.zoneTag));
+            const bots = tagged(build, rule.robotTag);
+            return bots.length > 0 && bots.every(b => { const v = runtime.robots.robot(b.id); return v !== undefined && v.done && !v.crashed && cells.has(`${Math.round(v.x)},${Math.round(v.y)}`) && (rule.maxBlocks === undefined || v.blocks <= rule.maxBlocks); });
+        }
+        if (rule.kind === "ROBOT_NO_CRASH")
+            return tagged(build, rule.robotTag).every(b => { const v = runtime.robots.robot(b.id); return v !== undefined && !v.crashed && v.bumps <= (rule.maxBumps ?? 0); });
+        const a = tagged(build, rule.aTag)[0], b = tagged(build, rule.bTag)[0];
+        if (!a || !b)
+            return false;
+        const va = runtime.robots.robot(a.id), vb = runtime.robots.robot(b.id);
+        if (!va?.done || !vb?.done || va.crashed || vb.crashed || va.doneAt === undefined || vb.doneAt === undefined)
+            return false;
+        return Math.max(va.doneAt, vb.doneAt) / Math.max(0.01, Math.min(va.doneAt, vb.doneAt)) >= rule.minRatio;
+    }
+    if (rule.kind === "BOX_AT") {
+        const cells = new Set(tagged(build, rule.zoneTag).map(z => `${Math.round(z.position.x)},${Math.round(z.position.y)}`));
+        const boxes = tagged(build, rule.boxTag);
+        return boxes.length > 0 && boxes.every(b => { const v = runtime.robots.box(b.id); return v !== undefined && !v.carried && cells.has(`${v.x},${v.y}`); });
+    }
+    if (rule.kind === "PROGRAM_USES")
+        return tagged(build, rule.robotTag).every(b => programUses(runtime.robots.programOf(b.id), rule.op, rule.sensorPrefix));
+    if (rule.kind === "BUTTON_PRESSED") {
+        const bs = tagged(build, rule.buttonTag);
+        return bs.length > 0 && bs.every(b => runtime.robots.isPressed(b.id));
+    }
+    if (rule.kind === "PRODUCTS_MADE")
+        return runtime.robots.productCount() >= rule.count;
+    if (rule.kind === "DANCE_SCORE")
+        return runtime.robots.danceScore() >= rule.minSteps;
     if (rule.kind === "MECHANISM_FAMILY_COUNT") {
         const present = new Set(build.allParts().filter(part => rule.definitionIds.includes(part.definitionId)).map(part => part.definitionId));
         return present.size >= rule.minimum;

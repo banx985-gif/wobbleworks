@@ -96,6 +96,18 @@ export const DISCOVERIES = [
     { id: "combo.flight-battery", kind: "COMBINATION", title: "Glide home", line: "The battery ran out and the wings glided it down.", art: "icon.battery", truthContractId: "truth.flight.v1" },
     { id: "secret.flight-loop", kind: "SECRET", title: "Loop-the-Loop", line: "Whoa — it flipped right over! (Tails help with that.)", art: "icon.rotate", truthContractId: "truth.flight.v1" },
     { id: "secret.flight-sprocket", kind: "SECRET", title: "Sky Puppy", line: "Sprocket floated through a hoop. Best day ever.", art: "icon.balloon-rainbow", truthContractId: "truth.flight.v1" },
+    // Robot Lab (M18) — every one measured by the RobotSystem (truth.robotics.v1)
+    { id: "robot.sequence", kind: "CONCEPT", title: "Programs run in order", line: "A robot does its blocks one after another, exactly as written.", art: "icon.robot", truthContractId: "truth.robotics.v1" },
+    { id: "robot.sensor", kind: "CONCEPT", title: "Sensors tell the program things", line: "A sensor checked the world while the program ran.", art: "icon.robot-idea", truthContractId: "truth.robotics.v1" },
+    { id: "robot.condition", kind: "CONCEPT", title: "IF / ELSE chooses", line: "An IF block did one thing when the sensor said yes, another when it said no.", art: "icon.chip", truthContractId: "truth.robotics.v1" },
+    { id: "robot.loop", kind: "CONCEPT", title: "Loops repeat", line: "A loop ran the same blocks again and again.", art: "icon.rotate", truthContractId: "truth.robotics.v1" },
+    { id: "robot.timing", kind: "CONCEPT", title: "Good timing", line: "Waiting for the right moment got the robot safely past.", art: "icon.speed", truthContractId: "truth.robotics.v1" },
+    { id: "robot.actuator", kind: "CONCEPT", title: "Robots act with actuators", line: "A gripper or a pusher let the robot change the world.", art: "icon.robot-claw", truthContractId: "truth.robotics.v1" },
+    { id: "robot.literal", kind: "CONCEPT", title: "Robots do exactly what you say", line: "BONK. The program said go, so it went — wall or no wall.", art: "icon.robot-tracks", truthContractId: "truth.robotics.v1" },
+    { id: "combo.robot-conveyor", kind: "COMBINATION", title: "Robot + conveyor", line: "A robot switched on the old conveyor.", art: "robot.rails", truthContractId: "truth.robotics.v1" },
+    { id: "combo.robot-factory", kind: "COMBINATION", title: "Production line", line: "Robots and machines packed a box together.", art: "robot.arm", truthContractId: "truth.robotics.v1" },
+    { id: "secret.robot-dance", kind: "SECRET", title: "Robot Disco", line: "Six beats! The robots can really move.", art: "level.dance-pads", truthContractId: "truth.robotics.v1" },
+    { id: "secret.robot-dizzy", kind: "SECRET", title: "Dizzy Robot", line: "Eight turns in one program. The robot needs a sit down.", art: "icon.rotate", truthContractId: "truth.robotics.v1" },
     { id: "secret.sky-tower", kind: "SECRET", title: "Sky Scraper", line: "A tower so tall it nearly touched the ceiling — and it stood firm!", art: "builder.beam-metal", truthContractId: "truth.structures.v1" }
 ];
 export function discoveryById(id) { return DISCOVERIES.find(d => d.id === id); }

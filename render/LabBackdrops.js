@@ -126,6 +126,25 @@ THEMES["flight-hangar"] = { title: "FLIGHT HANGAR", top: "#a5d8ff", bottom: "#d0
         c.fill();
         c.restore();
     } };
+/** Robot Lab: a bright test floor seen from above (the arena grid is drawn on top by the robot renderer). */
+THEMES["robot-lab"] = { title: "ROBOT LAB", top: "#0ca678", bottom: "#38d9a9", wall: "#63e6be", floor: "#20c997", accent: "#12b886", topDown: true, motif: c => {
+        c.fillStyle = "#e6fcf5";
+        c.fillRect(50, 50, 1500, 800);
+        c.strokeStyle = "#96f2d7";
+        c.lineWidth = 2;
+        for (let x = 50; x <= 1550; x += 100) {
+            c.beginPath();
+            c.moveTo(x, 50);
+            c.lineTo(x, 850);
+            c.stroke();
+        }
+        for (let y = 50; y <= 850; y += 100) {
+            c.beginPath();
+            c.moveTo(50, y);
+            c.lineTo(1550, y);
+            c.stroke();
+        }
+    } };
 export function hasLabBackdrop(labId) { return labId in THEMES; }
 export function drawLabBackdrop(c, labId, time) {
     const th = THEMES[labId];
@@ -136,6 +155,21 @@ export function drawLabBackdrop(c, labId, time) {
     g.addColorStop(1, th.bottom);
     c.fillStyle = g;
     c.fillRect(0, 0, 1600, 820);
+    if (th.topDown) {
+        th.motif(c, time);
+        c.fillStyle = "#ffffffdd";
+        c.strokeStyle = INK;
+        c.lineWidth = 3;
+        c.beginPath();
+        c.roundRect(60, 6, 220, 38, 14);
+        c.fill();
+        c.stroke();
+        c.fillStyle = INK;
+        c.textAlign = "center";
+        c.font = "900 24px system-ui";
+        c.fillText(th.title, 170, 34);
+        return;
+    }
     c.fillStyle = th.wall;
     c.fillRect(0, 130, 1600, 570);
     th.motif(c, time);

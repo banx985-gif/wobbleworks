@@ -37,6 +37,8 @@ import { aeroBehaviour, craftSnap, fanBehaviour, isCraft } from "./flight/Flight
 import { LAB_MODULES, evaluateLabMission, labModule } from "./labs/Labs.js";
 import { loadLabLevels } from "./labs/LabModule.js";
 import { hasLabBackdrop } from "./render/LabBackdrops.js";
+import { renderBlockEditor } from "./robots/BlockEditor.js";
+import { parseProgram } from "./robots/RobotProgram.js";
 import { InputManager } from "./input/InputManager.js";
 import { CanvasRenderer } from "./render/CanvasRenderer.js";
 import { CameraController } from "./render/CameraController.js";
@@ -970,7 +972,7 @@ function startFreeBuild(from) {
     motionObjective.textContent = "Build anything. TEST it. Change it. TEST again.";
     document.querySelector(".motion-badge").textContent = "WORKSHOP";
     resetGuidance(undefined);
-    const scanner = (p?.unlockedTools.includes("tool.force-scanner") || p?.unlockedTools.includes("tool.spin-scanner") || p?.unlockedTools.includes("tool.stress-scanner") || p?.unlockedTools.includes("tool.circuit-scanner") || p?.unlockedTools.includes("tool.magnet-scanner") || p?.unlockedTools.includes("tool.flow-scanner") || p?.unlockedTools.includes("tool.air-scanner")) ?? false;
+    const scanner = (p?.unlockedTools.includes("tool.force-scanner") || p?.unlockedTools.includes("tool.spin-scanner") || p?.unlockedTools.includes("tool.stress-scanner") || p?.unlockedTools.includes("tool.circuit-scanner") || p?.unlockedTools.includes("tool.magnet-scanner") || p?.unlockedTools.includes("tool.flow-scanner") || p?.unlockedTools.includes("tool.air-scanner") || p?.unlockedTools.includes("tool.program-debugger")) ?? false;
     forceScannerButton.textContent = "Scanner";
     forceScannerButton.classList.toggle("hidden", !scanner);
     forceScannerButton.classList.remove("force-on");
@@ -1950,7 +1952,7 @@ input.on((event, sample) => {
                 panStart = undefined;
                 return;
             }
-            if (dropped?.parameters.locked === true) {
+            if (dropped?.parameters.locked === true || dropped?.parameters.pinned === true) {
                 dragStart = undefined;
                 dragPreview = undefined;
                 panStart = undefined;
@@ -1970,9 +1972,50 @@ input.on((event, sample) => {
         panStart = undefined;
     }
 });
+/** Robot Lab (M18): the block editor for the selected robot. Edits go through the build (undo + save see them). */
+const programPanel = document.querySelector("#program-panel");
+const programState = { selected: undefined };
+let programRobotId;
+let programPanelKey = "";
+function updateProgramPanel() {
+    if (selectedId && !testMode && build.getPart(selectedId)?.definitionId === "robot.bot" && selectedId !== programRobotId) {
+        programRobotId = selectedId;
+        programState.selected = undefined;
+    }
+    const part = programRobotId ? build.getPart(programRobotId) : undefined;
+    if (!part || part.definitionId !== "robot.bot" || !gameplayAllowed()) {
+        if (programRobotId && !part)
+            programRobotId = undefined;
+        if (!programPanel.classList.contains("hidden")) {
+            programPanel.classList.add("hidden");
+            programPanelKey = "";
+        }
+        return;
+    }
+    const running = testMode ? tests.active()?.robots.robot(part.id)?.current : undefined;
+    const key = [part.id, String(part.parameters.program ?? ""), programState.selected ?? "", testMode, running?.join(".") ?? ""].join("|");
+    if (key === programPanelKey)
+        return;
+    programPanelKey = key;
+    programPanel.classList.remove("hidden");
+    const robotName = (part.tags ?? []).find(t => t !== "robot")?.replace(/^robot[-.]?/, "") || "Robot";
+    renderBlockEditor(programPanel, parseProgram(part.parameters.program), programState, next => {
+        if (testMode) {
+            programPanelKey = "";
+            return;
+        }
+        const text = JSON.stringify(next);
+        if (text !== String(part.parameters.program ?? "")) {
+            build.reshape(part.id, { parameters: { program: text } });
+            sfx(600, .03);
+        }
+        programPanelKey = "";
+    }, { ...(running ? { running } : {}), locked: testMode, robotName: robotName.charAt(0).toUpperCase() + robotName.slice(1), close: () => { programRobotId = undefined; selectedId = undefined; programPanelKey = ""; programPanel.classList.add("hidden"); } });
+}
 function render() {
     maybeCompleteOpeningChallenge();
     maybeCompleteMotionMission();
+    updateProgramPanel();
     renderer.begin(camera);
     if (labActive) {
         if (currentLabId === "gear-garage")

@@ -410,3 +410,28 @@ html.high-contrast { --ink:#000; --panel:#fff; --accent:#006b1b; --danger:#a0000
 .beam-icon.wire{background:radial-gradient(ellipse at 50% 0,transparent 55%,#203040 56% 64%,transparent 65%)}
 .emoji-icon{display:block;width:40px;height:40px;font-size:30px;line-height:40px;text-align:center;pointer-events:none}
 .beam-icon.pipe{background:linear-gradient(0deg,transparent 30%,#203040 30% 34%,#4dabf7 34% 66%,#203040 66% 70%,transparent 70%)}.beam-icon.pipe.narrow{background:linear-gradient(0deg,transparent 40%,#203040 40% 44%,#4dabf7 44% 56%,#203040 56% 60%,transparent 60%)}
+
+/* Robot Lab block editor (M18) */
+.program-panel { position: absolute; right: 12px; top: 12px; bottom: 12px; width: min(360px, 44vw); overflow-y: auto; background: #fffffff2; border: 4px solid #203040; border-radius: 20px; padding: 10px; box-shadow: 0 8px 24px #0004; z-index: 6; display: flex; flex-direction: column; gap: 8px; }
+.program-panel.hidden { display: none; }
+.prog-head { display: flex; align-items: center; gap: 8px; }
+.prog-head strong { flex: 1; font-size: 18px; }
+.prog-count { font-weight: 800; color: #495057; }
+.prog-close { min-width: 56px; min-height: 56px; border-radius: 16px; font-size: 22px; }
+.prog-palette { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.prog-pal { min-height: 56px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 2px; padding: 2px; border-radius: 14px; font-weight: 800; font-size: 12px; line-height: 1.1; background: #e6fcf5; border: 3px solid #12b886; }
+.prog-pal .ico { font-size: 22px; }
+.prog-list { display: flex; flex-direction: column; gap: 4px; }
+.prog-block { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; background: #e7f5ff; border: 3px solid #4dabf7; border-radius: 14px; padding: 2px; }
+.prog-block.op-repeat, .prog-block.op-until { background: #fff4e6; border-color: #ff922b; }
+.prog-block.op-if { background: #f3f0ff; border-color: #845ef7; }
+.prog-block.op-grab, .prog-block.op-drop, .prog-block.op-press { background: #ebfbee; border-color: #40c057; }
+.prog-block.sel { outline: 4px solid #ffd43b; }
+.prog-block.running { box-shadow: 0 0 0 5px #ff6b6b; }
+.prog-label { flex: 1; min-height: 56px; text-align: left; font-weight: 800; font-size: 16px; background: transparent; border: 0; }
+.prog-tools { display: flex; flex-wrap: wrap; gap: 4px; }
+.prog-tools button { min-width: 56px; min-height: 56px; border-radius: 12px; font-size: 18px; font-weight: 900; }
+.prog-tools button.danger { background: #ffe3e3; }
+.prog-slot { min-height: 56px; text-align: left; font-style: italic; color: #495057; background: #f8f9fa; border: 3px dashed #adb5bd; border-radius: 12px; }
+.prog-slot.sel { outline: 4px solid #ffd43b; }
+.prog-empty { color: #495057; font-weight: 700; }
