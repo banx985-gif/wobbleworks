@@ -5,6 +5,7 @@ import { boltArt, boltPoseUrl, renderCampusMap, renderHub, renderLocker, renderP
 import { renderInventions, showInventionDetail, showInventionList } from "./hub/InventionScreens.js";
 import { contentChecksum, contentOf, deleteInvention, duplicateInvention, inventionById, latestVersion, liveThumbKeys, renameInvention, resolveVersion, restoreAsNewVersion, saveNewInvention, saveVersion, shelfItemFor, showOnShelf, suggestedName, takeOffShelf, thumbKey, tidySuggestion, tidyVersions } from "./inventions/Inventions.js";
 import { RunMeter } from "./inventions/RunMeter.js";
+import { followPoint, followTargets, ReplayPlayer, ReplayRecorder } from "./replay/ReplaySystem.js";
 import { drawPhotoBackground, PhotoMode, photoStickers, thumbnailFrom } from "./photo/PhotoMode.js";
 import { renderParentDashboard, renderParentGate } from "./parent/ParentArea.js";
 import { OWNERSHIP_CHILD_COPY, regionById, routeToRegion } from "./progression/Campus.js";
@@ -420,6 +421,8 @@ function loadMission(id) {
     lastRun = undefined;
     runMeter = undefined;
     invSave.classList.add("hidden");
+    endReplay();
+    lastRecording = undefined;
     const level = labLevels.get(labId)?.get(id);
     if (!level) {
         loadingError.textContent = `${lab.title} content is missing: ${id}.`;
@@ -473,6 +476,8 @@ function showMotionResult(success, body, stars = [], newStars = [], rewards = []
     motionBackButton.textContent = resultReturnsToHub ? "Workshop" : labDef().title;
     whyButton.classList.toggle("hidden", success || !lastWhy);
     keepBuildingButton.classList.toggle("hidden", success);
+    watchReplayButton.classList.toggle("hidden", !recorder || recorder.length < 30);
+    watchReplayButton.textContent = !success && recorder?.markers.length ? "🎬 See where it went wrong" : "🎬 Watch replay";
     if (success) {
         const labels = { solve: "Solved", efficient: "Tiny machine", advanced: "Wild invention" };
         for (const id of ["solve", "efficient", "advanced"]) {
@@ -771,6 +776,11 @@ function stopToBuild() {
             lastRun = { checksum: runMeter.buildChecksum, metrics: m };
         runMeter = undefined;
     }
+    if (recorder && recorder.length > 30)
+        lastRecording = recorder;
+    recorder = undefined;
+    setSlow(false);
+    setFollow(undefined);
     if (activeLevel && labOfLevel(activeLevel.id) === CHAIN_WORKSHOP.id && !resultShown)
         noteChainRun();
     tests.stop();
@@ -901,6 +911,8 @@ function leaveGameplay() {
     lastRun = undefined;
     runMeter = undefined;
     invSave.classList.add("hidden");
+    endReplay();
+    lastRecording = undefined;
     currentRoom = undefined;
     sandboxBar.classList.add("hidden");
     sandboxDrawer.classList.add("hidden");
@@ -1945,7 +1957,7 @@ document.querySelector("#setting-snap").addEventListener("change", event => {
     void commit(withAssistance(appSave, { ...currentAssistance(appSave), snapAssist: event.target.checked }));
 });
 document.querySelectorAll("[data-part]").forEach(button => button.addEventListener("click", () => {
-    if (testMode || !gameplayAllowed())
+    if (testMode || replayer || !gameplayAllowed())
         return;
     if (!roomForMore(1))
         return;
@@ -1966,18 +1978,26 @@ ui.test.addEventListener("click", () => {
         return;
     if (openingActive)
         openingDirector.noteTest(now());
+    const testSnap = build.snapshot();
     telemetry.inc("testPresses");
-    tests.start(build.snapshot());
+    tests.start(testSnap);
     testMode = true;
     selectedId = undefined;
     ui.mode.textContent = "TEST";
     sfx(700, 0.06);
-    runMeter = new RunMeter(contentChecksum(contentOf(build.snapshot())));
+    runMeter = new RunMeter(contentChecksum(contentOf(testSnap)));
+    // M25: record the run (the build + every tap) so it can be replayed exactly.
+    recorder = openingActive || exp ? undefined : new ReplayRecorder(testSnap, contentChecksum(contentOf(testSnap)));
+    lastRecording = undefined;
     if (exp)
         beginTrial();
     void persistCurrentBuild(true).catch(() => undefined);
 });
 ui.stop.addEventListener("click", () => {
+    if (replayer) {
+        endReplay();
+        return;
+    }
     if (!gameplayAllowed())
         return;
     if (openingActive)
@@ -1999,7 +2019,10 @@ ui.stop.addEventListener("click", () => {
     stopToBuild();
     sfx(360, 0.04);
 });
-ui.pause.addEventListener("click", () => { if (testMode && gameplayAllowed())
+ui.pause.addEventListener("click", () => { if (replayer) {
+    replayer.paused = !replayer.paused;
+    return;
+} if (testMode && gameplayAllowed())
     tests.togglePause(); });
 ui.menu.addEventListener("click", () => { if (gameplayAllowed())
     openPause(); });
@@ -2120,18 +2143,24 @@ function testModeTouch(event, sample) {
         if (role === "BUTTON") {
             fingerButton = hit.id;
             runtime.pressButton(hit.id, true);
+            recorder?.noteInput(runtime.tick, "PRESS", hit.id);
         }
-        else
+        else {
             runtime.flipSwitch(hit.id);
+            recorder?.noteInput(runtime.tick, "FLIP", hit.id);
+        }
         sfx(role === "BUTTON" ? 520 : 680, .04);
         buzz(15);
     }
     else if (event !== "move" && fingerButton) {
         runtime.pressButton(fingerButton, false);
+        recorder?.noteInput(runtime.tick, "RELEASE", fingerButton);
         fingerButton = undefined;
     }
 }
 input.on((event, sample) => {
+    if (replayer)
+        return; // replays are watch-only
     if (testMode && gameplayAllowed()) {
         testModeTouch(event, sample);
         return;
@@ -2488,7 +2517,7 @@ function showPrompt() { if (!currentRoom || promptsHidden) {
 document.querySelector("#btn-prompt-next").addEventListener("click", () => { promptIndex++; showPrompt(); });
 document.querySelector("#btn-prompt-close").addEventListener("click", () => { promptsHidden = true; showPrompt(); });
 function openDrawer(kind) {
-    if (!currentRoom || testMode)
+    if (!currentRoom || testMode || replayer)
         return;
     if (!sandboxDrawer.classList.contains("hidden") && sandboxDrawer.dataset.kind === kind) {
         sandboxDrawer.classList.add("hidden");
@@ -2755,10 +2784,223 @@ const photo = new PhotoMode({
 });
 photoButton.addEventListener("click", () => { if (!gameplayAllowed())
     return; selectedId = undefined; invSave.classList.add("hidden"); photo.enter(); });
+// ---------------------------------------------------------------- Replay, slow motion & machine camera (M25)
+const replayBar = document.querySelector("#replay-bar"), replayFill = document.querySelector("#replay-fill"), replayMarks = document.querySelector("#replay-marks"), replayTime = document.querySelector("#replay-time");
+const replayPlay = document.querySelector("#replay-play"), replayProblem = document.querySelector("#replay-problem");
+const replayButton = document.querySelector("#btn-replay"), slowButton = document.querySelector("#btn-slow"), followButton = document.querySelector("#btn-follow"), followMenu = document.querySelector("#follow-menu");
+const watchReplayButton = document.querySelector("#btn-watch-replay");
+/** The TEST being recorded right now, and the last finished one (kept while the build is unchanged). */
+let recorder, lastRecording;
+let replayer;
+let replayNote = "";
+let markerIndex = 0;
+let slowMo = false;
+let following;
+let zoomBeforeFollow = 1;
+const FOLLOW_ICONS = { BALL: "⚽", BOLT: "🤖", ROBOT: "🦾", VEHICLE: "🚗", PART: "🔩" };
+/** Slow motion slows the clock; every physics step stays exactly the same size, so results never change. */
+function setSlow(on) { slowMo = on; clock.setSpeed(on ? 0.25 : 1); slowButton.classList.toggle("on", on); slowButton.setAttribute("aria-pressed", String(on)); }
+function setFollow(partId, announce = true) {
+    if (!partId && !following)
+        return;
+    if (partId && !following)
+        zoomBeforeFollow = camera.zoom;
+    following = partId;
+    followMenu.classList.add("hidden");
+    followButton.classList.toggle("on", Boolean(partId));
+    if (partId) {
+        camera.setZoom(Math.max(camera.zoom, 1.6));
+        if (announce)
+            toast(`Following the ${registry.get(build.getPart(partId)?.definitionId ?? "motion.ball").displayName}.`);
+    }
+    else
+        camera.setZoom(zoomBeforeFollow);
+}
+function updateFollowCamera() {
+    if (!following)
+        return;
+    const rt = replayer ? replayer.runtime : tests.active();
+    if (!rt)
+        return;
+    const p = followPoint(rt, following);
+    if (p)
+        camera.centerOn(p.x * 100, p.y * 100, 0.18);
+}
+function openFollowMenu() {
+    const rt = replayer ? replayer.runtime : tests.active();
+    if (!rt)
+        return;
+    if (!followMenu.classList.contains("hidden")) {
+        followMenu.classList.add("hidden");
+        return;
+    }
+    followMenu.replaceChildren();
+    const head = document.createElement("strong");
+    head.textContent = "🎥 Follow with the camera";
+    followMenu.append(head);
+    const list = followTargets(rt, build.allParts());
+    if (!list.length) {
+        const p = document.createElement("p");
+        p.textContent = "Nothing is moving yet.";
+        followMenu.append(p);
+    }
+    for (const t of list) {
+        const b = document.createElement("button");
+        b.textContent = `${FOLLOW_ICONS[t.kind]} ${registry.get(build.getPart(t.partId).definitionId).displayName}`;
+        b.classList.toggle("on", following === t.partId);
+        b.addEventListener("click", () => setFollow(t.partId));
+        followMenu.append(b);
+    }
+    if (following) {
+        const b = document.createElement("button");
+        b.textContent = "✕ Stop following";
+        b.addEventListener("click", () => setFollow(undefined));
+        followMenu.append(b);
+    }
+    followMenu.classList.remove("hidden");
+}
+/** A recording can be replayed only while the build on screen is exactly the build that was tested. */
+function replayAvailable() {
+    if (!lastRecording || testMode || replayer || exp || openingActive || !(labActive || freeBuildActive))
+        return undefined;
+    return contentChecksum(contentOf(build.snapshot())) === lastRecording.buildChecksum ? lastRecording : undefined;
+}
+function startReplay(toProblem = false) {
+    if (testMode)
+        stopToBuild();
+    const rec = replayAvailable();
+    if (!rec) {
+        toast("Change nothing and TEST again to make a new replay.");
+        return;
+    }
+    motionResult.classList.add("hidden");
+    whyCard.classList.add("hidden");
+    resultShown = false;
+    selectedId = undefined;
+    replayer = new ReplayPlayer(registry, rec);
+    markerIndex = 0;
+    appElement.classList.add("replaying");
+    sandboxDrawer.classList.add("hidden");
+    ui.mode.textContent = "REPLAY";
+    replayBar.classList.remove("hidden");
+    replayNote = "";
+    replayMarks.replaceChildren();
+    for (const mk of rec.markers) {
+        const d = document.createElement("span");
+        d.className = "replay-mark";
+        d.style.left = `${(mk.tick / Math.max(1, rec.length)) * 100}%`;
+        d.title = mk.label;
+        replayMarks.append(d);
+    }
+    replayProblem.classList.toggle("hidden", !rec.markers.length);
+    if (toProblem && rec.markers.length)
+        jumpToProblem();
+}
+function jumpToProblem() {
+    const rp = replayer;
+    if (!rp)
+        return;
+    const marks = rp.recording.markers;
+    if (!marks.length)
+        return;
+    const mk = marks[markerIndex % marks.length];
+    markerIndex++;
+    rp.jumpTo(Math.max(0, mk.tick - 60));
+    rp.paused = false;
+    setSlow(true);
+    replayNote = mk.label;
+    if (marks.length > 1)
+        replayProblem.textContent = `⚠️ Next problem (${(markerIndex % marks.length) + 1}/${marks.length})`;
+    const part = build.getPart(mk.partId);
+    if (part)
+        setFollow(mk.partId, false);
+}
+function endReplay() {
+    if (!replayer)
+        return;
+    replayer.destroy();
+    replayer = undefined;
+    replayBar.classList.add("hidden");
+    appElement.classList.remove("replaying");
+    ui.mode.textContent = "BUILD";
+    setSlow(false);
+    setFollow(undefined);
+    camera.reset();
+}
+function updateReplayUi() {
+    const live = testMode || Boolean(replayer);
+    const can = (labActive || freeBuildActive) && !openingActive;
+    slowButton.hidden = !(live && can);
+    followButton.hidden = !(live && can);
+    if (!live)
+        followMenu.classList.add("hidden");
+    const avail = !live && can && Boolean(replayAvailable());
+    if (replayButton.hidden === avail)
+        replayButton.hidden = !avail;
+    const rp = replayer;
+    if (!rp)
+        return;
+    const len = Math.max(1, rp.recording.length);
+    replayFill.style.width = `${Math.min(100, (rp.tick / len) * 100)}%`;
+    const fast = rp.fastForwarding;
+    replayPlay.textContent = rp.done ? "⏮ Again" : rp.paused ? "▶ Play" : "⏸ Pause";
+    replayTime.textContent = `${fast ? "⏩ " : ""}${(rp.tick / 60).toFixed(1)} s of ${(len / 60).toFixed(1)} s${rp.done ? " — the end" : ""}${replayNote && !rp.done ? " · " + replayNote : ""}${rp.recording.truncated ? " (first 60 s)" : ""}`;
+    if (!fast && replayNote === "Fast-forwarding…")
+        replayNote = "";
+}
+/** Red rings where the recorded problems happened, shown around the moment they happened. */
+function drawReplayMarkers(rp) {
+    const c = renderer.ctx;
+    const t = rp.tick;
+    for (const mk of rp.recording.markers) {
+        if (t < mk.tick - 15 || t > mk.tick + 150)
+            continue;
+        const p = followPoint(rp.runtime, mk.partId) ?? build.getPart(mk.partId)?.position;
+        if (!p)
+            continue;
+        const pulse = 1 + 0.12 * Math.sin(now() / 120);
+        c.save();
+        c.strokeStyle = "#e03131";
+        c.lineWidth = 6;
+        c.setLineDash([14, 10]);
+        c.beginPath();
+        c.arc(p.x * 100, p.y * 100, 70 * pulse, 0, Math.PI * 2);
+        c.stroke();
+        c.setLineDash([]);
+        c.font = "900 24px system-ui";
+        c.textAlign = "center";
+        const w = c.measureText(mk.label).width + 24;
+        c.fillStyle = "#fff5f5";
+        c.beginPath();
+        c.roundRect(p.x * 100 - w / 2, p.y * 100 - 128, w, 36, 10);
+        c.fill();
+        c.stroke();
+        c.fillStyle = "#c92a2a";
+        c.fillText(mk.label, p.x * 100, p.y * 100 - 102);
+        c.restore();
+    }
+}
+replayButton.addEventListener("click", () => { if (gameplayAllowed())
+    startReplay(false); });
+watchReplayButton.addEventListener("click", () => startReplay(true));
+slowButton.addEventListener("click", () => setSlow(!slowMo));
+followButton.addEventListener("click", openFollowMenu);
+replayPlay.addEventListener("click", () => { const rp = replayer; if (!rp)
+    return; if (rp.done) {
+    rp.restart();
+    rp.paused = false;
+    replayNote = "";
+    return;
+} rp.paused = !rp.paused; });
+document.querySelector("#replay-restart").addEventListener("click", () => { const rp = replayer; if (!rp)
+    return; rp.restart(); rp.paused = false; replayNote = ""; markerIndex = 0; replayProblem.textContent = "⚠️ Jump to the problem"; });
+replayProblem.addEventListener("click", jumpToProblem);
+document.querySelector("#replay-close").addEventListener("click", endReplay);
 function render() {
     maybeCompleteOpeningChallenge();
     maybeCompleteMotionMission();
     updateProgramPanel();
+    updateFollowCamera();
     renderer.begin(camera);
     const photoBackground = photo.isOpen() && photo.background !== "room";
     if (photoBackground)
@@ -2778,7 +3020,7 @@ function render() {
             renderer.drawMotionYardBackdrop();
         renderer.drawScenery(activeLevel?.id);
     }
-    const runtime = tests.active();
+    const runtime = replayer ? replayer.runtime : tests.active();
     const states = runtime?.physics.states();
     const parts = build.allParts().map(p => p.id === dragStart?.id && dragPreview ? { ...p, position: dragPreview } : p);
     const shown = beamEndDrag ? parts.map(p => p.id === beamEndDrag.id ? beamFromEnds(p, beamEndDrag.fixed, beamEndDrag.moving) : p) : parts;
@@ -2816,28 +3058,35 @@ function render() {
         renderer.drawForceVectors(runtime.physics.forceVectors(), states, currentGuidance().showMeasurements);
     if (testMode && (labActive || freeBuildActive) && ++discoveryFrame % 15 === 0)
         checkRunDiscoveries();
+    if (replayer)
+        drawReplayMarkers(replayer);
     renderer.end();
+    updateReplayUi();
     const enabled = gameplayAllowed();
     const canKeep = (labActive || freeBuildActive) && !exp && Boolean(activeProfile(appSave));
     if (saveInventionButton.hidden === canKeep) {
         saveInventionButton.hidden = !canKeep;
         photoButton.hidden = !canKeep;
     }
-    ui.undo.disabled = !enabled || testMode || !build.canUndo();
-    ui.redo.disabled = !enabled || testMode || !build.canRedo();
-    ui.test.disabled = !enabled || testMode;
-    ui.stop.disabled = !enabled || !testMode;
+    ui.undo.disabled = !enabled || testMode || Boolean(replayer) || !build.canUndo();
+    ui.redo.disabled = !enabled || testMode || Boolean(replayer) || !build.canRedo();
+    ui.test.disabled = !enabled || testMode || Boolean(replayer);
+    ui.stop.disabled = !enabled || !(testMode || replayer);
     const t = telemetry.snapshot();
     const budgetFlag = labActive && perf.simulationMs > MOTION_PERFORMANCE_BUDGET.targetSimulationMs ? " | ⚠ SIM BUDGET" : "";
     ui.debug.textContent = `FPS ${perf.fps} | frame ${perf.frameMs.toFixed(1)}ms | sim ${perf.simulationMs.toFixed(2)}ms | 60 Hz | parts ${build.allParts().length} | TEST ${t.testPresses} | drags ${t.dragAttempts}${runtime ? ` | tick ${runtime.tick}` : ""}${budgetFlag}`;
 }
 function frame(frameNow) {
     perf.frame(frameNow);
-    perf.measureSimulation(() => clock.consume(frameNow, dt => { tests.step(dt); experimentTick(); if (testMode && runMeter) {
+    perf.measureSimulation(() => clock.consume(frameNow, dt => { tests.step(dt); experimentTick(); if (testMode) {
         const rt = tests.active();
-        if (rt)
-            runMeter.sample(rt);
-    } }));
+        if (rt) {
+            runMeter?.sample(rt);
+            recorder?.record(rt);
+        }
+    } replayer?.step(); }));
+    if (replayer?.frame())
+        replayNote = "Fast-forwarding…";
     render();
     requestAnimationFrame(frame);
 }

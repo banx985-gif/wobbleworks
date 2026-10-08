@@ -48,6 +48,8 @@ export class PhysicsWorld {
         b.angularVelocity = 0;
     } }
     /** Flight Hangar: a craft weighs its body plus everything attached to it (set once at the start of a TEST). */
+    /** True for a body that moves freely (not fixed, not driven along a path). Read-only. */
+    isDynamic(id) { return this.bodies.get(id)?.type === "DYNAMIC"; }
     setMass(id, mass) { const b = this.mustBody(id); if (b.type === "DYNAMIC")
         b.mass = Math.max(0.02, mass); }
     /** Sandbox (M23): move a fixed body (a moving platform), remembering how fast it moved for whatever it carries. */
