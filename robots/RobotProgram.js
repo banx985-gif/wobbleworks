@@ -1,7 +1,7 @@
 export const SENSORS = [
     { id: "WALL_AHEAD", label: "wall ahead", icon: "🧱" }, { id: "PATH_CLEAR", label: "path clear", icon: "🟢" },
     { id: "ON_RED", label: "on red", icon: "🟥" }, { id: "ON_GREEN", label: "on green", icon: "🟩" }, { id: "ON_BLUE", label: "on blue", icon: "🟦" }, { id: "ON_YELLOW", label: "on yellow", icon: "🟨" },
-    { id: "BOX_AHEAD", label: "box ahead", icon: "📦" }, { id: "HOLDING", label: "holding a box", icon: "✋" }
+    { id: "BOX_AHEAD", label: "box ahead", icon: "📦" }, { id: "HOLDING", label: "holding a box", icon: "✋" }, { id: "SIGNAL", label: "signal is on", icon: "📶" }
 ];
 export function parseProgram(text) {
     if (typeof text !== "string" || !text)

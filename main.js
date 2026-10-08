@@ -25,7 +25,9 @@ import { OpeningDirector, evaluateOpeningSuccess } from "./opening/OpeningDirect
 import { loadMotionYardLevels } from "./motion/MotionContent.js";
 import { MOTION_PERFORMANCE_BUDGET } from "./motion/MotionPerformanceBudget.js";
 import { evaluateMotionMission, MOTION_REAL_WORLD_CARDS } from "./motion/MotionYard.js";
-import { MAIN_LABS } from "./progression/CampaignData.js";
+import { CHAIN_WORKSHOP, MAIN_LABS } from "./progression/CampaignData.js";
+import { chainStats, chainWorkshopOpen, collectChainDiscoveries, withChainRecords, withChainShelfMeta, CHAIN_REAL_WORLD_CARDS } from "./chain/ChainWorkshop.js";
+import { evaluateLevelOutcome } from "./core/OutcomeEvaluator.js";
 import { labMissionUnlocked, nextRequiredLabMission } from "./progression/LabProgression.js";
 import { evaluateGearMission, GEAR_REAL_WORLD_CARDS, loadGearGarageLevels } from "./gears/GearGarage.js";
 import { analyzeGears, gearNodeFrom, gearSnapPosition } from "./gears/GearSystem.js";
@@ -261,10 +263,12 @@ function readSettingsForm() {
     const chk = (id) => document.querySelector(id).checked;
     return { textScale: Number.isFinite(num) ? Math.max(0.9, Math.min(1.4, num)) : 1, reducedMotion: chk("#setting-reduced-motion"), highContrast: chk("#setting-high-contrast"), narration: chk("#setting-narration"), subtitles: chk("#setting-subtitles"), soundEffects: chk("#setting-sfx"), music: chk("#setting-music"), vibration: chk("#setting-vibration") };
 }
-function labDef(id = currentLabId) { return MAIN_LABS.find(l => l.id === id); }
-function labOfLevel(levelId) { return MAIN_LABS.find(l => l.missions.some(m => m.id === levelId))?.id ?? "motion-yard"; }
+/** The nine campaign labs plus the creative modes that use the same mission menu (the Chain Reaction Workshop). */
+const PLAY_SETS = [...MAIN_LABS, CHAIN_WORKSHOP];
+function labDef(id = currentLabId) { return PLAY_SETS.find(l => l.id === id); }
+function labOfLevel(levelId) { return PLAY_SETS.find(l => l.missions.some(m => m.id === levelId))?.id ?? "motion-yard"; }
 function completedSet() { return new Set(completedLevelIds(appSave)); }
-function missionMeta(levelId) { return MAIN_LABS.flatMap(l => l.missions).find(m => m.id === levelId); }
+function missionMeta(levelId) { return PLAY_SETS.flatMap(l => l.missions).find(m => m.id === levelId); }
 /** The lab's own evaluator: same success rules as the level file, plus that lab's evidence-backed discoveries. */
 function evaluateLevel(level, runtime) {
     const lab = labOfLevel(level.id);
@@ -272,6 +276,8 @@ function evaluateLevel(level, runtime) {
         const prev = lastRuns.get(level.id);
         return evaluateBuilderMission(level, build, runtime, prev);
     }
+    if (lab === CHAIN_WORKSHOP.id)
+        return { levelId: level.id, success: runtime ? evaluateLevelOutcome(level, build, runtime).complete : false, discoveries: runtime ? collectChainDiscoveries(build, runtime) : [] };
     const module = labModule(lab);
     if (module)
         return evaluateLabMission(module, level, build, runtime);
@@ -280,7 +286,8 @@ function evaluateLevel(level, runtime) {
 /** Remember this run so the next TEST can show whether a change (like a brace) really helped. */
 function rememberRun() { const runtime = tests.active(); if (runtime && activeLevel)
     lastRuns.set(activeLevel.id, runSummary(build, runtime)); }
-function labIsOpen(labId) { return labLevels.has(labId) && (routeToRegion(appSave, labId).kind === "ENTER" || testingLabs.has(labId)); }
+function labIsOpen(labId) { if (labId === CHAIN_WORKSHOP.id)
+    return labLevels.has(labId) && (chainWorkshopOpen(appSave) || testingLabs.has(labId)); return labLevels.has(labId) && (routeToRegion(appSave, labId).kind === "ENTER" || testingLabs.has(labId)); }
 function updateOpeningTray(level) {
     const allowed = level ? new Set(level.availablePartIds) : undefined;
     document.querySelectorAll("[data-part]").forEach(button => {
@@ -331,7 +338,7 @@ function renderLabMenu() {
     const lab = labDef();
     const completed = completedSet();
     const requiredNext = nextRequiredLabMission(lab, completed);
-    document.querySelector("#lab-badge").textContent = `LAB ${MAIN_LABS.indexOf(lab) + 1}`;
+    document.querySelector("#lab-badge").textContent = MAIN_LABS.includes(lab) ? `LAB ${MAIN_LABS.indexOf(lab) + 1}` : "WORKSHOP MODE";
     document.querySelector("#lab-badge").style.background = lab.colour;
     document.querySelector("#lab-title").textContent = lab.title;
     document.querySelector("#lab-lead").textContent = `${lab.concepts}. Build, TEST, watch what happens, then change it.`;
@@ -343,7 +350,7 @@ function renderLabMenu() {
         button.disabled = !unlocked;
         const slot = document.createElement("span");
         slot.className = "slot";
-        slot.textContent = meta.slot === "ORDINARY" ? `MISSION ${meta.ordinaryNumber}` : meta.slot;
+        slot.textContent = meta.slot === "ORDINARY" ? `MISSION ${meta.ordinaryNumber}` : meta.slot === "CHALLENGE" ? `CHALLENGE ${lab.missions.indexOf(meta) + 1}` : meta.slot;
         const title = document.createElement("strong");
         title.textContent = completed.has(meta.id) ? `✓ ${meta.title}` : meta.title;
         const objective = document.createElement("span");
@@ -479,11 +486,12 @@ function maybeCompleteMotionMission() {
     setHint(undefined);
     hideBoltTip();
     hintButton.classList.remove("offer");
-    const card = result.discoveries.map(id => [...MOTION_REAL_WORLD_CARDS, ...GEAR_REAL_WORLD_CARDS, ...STRUCTURE_REAL_WORLD_CARDS, ...LAB_MODULES.flatMap(m => m.realWorldCards)].find(c => c.discoveryId === id)).find(Boolean);
+    const card = result.discoveries.map(id => [...MOTION_REAL_WORLD_CARDS, ...GEAR_REAL_WORLD_CARDS, ...STRUCTURE_REAL_WORLD_CARDS, ...LAB_MODULES.flatMap(m => m.realWorldCards), ...CHAIN_REAL_WORLD_CARDS].find(c => c.discoveryId === id)).find(Boolean);
+    const chainNote = labOfLevel(activeLevel.id) === CHAIN_WORKSHOP.id ? noteChainRun() : "";
     rememberRun();
     const discovered = card ? ` ${card.title}: ${card.example}` : result.discoveries.length ? ` You discovered ${result.discoveries[0].replace("motion.", "").replaceAll("-", " ")}.` : "";
     const cleared = outcome.labCleared ? ` The ${regionById(outcome.labCleared)?.title ?? "lab"} is restored!` : "";
-    showMotionResult(true, `Nice invention.${discovered}${cleared}`, outcome.stars, outcome.newStars, outcome.newRewards);
+    showMotionResult(true, `Nice invention.${chainNote}${discovered}${cleared}`, outcome.stars, outcome.newStars, outcome.newRewards);
     sfx(980, .09);
     buzz(60);
 }
@@ -719,6 +727,8 @@ async function persistCurrentBuild(markFirstTest = false, immediate = false) {
 function stopToBuild() {
     if (!testMode)
         return;
+    if (activeLevel && labOfLevel(activeLevel.id) === CHAIN_WORKSHOP.id && !resultShown)
+        noteChainRun();
     tests.stop();
     testMode = false;
     pausedByShell = false;
@@ -758,6 +768,7 @@ async function loadAppState() {
         labLevels.set("builder-bay", await loadBuilderBayLevels(registry));
         for (const m of LAB_MODULES)
             labLevels.set(m.labId, await loadLabLevels(registry, m.labId, m.folder));
+        labLevels.set(CHAIN_WORKSHOP.id, await loadLabLevels(registry, CHAIN_WORKSHOP.id, "chain"));
         appSave = loaded.payload ?? createDefaultAppSave();
         savingBlocked = loaded.futureVersion;
         applySettings();
@@ -994,6 +1005,7 @@ function renderHubScreen() {
         openTrophies: () => transition("TROPHIES"),
         openLocker: () => transition("LOCKER"),
         openFreeBuild: () => startFreeBuild(),
+        ...(chainWorkshopOpen(appSave) ? { openChain: () => showLab(CHAIN_WORKSHOP.id) } : {}),
         pokeBolt: () => { const p = activeProfile(appSave); hubQueue.push({ kind: "BOLT", title: p?.openingComplete ? "Fully charged and ready to wobble!" : "Bzzt… still charging…", body: "Tap the Campus Map to pick where to go next." }); showNextHubMoment(); },
         pokeSprocket: () => { sfx(1300, .05); window.setTimeout(() => sfx(1500, .05), 90); hubRoot.querySelector(".station-sprocket")?.classList.add("wiggle"); window.setTimeout(() => hubRoot.querySelector(".station-sprocket")?.classList.remove("wiggle"), 600); },
         meetVisitor: id => {
@@ -1810,7 +1822,10 @@ shelfButton.addEventListener("click", () => {
         shelfButton.disabled = true;
         return;
     }
-    void commit(out.save, true);
+    // A chain keeps its chain numbers on the shelf too.
+    const chainRun = tests.active();
+    const saved = out.item && chainRun?.chain.active ? withChainShelfMeta(out.save, out.item.id, chainStats(chainRun)) : out.save;
+    void commit(saved, true);
     shelfButton.textContent = "On the shelf ✓";
     shelfButton.disabled = true;
     sfx(840, .06);
@@ -2157,6 +2172,42 @@ function updateProgramPanel() {
         programPanelKey = "";
     }, { ...(running ? { running } : {}), locked: testMode, robotName: robotName.charAt(0).toUpperCase() + robotName.slice(1), close: () => { programRobotId = undefined; selectedId = undefined; programPanelKey = ""; programPanel.classList.add("hidden"); } });
 }
+// ---------------------------------------------------------------- Chain Reaction Workshop (M21)
+const chainHud = document.querySelector("#chain-hud"), chainCount = document.querySelector("#chain-count"), chainLast = document.querySelector("#chain-last");
+let chainShown = -1;
+/** The live counter: the longest real cause → effect sequence so far, and the newest step. */
+function updateChainHud(runtime) {
+    const on = Boolean(runtime?.chain.active && testMode);
+    chainHud.classList.toggle("hidden", !on);
+    if (!on || !runtime) {
+        chainShown = -1;
+        return;
+    }
+    const n = runtime.chain.longest();
+    if (n === chainShown)
+        return;
+    chainShown = n;
+    chainCount.textContent = String(n);
+    const e = runtime.chain.edges[runtime.chain.edges.length - 1];
+    const name = (id) => registry.get(build.getPart(id)?.definitionId ?? "chain.counter").displayName;
+    chainLast.textContent = e ? `${name(e.causeId)} → ${name(e.effectId)}` : "";
+    chainHud.classList.remove("bump");
+    void chainHud.offsetWidth;
+    chainHud.classList.add("bump");
+    if (n > 0)
+        sfx(500 + Math.min(n, 20) * 40, .03);
+}
+/** After a chain run: update personal records (kept in the profile's records table) and say so. */
+function noteChainRun() {
+    const runtime = tests.active();
+    if (!runtime?.chain.active || !activeProfile(appSave))
+        return "";
+    const stats = chainStats(runtime);
+    const out = withChainRecords(appSave, stats);
+    if (out.beaten.length)
+        void commit(out.save);
+    return ` Chain: ${stats.longest} step${stats.longest === 1 ? "" : "s"}${out.beaten.includes("longest") ? " — a new record!" : "."}`;
+}
 function render() {
     maybeCompleteOpeningChallenge();
     maybeCompleteMotionMission();
@@ -2188,6 +2239,9 @@ function render() {
         renderer.drawWaterEffects(runtime, now() / 1000);
     if (runtime && forceScanner && runtime.flight.hasFlight())
         renderer.drawFlightForces(runtime);
+    if (runtime?.chain.active)
+        renderer.drawChainEdges(runtime, shown);
+    updateChainHud(runtime);
     if (runtime && runtime.space.zones.length && (forceScanner || runtime.space.zones.length >= 2))
         renderer.drawGravityReadouts(runtime);
     if (!runtime && shown.some(p => fluidBehaviour(registry.get(p.definitionId)) || registry.get(p.definitionId).behaviours.some(b => b.kind === "PIPE")))

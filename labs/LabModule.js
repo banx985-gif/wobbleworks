@@ -1,6 +1,6 @@
 import { assertLevelDefinition } from "../data/validation.js";
-import { MAIN_LABS } from "../progression/CampaignData.js";
-export function labMissions(labId) { return MAIN_LABS.find(l => l.id === labId).missions; }
+import { CREATIVE_MODES, MAIN_LABS } from "../progression/CampaignData.js";
+export function labMissions(labId) { return [...MAIN_LABS, ...CREATIVE_MODES].find(l => l.id === labId).missions; }
 export async function loadLabLevels(registry, labId, folder) {
     const known = new Set(registry.all().map(part => part.id));
     const levels = new Map();

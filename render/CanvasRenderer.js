@@ -10,6 +10,7 @@ import { drawFlightForces, drawFlightPart, isFlightPart } from "./FlightRenderer
 import { drawRobotFloor, drawRobotPart, isRobotPart } from "./RobotRenderer.js";
 import { drawGravityReadouts, drawSpacePart, isSpacePart, spaceLayer } from "./SpaceRenderer.js";
 import { tiltedPoses } from "../space/SpaceSystem.js";
+import { chainLayer, drawChainEdges, drawChainPart, isChainPart } from "./ChainRenderer.js";
 import { drawDoorPanel, drawGearGarageBackdrop, drawGearLinks, drawGearPart, drawRotationView, gearBehaviour, gearOutput } from "./GearRenderer.js";
 export class CanvasRenderer {
     canvas;
@@ -118,7 +119,8 @@ export class CanvasRenderer {
     drawParts(parts, registry, runtimeStates, selectedId, gears, time = 0, structures, showStress = false, runtime) {
         const states = new Map(runtimeStates?.map(s => [s.id, s]) ?? []);
         // Draw order only: fixed things first (zones, ramps, pads), then shafts, then gears, then moving things in front.
-        const layer = (p) => { const def = registry.get(p.definitionId); if (isSpacePart(def))
+        const layer = (p) => { const def = registry.get(p.definitionId); if (isChainPart(def))
+            return chainLayer(def); if (isSpacePart(def))
             return spaceLayer(def); if (isRobotPart(def)) {
             const t = def.behaviours.find(b => b.kind === "ARENA");
             return t?.kind === "ARENA" ? (t.thing === "TILE" || t.thing === "GOAL" || t.thing === "DROP" || t.thing === "PAD" ? -1 : t.thing === "BOX" || t.thing === "SWEEPER" ? 3 : 0) : 3.5;
@@ -135,6 +137,7 @@ export class CanvasRenderer {
         // Space Centre: clip-on parts ride on their rocket or rover; in BUILD a rocket on a tilted pad leans with its parts.
         const tilts = runtime ? undefined : (parts.some(p => p.definitionId === "space.launch-pad" && Number(p.parameters.tilt ?? 0) !== 0) ? tiltedPoses(parts, id => registry.has(id) ? registry.get(id) : undefined) : undefined);
         const spacePose = (id) => runtime ? runtime.space.attachedPose(id, runtime.physics) : tilts?.get(id);
+        const chainCtx = { ...(runtime?.chain.active ? { chain: runtime.chain } : {}), time };
         const spaceCtx = { ...(runtime ? { space: runtime.space, robots: runtime.robots } : {}), states, time, scanner: showStress, pose: spacePose, art: this.art };
         const flightCtx = { ...(runtime ? { flight: runtime.flight } : {}), states, art: this.art, time, scanner: showStress, pose: (id) => runtime?.flight.attachedPose(id, runtime.physics) };
         const waterCtx = { ...(runtime ? { water: runtime.water } : {}), art: this.art, time, scanner: showStress, gearAngle: (id) => gears?.state(id)?.angle ?? 0 };
@@ -143,6 +146,8 @@ export class CanvasRenderer {
         for (const placed of ordered) {
             const def = registry.get(placed.definitionId);
             const rigid = def.behaviours.find(b => b.kind === "RIGID_BODY");
+            if (isChainPart(def) && drawChainPart(this.ctx, placed, def, selectedId === placed.id, chainCtx))
+                continue;
             if (isSpacePart(def) && drawSpacePart(this.ctx, placed, def, selectedId === placed.id, spaceCtx))
                 continue;
             // A Power Lab battery or a Flight Hangar parachute clipped onto a rover or rocket is drawn where it is now.
@@ -266,6 +271,7 @@ export class CanvasRenderer {
     drawLabBackdrop(labId, time) { drawLabBackdrop(this.ctx, labId, time); }
     drawMagnetForces(runtime) { drawMagnetForces(this.ctx, runtime.magnets, new Map(runtime.physics.states().map(s => [s.id, s]))); }
     drawRobotFloor() { drawRobotFloor(this.ctx); }
+    drawChainEdges(runtime, parts) { drawChainEdges(this.ctx, runtime, parts); }
     drawGravityReadouts(runtime) { drawGravityReadouts(this.ctx, runtime); }
     drawFlightForces(runtime) { drawFlightForces(this.ctx, runtime.flight, new Map(runtime.physics.states().map(s => [s.id, s]))); }
     drawWaterEffects(runtime, time) { drawWaterEffects(this.ctx, runtime.water, time); }

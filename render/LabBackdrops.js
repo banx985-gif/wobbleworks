@@ -183,6 +183,34 @@ THEMES["space-centre"] = { title: "SPACE CENTRE", top: "#0b1026", bottom: "#2430
             c.stroke();
         }
     } };
+/** Chain Reaction Workshop: a cosy workshop wall of pegboard, marble tracks and bunting. */
+THEMES["chain-workshop"] = { title: "CHAIN REACTIONS", top: "#fff4e6", bottom: "#ffe8cc", wall: "#ffd8a8", floor: "#c08f5f", accent: "#e8590c", motif: (c, t) => {
+        c.fillStyle = "#e8590c33";
+        for (let x = 40; x < 1600; x += 40)
+            for (let y = 160; y < 690; y += 40) {
+                c.beginPath();
+                c.arc(x, y, 3, 0, Math.PI * 2);
+                c.fill();
+            }
+        const flags = ["#ff6b6b", "#ffd43b", "#69db7c", "#4dabf7", "#da77f2"];
+        for (let i = 0; i < 26; i++) {
+            c.fillStyle = flags[i % flags.length];
+            const x = 20 + i * 62, sway = Math.sin(t * 2 + i) * 3;
+            c.beginPath();
+            c.moveTo(x, 140);
+            c.lineTo(x + 50, 140);
+            c.lineTo(x + 25, 178 + sway);
+            c.closePath();
+            c.fill();
+        }
+        c.strokeStyle = "#adb5bd";
+        c.lineWidth = 6;
+        c.beginPath();
+        c.moveTo(1180, 230);
+        c.quadraticCurveTo(1300, 300, 1420, 260);
+        c.quadraticCurveTo(1520, 230, 1560, 330);
+        c.stroke();
+    } };
 export function hasLabBackdrop(labId) { return labId in THEMES; }
 export function drawLabBackdrop(c, labId, time) {
     const th = THEMES[labId];

@@ -31,6 +31,28 @@ function eventTargetMatches(runtime, build, targetTag, targetId) {
         return false;
     return tagged(build, targetTag).some(part => part.id === targetId);
 }
+/** Chain Reaction Workshop rules: all measured from the chain counter's explicit cause → effect edges. */
+function evaluateChainRule(rule, build, runtime) {
+    const c = runtime.chain;
+    const nodes = c.nodeList();
+    const tagOf = (id, tag) => build.getPart(id)?.tags?.includes(tag) === true;
+    const oneStart = (want) => !want || c.roots().length === 1;
+    const path = (id) => [...c.pathTo(id)].reverse();
+    switch (rule.kind) {
+        case "CHAIN_LENGTH": return oneStart(rule.oneStart) && (rule.endTag ? nodes.some(n => tagOf(n.id, rule.endTag) && n.depth >= rule.minDepth) : c.longest() >= rule.minDepth);
+        case "CHAIN_DISTINCT": return oneStart(rule.oneStart) && nodes.filter(n => !n.root && tagOf(n.id, rule.tag)).length >= rule.count;
+        case "CHAIN_KINDS": return nodes.some(n => n.depth >= rule.minDepth && rule.kinds.every(k => c.pathEdges(n.id).some(e => e.kind === k)));
+        case "CHAIN_TRANSFER": return nodes.some(n => { let i = 0; for (const p of path(n.id))
+            if (p.domain === rule.domains[i])
+                i++; return i >= rule.domains.length; });
+        case "CHAIN_DOMAINS": return nodes.some(n => n.depth >= rule.minDepth && new Set(path(n.id).map(p => p.domain)).size >= rule.min);
+        case "CHAIN_NO_REPEAT": return nodes.some(n => { const p = path(n.id); return n.depth >= rule.minDepth && new Set(p.map(x => x.family)).size === p.length; });
+        case "CHAIN_DURATION": return nodes.some(n => { const p = path(n.id); return n.depth >= rule.minDepth && p.length > 0 && (n.firstTick - p[0].firstTick) / 60 >= rule.seconds; });
+        case "CHAIN_FINALE": return nodes.some(n => tagOf(n.id, rule.endTag) && n.depth >= rule.minDepth && n.parent !== undefined && tagOf(n.parent, rule.viaTag));
+        case "CHAIN_INCLUDES": return nodes.some(n => n.domain === rule.domain);
+        default: return false;
+    }
+}
 export function evaluateOutcomeRule(rule, build, runtime) {
     if (rule.kind === "ELAPSED_AT_LEAST")
         return runtime.elapsedTime >= rule.seconds;
@@ -204,6 +226,8 @@ export function evaluateOutcomeRule(rule, build, runtime) {
             return false;
         return Math.max(ta, tb) / Math.max(1e-6, Math.min(ta, tb)) >= rule.minRatio;
     }
+    if (rule.kind.startsWith("CHAIN_"))
+        return evaluateChainRule(rule, build, runtime);
     if (rule.kind === "ROVER_DELIVERS") {
         const zones = tagged(build, rule.zoneTag);
         const cargo = rule.cargoTag ? tagged(build, rule.cargoTag) : [];

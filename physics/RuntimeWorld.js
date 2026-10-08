@@ -10,6 +10,7 @@ import { FluidSystem } from "../water/FluidSystem.js";
 import { FlightSystem } from "../flight/FlightSystem.js";
 import { RobotSystem } from "../robots/RobotSystem.js";
 import { SpaceSystem } from "../space/SpaceSystem.js";
+import { ChainSystem } from "../chain/ChainSystem.js";
 export class RuntimeWorld {
     snapshotSignature;
     physics = new PhysicsWorld();
@@ -29,6 +30,10 @@ export class RuntimeWorld {
     robots;
     /** Space Centre (M19): gravity zones, rockets, rovers, toy planets and launchers. */
     space;
+    /** Chain Reaction Workshop (M21): the chain counter and its toy mechanisms. */
+    chain;
+    /** Switches flipped and buttons held by a finger this tick (a child's starting action). */
+    fingerThisTick = [];
     /** Buttons held down by a finger during this TEST, and switches flipped since the last tick. */
     fingerPressed = new Set();
     flips = new Set();
@@ -71,6 +76,7 @@ export class RuntimeWorld {
         this.gears = new GearSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined, this.snapshot.connections, extraLoads);
         this.circuits = new CircuitSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.robots = new RobotSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
+        this.chain = new ChainSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.space = new SpaceSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.flight = new FlightSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.water = new FluidSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
@@ -110,12 +116,16 @@ export class RuntimeWorld {
         this.pipeline.on("NETWORK_TOPOLOGY", ({ dt }) => { this.resolveNetworks(); this.stepCircuits(dt); });
         this.pipeline.on("PRE_PHYSICS_SENSORS", () => this.sampleSensors());
         this.pipeline.on("LOGIC_EVALUATION", ({ dt }) => { this.evaluateLogic(); if (this.robots.hasRobots()) {
-            this.robots.step(dt, id => this.circuits.motorDrive(id));
+            this.robots.step(dt, id => this.circuits.motorDrive(id), id => this.robotSignal(id));
             for (const e of this.robots.drainEvents())
                 this.event(e.kind, e.sourceId, e.targetId, e.data);
         } });
         this.pipeline.on("ACTUATOR_RESOLUTION", () => this.resolveActuators());
-        this.pipeline.on("FORCE_AND_COUPLING", ({ dt }) => { this.stepMagnets(dt); this.applyJets(); this.stepFlight(dt); this.stepSpace(dt); this.applyCouplings(); this.gears.step(dt); this.applyGearCouplings(); this.stepStructures(dt); });
+        this.pipeline.on("FORCE_AND_COUPLING", ({ dt }) => { if (this.chain.active) {
+            this.chain.step(this.physics);
+            for (const e of this.chain.drainEvents())
+                this.event(e.kind, e.sourceId, e.targetId, e.data);
+        } this.stepMagnets(dt); this.applyJets(); this.stepFlight(dt); this.stepSpace(dt); this.applyCouplings(); this.gears.step(dt); this.applyGearCouplings(); this.stepStructures(dt); });
         this.pipeline.on("PHYSICS_STEP", ({ dt }) => this.physics.step(dt));
         this.pipeline.on("POST_PHYSICS_CONTACTS", () => { this.magnets.applyGuides(this.physics); if (this.flight.hasFlight() || this.space.hasSpace()) {
             this.flight.observe(this.physics);
@@ -128,7 +138,7 @@ export class RuntimeWorld {
         } this.collectPhysicsEvents(); });
         this.pipeline.on("DOMAIN_TRANSFER", ({ dt }) => this.transferDomains(dt));
         this.pipeline.on("CAUSAL_EVENT_RECORDING", () => { this.causalEvents.push(...this.pendingEvents); });
-        this.pipeline.on("GOAL_AND_CONCEPT_EVIDENCE", () => undefined);
+        this.pipeline.on("GOAL_AND_CONCEPT_EVIDENCE", () => this.observeChain());
         this.pipeline.on("REPLAY_SAMPLE", () => undefined);
         this.pipeline.on("PRESENTATION_QUEUE", () => undefined);
     }
@@ -160,6 +170,8 @@ export class RuntimeWorld {
         if (this.fingerPressed.has(id))
             return true;
         if (this.robots.linkPressed(id))
+            return true;
+        if (this.chain.buttonHeld(id))
             return true;
         const part = this.snapshot.parts.find(p => p.id === id);
         if (!part)
@@ -238,6 +250,51 @@ export class RuntimeWorld {
         for (const e of this.space.drainEvents())
             this.event(e.kind, e.sourceId, e.targetId, e.data);
     }
+    /** Parts joined to this one by wires (same connected circuit). */
+    circuitMates(id) {
+        const els = this.circuits.layout.elements;
+        const start = els.find(e => e.partId === id);
+        if (!start)
+            return [];
+        const nodes = new Set([start.a, start.b]);
+        let grew = true;
+        while (grew) {
+            grew = false;
+            for (const e of els)
+                if ((nodes.has(e.a) || nodes.has(e.b)) && !(nodes.has(e.a) && nodes.has(e.b))) {
+                    nodes.add(e.a);
+                    nodes.add(e.b);
+                    grew = true;
+                }
+        }
+        return els.filter(e => nodes.has(e.a) || nodes.has(e.b)).map(e => e.partId);
+    }
+    /** A robot listening for a signal: the part it listens to has power, is pressed, or has been set off by the chain. */
+    robotSignal(robotId) {
+        const listen = this.snapshot.parts.find(p => p.id === robotId)?.parameters.listen;
+        if (typeof listen !== "string")
+            return false;
+        return (this.circuits.load(listen)?.level ?? 0) > 0.3 || this.buttonPressed(listen) || this.chain.inChain(listen);
+    }
+    /** Chain Reaction Workshop: after this tick's events are recorded, grow the chain from what every system measured. */
+    observeChain() {
+        if (!this.chain.active)
+            return;
+        const axleMates = (id) => { const a = this.gears.analysis.axleOf.get(id); return a === undefined ? [] : [...this.gears.analysis.axleOf.entries()].filter(([o, k]) => k === a && o !== id).map(([o]) => o); };
+        this.chain.observe({
+            tick: this.tick, physics: this.physics, causalEvents: this.causalEvents,
+            isDynamicBody: id => this.isDynamicBody(id), buttonPressed: id => this.buttonPressed(id),
+            loadLevel: id => this.circuits.load(id)?.level ?? 0,
+            gearSpeed: id => this.gears.nodes.some(n => n.id === id) ? this.gears.omega(id) : Number.NaN,
+            gearNeighbours: id => [...axleMates(id), ...this.gears.analysis.links.filter(l => l.a === id || l.b === id).map(l => l.a === id ? l.b : l.a)],
+            jetFlow: id => this.water.jetStates().find(j => j.id === id)?.flow ?? Number.NaN,
+            fingerControls: () => this.fingerThisTick,
+            circuitMates: id => this.circuitMates(id)
+        });
+        // Recorded straight away: the chain's own edges belong to this tick.
+        for (const e of this.chain.drainEvents())
+            this.causalEvents.push({ id: `evt-${this.tick}-c${this.causalEvents.length}`, tick: this.tick, kind: e.kind, sourceId: e.sourceId, ...(e.targetId ? { targetId: e.targetId } : {}), ...(e.data ? { data: e.data } : {}) });
+    }
     stepMagnets(dt) {
         if (!this.magnets.hasMagnets())
             return;
@@ -259,6 +316,7 @@ export class RuntimeWorld {
             for (const e of this.water.drainEvents())
                 this.event(e.kind, e.sourceId, e.targetId, e.data);
         }
+        this.fingerThisTick = [...this.flips, ...this.fingerPressed];
         this.flips.clear();
         for (const n of this.gears.nodes)
             if (this.gears.isElectric(n.id))

@@ -208,6 +208,28 @@ export const REWARDS = [
     { id: "avatar.astronaut", kind: "AVATAR", title: "Astronaut", icon: "🧑‍🚀", description: "One small step…" },
     { id: "badge.wobbleworks-explorer", kind: "BADGE", title: "WobbleWorks Explorer", icon: "🌙", description: "Launch, land and drive — all in one go." },
     { id: "badge.space-centre", kind: "BADGE", title: "Space Centre Restored", icon: "🏅", description: "The launch tower stands again!" },
+    // Chain Reaction Workshop (M21)
+    { id: "part.chain.domino", kind: "PART", title: "Dominoes", icon: "🁢", description: "Line them up and knock them down." },
+    { id: "part.chain.bell", kind: "PART", title: "Bell", icon: "🔔", description: "Ding!" },
+    { id: "part.chain.seesaw", kind: "PART", title: "Seesaw", icon: "⚖️", description: "Down one end, up the other." },
+    { id: "part.chain.trapdoor", kind: "PART", title: "Trapdoor", icon: "🚪", description: "Holds something until it's set off." },
+    { id: "part.chain.cannon", kind: "PART", title: "Duck Cannon", icon: "🦆", description: "Fires the duck when it's set off." },
+    { id: "part.chain.confetti", kind: "PART", title: "Confetti Ring", icon: "🎊", description: "Bursts when something flies through." },
+    { id: "part.chain.counter", kind: "PART", title: "Chain Counter", icon: "⛓️", description: "Counts real cause-and-effect steps — in Free Build too." },
+    { id: "sticker.first-domino", kind: "STICKER", title: "First Domino", icon: "🁢", description: "Five steps to the bell." },
+    { id: "sticker.bell-ringer", kind: "STICKER", title: "Bell Ringer", icon: "🔔", description: "Five bells, one push." },
+    { id: "sticker.up-down", kind: "STICKER", title: "Up, Down, Around", icon: "🔄", description: "Roll, lift and spin." },
+    { id: "sticker.power-change", kind: "STICKER", title: "Power Change", icon: "⚡", description: "Rolling to electric to turning." },
+    { id: "sticker.wet-wild", kind: "STICKER", title: "Wet and Wild", icon: "💦", description: "Water in the middle." },
+    { id: "sticker.magnet-middle", kind: "STICKER", title: "Magnetic Middle", icon: "🧲", description: "A pull without touching." },
+    { id: "sticker.robot-relay", kind: "STICKER", title: "Robot Relay", icon: "🦾", description: "The robot passed it on." },
+    { id: "sticker.air-mail", kind: "STICKER", title: "Air Mail", icon: "✉️", description: "Delivered by breeze." },
+    { id: "sticker.three-domains", kind: "STICKER", title: "Three Domains", icon: "🧩", description: "Three kinds of machine." },
+    { id: "sticker.no-repeats", kind: "STICKER", title: "No Repeats", icon: "🎨", description: "Ten different parts." },
+    { id: "sticker.long-haul", kind: "STICKER", title: "Long Haul", icon: "⏳", description: "Twenty seconds of chain." },
+    { id: "prop.domino-tower", kind: "PROP", title: "Domino Tower", icon: "🁢", description: "Don't breathe on it." },
+    { id: "sprocket.party-hat", kind: "SPROCKET_ACCESSORY", title: "Party Hat", icon: "🎉", description: "Sprocket loves a grand finale." },
+    { id: "badge.chain-master", kind: "BADGE", title: "Chain Reaction Master", icon: "⛓️", description: "The Duck Finale — fifteen steps and a flying duck!" },
     { id: "badge.power-lab", kind: "BADGE", title: "Power Lab Restored", icon: "🏅", description: "The lights are on in the Power Lab!" },
     // hidden prototype lab key pieces — one from a silly mission in each of the first three labs (exploration, never stars)
     { id: "key.prototype-1", kind: "KEY_PIECE", title: "Strange Key Piece", icon: "🗝️", description: "A piece of something. It hums." },
@@ -324,7 +346,19 @@ export const MISSION_REWARDS = Object.freeze({
     "space.earth-gravity-vs-moon-gravity": { onComplete: ["sticker.fair-test"] },
     "space.space-duck": { onComplete: ["prop.mini-rocket"], onAllStars: ["sprocket.space-helmet"] },
     "space.the-wobbleworks-explorer": { onComplete: ["badge.wobbleworks-explorer", "avatar.astronaut"] },
-    "space.broken-launch-tower": { onComplete: ["badge.space-centre"] }
+    "space.broken-launch-tower": { onComplete: ["badge.space-centre"] },
+    "chain.first-domino": { onComplete: ["sticker.first-domino", "part.chain.domino", "part.chain.bell", "part.chain.counter"] },
+    "chain.bell-ringer": { onComplete: ["sticker.bell-ringer"] },
+    "chain.up-down-around": { onComplete: ["sticker.up-down", "part.chain.seesaw"] },
+    "chain.power-change": { onComplete: ["sticker.power-change"] },
+    "chain.wet-and-wild": { onComplete: ["sticker.wet-wild", "part.chain.cannon", "part.chain.confetti"] },
+    "chain.magnetic-middle": { onComplete: ["sticker.magnet-middle"] },
+    "chain.robot-relay": { onComplete: ["sticker.robot-relay"] },
+    "chain.air-mail": { onComplete: ["sticker.air-mail"] },
+    "chain.three-domains": { onComplete: ["sticker.three-domains", "prop.domino-tower"] },
+    "chain.no-repeats": { onComplete: ["sticker.no-repeats", "part.chain.trapdoor"] },
+    "chain.long-haul": { onComplete: ["sticker.long-haul"] },
+    "chain.duck-finale": { onComplete: ["badge.chain-master"], onAllStars: ["sprocket.party-hat"] }
 });
 /** Rewards owed for missions already completed (used when old saves or guest progress move into a profile). */
 export function completionRewardIds(levelIds) {
@@ -451,7 +485,19 @@ export const MISSION_STARS = Object.freeze({
     "space.earth-gravity-vs-moon-gravity": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "space.mass-same", label: "FAIR TEST — mass stays the same" } },
     "space.space-duck": { efficient: nothingAdded, advanced: { kind: "DISCOVERY", discoveryId: "secret.space-duck", label: "ORBIT — round the planet" } },
     "space.the-wobbleworks-explorer": { efficient: budget(4), advanced: wild(3) },
-    "space.broken-launch-tower": { efficient: budget(2), advanced: wild(2) }
+    "space.broken-launch-tower": { efficient: budget(2), advanced: wild(2) },
+    "chain.first-domino": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "chain.cause-effect", label: "ONE PUSH — five real steps" } },
+    "chain.bell-ringer": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "chain.cause-effect", label: "ONE PUSH — every bell" } },
+    "chain.up-down-around": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "chain.cause-effect", label: "ONE PUSH — roll, lift, spin" } },
+    "chain.power-change": { efficient: budget(1), advanced: { kind: "DISCOVERY", discoveryId: "chain.energy-transfer", label: "PASS IT ON — energy changes kind" } },
+    "chain.wet-and-wild": { efficient: budget(1), advanced: { kind: "DISCOVERY", discoveryId: "secret.chain-duck", label: "FINALE — duck through the confetti" } },
+    "chain.magnetic-middle": { efficient: budget(1), advanced: { kind: "DISCOVERY", discoveryId: "chain.many-systems", label: "MIX — three kinds of machine" } },
+    "chain.robot-relay": { efficient: nothingAdded, advanced: { kind: "DISCOVERY", discoveryId: "secret.chain-duck", label: "FINALE — duck through the confetti" } },
+    "chain.air-mail": { efficient: budget(1), advanced: { kind: "DISCOVERY", discoveryId: "chain.energy-transfer", label: "PASS IT ON — by air" } },
+    "chain.three-domains": { efficient: budget(1), advanced: { kind: "DISCOVERY", discoveryId: "chain.many-systems", label: "MIX — three kinds of machine" } },
+    "chain.no-repeats": { efficient: budget(1), advanced: wild(2) },
+    "chain.long-haul": { efficient: nothingAdded, advanced: { kind: "DISCOVERY", discoveryId: "secret.chain-marathon", label: "MARATHON — twenty seconds" } },
+    "chain.duck-finale": { efficient: budget(2), advanced: { kind: "DISCOVERY", discoveryId: "chain.long-chain", label: "LONG CHAIN — fifteen steps" } }
 });
 export function evaluateStars(levelId, evidence) {
     const stars = ["solve"];

@@ -92,6 +92,10 @@ export function addToShelf(save, title, build, sourceLevelId, nowMs = Date.now()
     return { save: updateProfile(save, p.id, q => ({ ...q, shelf: [...q.shelf, item] })), item, full: false };
 }
 export function removeFromShelf(save, inventionId) {
+    // A chain saved to the shelf kept its chain numbers in `records` (M21): they go with it.
+    const p0 = activeProfile(save);
+    if (p0 && Object.keys(p0.records).some(k => k.startsWith(`chain.shelf.${inventionId}.`)))
+        save = updateProfile(save, p0.id, q => ({ ...q, records: Object.fromEntries(Object.entries(q.records).filter(([k]) => !k.startsWith(`chain.shelf.${inventionId}.`))) }));
     const p = activeProfile(save);
     if (!p)
         return save;

@@ -6,6 +6,7 @@ import { labCleared } from "../progression/LabProgression.js";
 import { INSTALLED_REGION_CONTENT, ownsFullGame } from "../progression/Campus.js";
 import { LAB_MODULES } from "../labs/Labs.js";
 import { formatBytes } from "../save/StorageMonitor.js";
+import { CHAIN_PARENT_MAPPINGS } from "../chain/ChainWorkshop.js";
 /**
  * Grown-ups area (Milestone 10 slice): gate keypad, per-child concept summary, storage manager,
  * backup export/import and profile removal. Full Parent Dashboard content arrives at M34;
@@ -69,7 +70,8 @@ function line(icon, text) { const s = el("span", "parent-line"); s.append(parent
 export const PARENT_CONCEPT_GROUPS = [
     { concept: "Gears & Mechanisms", mappings: GEAR_PARENT_MAPPINGS },
     { concept: "Structures & Forces", mappings: STRUCTURE_PARENT_MAPPINGS },
-    ...LAB_MODULES.map(m => ({ concept: m.concept, mappings: m.parentMappings }))
+    ...LAB_MODULES.map(m => ({ concept: m.concept, mappings: m.parentMappings })),
+    { concept: "Cause and effect", mappings: CHAIN_PARENT_MAPPINGS }
 ];
 function conceptLines(p, mappings = MOTION_PARENT_MAPPINGS) {
     const found = new Set(p.discoveries);

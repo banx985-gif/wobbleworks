@@ -461,3 +461,12 @@ html.high-contrast { --ink:#000; --panel:#fff; --accent:#006b1b; --danger:#a0000
 .blueprint-piece.found { border-style: solid; border-color: #1c7ed6; background: #d0ebff; }
 .story-list { display: flex; flex-wrap: wrap; gap: 8px; }
 .story-list button { min-height: 56px; border-radius: 14px; font-weight: 800; }
+
+/* Chain Reaction Workshop (M21): the live chain counter */
+.chain-hud { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); z-index: 5; display: flex; align-items: center; gap: 10px; background: #212529ee; color: #fff; border: 4px solid #ffd43b; border-radius: 18px; padding: 6px 16px; pointer-events: none; }
+.chain-hud.hidden { display: none; }
+.chain-hud .chain-label { font-weight: 900; color: #ffd43b; letter-spacing: .1em; }
+.chain-hud strong { font-size: 30px; min-width: 1.4em; text-align: center; color: #69db7c; }
+.chain-hud #chain-last { font-weight: 700; max-width: 40vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chain-hud.bump strong { animation: chain-bump .3s ease-out; }
+@keyframes chain-bump { from { transform: scale(1.5); } to { transform: none; } }

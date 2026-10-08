@@ -7,6 +7,9 @@ export function labMissionUnlocked(lab, id, completed) {
         return false;
     if (completed.has(id))
         return true;
+    // Creative-mode challenges are all open: nothing to unlock, nothing to clear.
+    if (meta.slot === "CHALLENGE")
+        return true;
     const o1 = ordinary(lab, 1), o2 = ordinary(lab, 2), o3 = ordinary(lab, 3);
     const firstThree = [o1, o2, o3].every(x => x !== undefined && completed.has(x));
     if (id === o1)

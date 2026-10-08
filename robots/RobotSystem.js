@@ -84,7 +84,9 @@ export class RobotSystem {
     /** Is a robot holding down an arena button wired to this (Power Lab) part? Buttons stay pressed once pressed. */
     linkPressed(id) { return this.buttons.some(b => b.pressed && b.link === id); }
     /** `motorDrive`: how hard a Power Lab motor is turning — a conveyor wired to a motor runs only while its motor really turns. */
-    step(dt, motorDrive = () => 0) {
+    /** `signal`: is this robot's signal on (the part it listens to has power, is pressed, or has been set off)? */
+    step(dt, motorDrive = () => 0, signal = () => false) {
+        this.signal = signal;
         this.elapsed += dt;
         for (const c of this.conveyors)
             if (c.poweredBy) {
@@ -178,7 +180,9 @@ export class RobotSystem {
                 return;
             }
             if (f.kind === "UNTIL") {
-                if (this.sense(r, f.sensor)) {
+                const met = this.sense(r, f.sensor);
+                this.pending.push({ kind: "SENSOR_DECISION", sourceId: r.id, data: { sensor: f.sensor, result: met, block: "UNTIL" } });
+                if (met) {
                     r.stack.pop();
                 }
                 else {
@@ -304,7 +308,10 @@ export class RobotSystem {
         return false;
     }
     /** Sensors: what the robot can find out about the world right now. */
+    signal = () => false;
     sense(r, s) {
+        if (s === "SIGNAL")
+            return this.signal(r.id);
         const [fx, fy] = this.front(r);
         const under = this.tiles.get(key(Math.round(r.x), Math.round(r.y)));
         switch (s) {

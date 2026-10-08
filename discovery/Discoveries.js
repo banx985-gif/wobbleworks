@@ -2,6 +2,7 @@ import { collectMotionDiscoveries, MOTION_REAL_WORLD_CARDS } from "../motion/Mot
 import { collectGearDiscoveries, GEAR_REAL_WORLD_CARDS } from "../gears/GearGarage.js";
 import { collectStructureDiscoveries, STRUCTURE_REAL_WORLD_CARDS } from "../structures/BuilderBay.js";
 import { LAB_MODULES } from "../labs/Labs.js";
+import { CHAIN_CONCEPT_EVIDENCE, collectChainDiscoveries } from "../chain/ChainWorkshop.js";
 export const DISCOVERIES = [
     { id: "motion.gravity-down", kind: "CONCEPT", title: "Gravity pulls down", line: "Let go of something and it falls.", art: "motion.ball", truthContractId: "truth.motion.v1" },
     { id: "motion.slope-effect", kind: "CONCEPT", title: "Slopes change motion", line: "A ramp turns falling into rolling.", art: "motion.ramp", truthContractId: "truth.motion.v1" },
@@ -125,6 +126,13 @@ export const DISCOVERIES = [
     { id: "combo.space-robot-power", kind: "COMBINATION", title: "Robot repair", line: "The robot's repair closed the circuit and the power came back.", art: "robot.arm", truthContractId: "truth.space.v1" },
     { id: "secret.space-duck", kind: "SECRET", title: "Orbiting Duck", line: "Three quarters of the way round a planet. Quack in space!", art: "sandbox.space-helmet", truthContractId: "truth.space.v1" },
     { id: "secret.space-sky-high", kind: "SECRET", title: "Sky High", line: "Over 12 metres up — right out of the room!", art: "icon.rocket-3", truthContractId: "truth.space.v1" },
+    // Chain Reaction Workshop (M21) — every one measured by the chain counter (truth.chain.v1)
+    { id: "chain.cause-effect", kind: "CONCEPT", title: "Cause and effect", line: "One push, and each step really set off the next.", art: "level.marble-run", truthContractId: "truth.chain.v1" },
+    { id: "chain.energy-transfer", kind: "CONCEPT", title: "Passing energy on", line: "Rolling turned into electricity, electricity into turning…", art: "icon.power-burst", truthContractId: "truth.chain.v1" },
+    { id: "chain.many-systems", kind: "COMBINATION", title: "Many machines, one chain", line: "Three different kinds of machine worked together.", art: "level.factory-line", truthContractId: "truth.chain.v1" },
+    { id: "chain.long-chain", kind: "CONCEPT", title: "Long chain", line: "Fifteen real steps from one push!", art: "level.marble-run", truthContractId: "truth.chain.v1" },
+    { id: "secret.chain-duck", kind: "SECRET", title: "Grand Finale Duck", line: "The duck flew through the confetti. Take a bow!", art: "level.duck-bath", truthContractId: "truth.chain.v1" },
+    { id: "secret.chain-marathon", kind: "SECRET", title: "Chain Marathon", line: "Twenty seconds of one chain reaction. Phew!", art: "icon.speed", truthContractId: "truth.chain.v1" },
     { id: "secret.sky-tower", kind: "SECRET", title: "Sky Scraper", line: "A tower so tall it nearly touched the ceiling — and it stood firm!", art: "builder.beam-metal", truthContractId: "truth.structures.v1" }
 ];
 export function discoveryById(id) { return DISCOVERIES.find(d => d.id === id); }
@@ -276,6 +284,8 @@ export function evaluateRunDiscoveries(build, runtime, previous) {
     for (const m of LAB_MODULES)
         for (const id of m.collectDiscoveries(build, runtime))
             concepts.push({ id, evidence: m.conceptEvidence[id] ?? "Seen in a test." });
+    for (const id of collectChainDiscoveries(build, runtime))
+        concepts.push({ id, evidence: CHAIN_CONCEPT_EVIDENCE[id] ?? "Seen in a test." });
     return [...concepts, ...collectSpecialDiscoveries(build, runtime)].filter(a => discoveryById(a.id));
 }
 export function eventsFor(runtime, partId, kind) {

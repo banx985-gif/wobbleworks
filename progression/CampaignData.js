@@ -126,3 +126,22 @@ export const MAIN_LABS = [
             { id: "space.broken-launch-tower", title: "Broken Launch Tower", slot: "EMERGENCY", objective: "Repair a multi-system launch tower using structures, electricity, gears and robotics.", requiredForProgression: true },
         ] },
 ];
+/**
+ * Creative modes (M21 onward): play sets outside the nine-lab campaign. Their challenges are all open from the start
+ * (slot CHALLENGE) — they never gate the campaign and the campaign never needs them.
+ */
+export const CHAIN_WORKSHOP = { id: "chain-workshop", title: "Chain Reaction Workshop", concepts: "Cause and effect", colour: "#ffa94d", icon: "⛓️", missions: [
+        { id: "chain.first-domino", title: "First Domino", slot: "CHALLENGE", objective: "Create a 5-edge causal chain ending at a bell.", requiredForProgression: false },
+        { id: "chain.bell-ringer", title: "Bell Ringer", slot: "CHALLENGE", objective: "Ring 5 distinct bells from one starting action.", requiredForProgression: false },
+        { id: "chain.up-down-around", title: "Up, Down, Around", slot: "CHALLENGE", objective: "Use at least one lift, roll and rotation event in a 8-edge chain.", requiredForProgression: false },
+        { id: "chain.power-change", title: "Power Change", slot: "CHALLENGE", objective: "Use mechanical → electrical → mechanical transfer in one valid chain.", requiredForProgression: false },
+        { id: "chain.wet-and-wild", title: "Wet and Wild", slot: "CHALLENGE", objective: "Include a water-controlled event and finish by launching a duck.", requiredForProgression: false },
+        { id: "chain.magnetic-middle", title: "Magnetic Middle", slot: "CHALLENGE", objective: "Use a magnetic switch or magnetic movement as a causal step.", requiredForProgression: false },
+        { id: "chain.robot-relay", title: "Robot Relay", slot: "CHALLENGE", objective: "A sensor-driven robot must trigger the next mechanism.", requiredForProgression: false },
+        { id: "chain.air-mail", title: "Air Mail", slot: "CHALLENGE", objective: "Use a fan/balloon/flight event to carry the chain between two stations.", requiredForProgression: false },
+        { id: "chain.three-domains", title: "Three Domains", slot: "CHALLENGE", objective: "Use at least three different system domains in a 12-edge chain.", requiredForProgression: false },
+        { id: "chain.no-repeats", title: "No Repeats", slot: "CHALLENGE", objective: "Reach 10 causal edges without repeating a mechanism family.", requiredForProgression: false },
+        { id: "chain.long-haul", title: "Long Haul", slot: "CHALLENGE", objective: "Keep one causal sequence alive for at least 20 seconds without loop farming.", requiredForProgression: false },
+        { id: "chain.duck-finale", title: "Duck Finale", slot: "CHALLENGE", objective: "Reach 15 valid edges and make the final event launch a duck through confetti.", requiredForProgression: false }
+    ] };
+export const CREATIVE_MODES = [CHAIN_WORKSHOP];
