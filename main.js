@@ -23,7 +23,11 @@ import { loadOpeningLevels } from "./opening/OpeningContent.js";
 import { OpeningDirector, evaluateOpeningSuccess } from "./opening/OpeningDirector.js";
 import { loadMotionYardLevels } from "./motion/MotionContent.js";
 import { MOTION_PERFORMANCE_BUDGET } from "./motion/MotionPerformanceBudget.js";
-import { MOTION_MISSIONS, completeMotionMission, createMotionProgress, evaluateMotionMission, isMotionMissionUnlocked, nextRequiredMotionMission, MOTION_REAL_WORLD_CARDS } from "./motion/MotionYard.js";
+import { evaluateMotionMission, MOTION_REAL_WORLD_CARDS } from "./motion/MotionYard.js";
+import { MAIN_LABS } from "./progression/CampaignData.js";
+import { labMissionUnlocked, nextRequiredLabMission } from "./progression/LabProgression.js";
+import { evaluateGearMission, GEAR_REAL_WORLD_CARDS, loadGearGarageLevels } from "./gears/GearGarage.js";
+import { analyzeGears, gearNodeFrom, gearSnapPosition } from "./gears/GearSystem.js";
 import { InputManager } from "./input/InputManager.js";
 import { CanvasRenderer } from "./render/CanvasRenderer.js";
 import { CameraController } from "./render/CameraController.js";
@@ -32,11 +36,15 @@ import { EditorOverlay } from "./tooling/EditorOverlay.js";
 import { AssetManager } from "./core/AssetManager.js";
 import { discoveryById, evaluateRunDiscoveries } from "./discovery/Discoveries.js";
 import { observePartUses, partTitle, useLabel } from "./discovery/PartMastery.js";
-import { ghostSnap, hintView, HintTracker, MOTION_HINTS } from "./discovery/Hints.js";
+import { ghostSnap, hintView, HintTracker, LEVEL_HINTS } from "./discovery/Hints.js";
 import { diagnoseRun, WHY_CHOICES } from "./discovery/WhyCards.js";
 import { AdaptiveObserver } from "./discovery/AdaptiveAssistance.js";
 import { guidanceHistory, recordRunEvidence, withSolveHistory } from "./discovery/DiscoveryBook.js";
 import { renderDiscoveryBook } from "./discovery/DiscoveryBookView.js";
+import { DEFAULT_LOOK, HAIR_COLOURS, LOOK_CATEGORIES, isPieceUnlocked, piecesFor, withPiece } from "./inventor/InventorLook.js";
+import { pictureUrl, renderLook } from "./inventor/LookView.js";
+import { AVATAR_PORTRAITS } from "./hub/HubScreens.js";
+import { rewardById as rewardInfo } from "./progression/Rewards.js";
 const canvas = document.querySelector("#game");
 if (!canvas)
     throw new Error("Missing #game canvas");
@@ -94,15 +102,23 @@ let openingDirector = new OpeningDirector(1);
 let openingActive = false;
 let openingSuccessShown = false;
 let selectedAvatar = "BLUE";
+/** Inventor maker: the look being built (null = one of the three ready-made painted inventors). */
+let makerLook = { ...DEFAULT_LOOK };
+let makerCategory = "skin";
+let makerHairColour;
 let profileSelectedId;
 let editingProfileId;
 let currentNarration = "";
-let motionLevels = new Map();
-let motionProgress = createMotionProgress();
-let motionActive = false;
-let activeMotionLevel;
+/** Authored levels for every installed lab, by lab id. */
+const labLevels = new Map();
+/** The lab whose menu/missions are showing (Motion Yard, Gear Garage, …). */
+let currentLabId = "motion-yard";
+/** Labs a grown-up opened with the test tool this session (progress gate skipped, nothing saved). */
+const testingLabs = new Set();
+let labActive = false;
+let activeLevel;
 let forceScanner = false;
-let motionResultShown = false;
+let resultShown = false;
 let freeBuildActive = false;
 let creatingExtraProfile = false;
 let lockerTab = "avatar";
@@ -223,11 +239,17 @@ function readSettingsForm() {
     const chk = (id) => document.querySelector(id).checked;
     return { textScale: Number.isFinite(num) ? Math.max(0.9, Math.min(1.4, num)) : 1, reducedMotion: chk("#setting-reduced-motion"), highContrast: chk("#setting-high-contrast"), narration: chk("#setting-narration"), subtitles: chk("#setting-subtitles"), soundEffects: chk("#setting-sfx"), music: chk("#setting-music"), vibration: chk("#setting-vibration") };
 }
-function motionCompleted() { return completedLevelIds(appSave).filter(id => id.startsWith("motion.")); }
+function labDef(id = currentLabId) { return MAIN_LABS.find(l => l.id === id); }
+function labOfLevel(levelId) { return MAIN_LABS.find(l => l.missions.some(m => m.id === levelId))?.id ?? "motion-yard"; }
+function completedSet() { return new Set(completedLevelIds(appSave)); }
+function missionMeta(levelId) { return MAIN_LABS.flatMap(l => l.missions).find(m => m.id === levelId); }
+/** The lab's own evaluator: same success rules as the level file, plus that lab's evidence-backed discoveries. */
+function evaluateLevel(level, runtime) { return labOfLevel(level.id) === "gear-garage" ? evaluateGearMission(level, build, runtime) : evaluateMotionMission(level, build, runtime); }
+function labIsOpen(labId) { return labLevels.has(labId) && (routeToRegion(appSave, labId).kind === "ENTER" || testingLabs.has(labId)); }
 function updateOpeningTray(level) {
     const allowed = level ? new Set(level.availablePartIds) : undefined;
     document.querySelectorAll("[data-part]").forEach(button => {
-        const hidden = Boolean((openingActive || motionActive || freeBuildActive) && allowed && !allowed.has(button.dataset.part));
+        const hidden = Boolean((openingActive || labActive || freeBuildActive) && allowed && !allowed.has(button.dataset.part));
         button.classList.toggle("hidden", hidden);
         button.disabled = hidden;
     });
@@ -262,13 +284,18 @@ function renderOpeningHud() {
     openingTitle.textContent = meta.title;
     openingPrompt.textContent = meta.prompt;
 }
-function renderMotionMenu() {
+function renderLabMenu() {
     motionMissionGrid.replaceChildren();
-    const completed = new Set(motionProgress.completed);
-    const requiredNext = nextRequiredMotionMission(motionProgress);
-    motionProgressLabel.textContent = `${completed.size} / ${MOTION_MISSIONS.length} Motion Yard experiences completed`;
-    for (const meta of MOTION_MISSIONS) {
-        const unlocked = isMotionMissionUnlocked(meta.id, motionProgress) || completed.has(meta.id);
+    const lab = labDef();
+    const completed = completedSet();
+    const requiredNext = nextRequiredLabMission(lab, completed);
+    document.querySelector("#lab-badge").textContent = `LAB ${MAIN_LABS.indexOf(lab) + 1}`;
+    document.querySelector("#lab-badge").style.background = lab.colour;
+    document.querySelector("#lab-title").textContent = lab.title;
+    document.querySelector("#lab-lead").textContent = `${lab.concepts}. Build, TEST, watch what happens, then change it.`;
+    motionProgressLabel.textContent = `${lab.missions.filter(m => completed.has(m.id)).length} / ${lab.missions.length} ${lab.title} experiences completed`;
+    for (const meta of lab.missions) {
+        const unlocked = labMissionUnlocked(lab, meta.id, completed);
         const button = document.createElement("button");
         button.className = `motion-mission${completed.has(meta.id) ? " done" : ""}${!unlocked ? " locked" : ""}${requiredNext === meta.id ? " required" : ""}`;
         button.disabled = !unlocked;
@@ -280,37 +307,42 @@ function renderMotionMenu() {
         const objective = document.createElement("span");
         objective.textContent = meta.objective;
         button.append(slot, title, objective);
-        button.addEventListener("click", () => loadMotionMission(meta.id));
+        button.addEventListener("click", () => loadMission(meta.id));
         motionMissionGrid.append(button);
     }
 }
-function showMotionYard() {
+function showLab(labId = currentLabId) {
+    if (!labIsOpen(labId))
+        labId = "motion-yard";
+    currentLabId = labId;
     stopToBuild();
     openingActive = false;
-    motionActive = false;
+    labActive = false;
     freeBuildActive = false;
-    activeMotionLevel = undefined;
+    activeLevel = undefined;
     forceScanner = false;
-    motionProgress = createMotionProgress(motionCompleted());
     if (activeProfile(appSave))
-        void commit(withLocation(appSave, "LAB:motion-yard"));
+        void commit(withLocation(appSave, `LAB:${labId}`));
     openingHud.classList.add("hidden");
     openingSuccess.classList.add("hidden");
     motionHud.classList.add("hidden");
     motionResult.classList.add("hidden");
     updateOpeningTray();
-    renderMotionMenu();
+    renderLabMenu();
     transition("MOTION_YARD", true);
 }
-function loadMotionMission(id) {
-    if (!isMotionMissionUnlocked(id, motionProgress) && !motionProgress.completed.includes(id))
+function loadMission(id) {
+    const labId = labOfLevel(id);
+    const lab = labDef(labId);
+    if (!labMissionUnlocked(lab, id, completedSet()))
         return;
-    const level = motionLevels.get(id);
+    const level = labLevels.get(labId)?.get(id);
     if (!level) {
-        loadingError.textContent = `Motion Yard content is missing: ${id}.`;
+        loadingError.textContent = `${lab.title} content is missing: ${id}.`;
         transition("LOADING_FAILURE", true);
         return;
     }
+    currentLabId = labId;
     stopToBuild();
     openingActive = false;
     freeBuildActive = false;
@@ -322,24 +354,25 @@ function loadMotionMission(id) {
     dragPreview = undefined;
     panStart = undefined;
     camera.reset();
-    motionActive = true;
-    activeMotionLevel = level;
-    motionResultShown = false;
+    labActive = true;
+    activeLevel = level;
+    resultShown = false;
     forceScanner = false;
     motionResult.classList.add("hidden");
-    const meta = MOTION_MISSIONS.find(m => m.id === id);
+    const meta = missionMeta(id);
     motionTitle.textContent = meta?.title ?? level.title;
     motionObjective.textContent = meta?.objective ?? level.title;
     motionHud.classList.remove("hidden");
     forceScannerButton.classList.remove("hidden", "force-on");
     forceScannerButton.setAttribute("aria-pressed", "false");
-    document.querySelector(".motion-badge").textContent = "MOTION YARD";
+    document.querySelector(".motion-hud .motion-badge").textContent = lab.title.toUpperCase();
+    forceScannerButton.textContent = labId === "gear-garage" ? "Spin Scanner" : "Force Scanner";
     updateOpeningTray(level);
     resetGuidance(level.id);
     enterWorkshop();
 }
 function showMotionResult(success, body, stars = [], newStars = [], rewards = []) {
-    motionResultShown = true;
+    resultShown = true;
     motionResult.classList.remove("hidden");
     motionResult.classList.toggle("success", success);
     motionResultTitle.textContent = success ? "IT WORKED!" : "GOOD TEST!";
@@ -351,7 +384,7 @@ function showMotionResult(success, body, stars = [], newStars = [], rewards = []
     shelfButton.classList.toggle("hidden", !success || !activeProfile(appSave));
     shelfButton.disabled = false;
     shelfButton.textContent = "Put on Shelf";
-    motionBackButton.textContent = resultReturnsToHub ? "Workshop" : "Motion Yard";
+    motionBackButton.textContent = resultReturnsToHub ? "Workshop" : labDef().title;
     whyButton.classList.toggle("hidden", success || !lastWhy);
     keepBuildingButton.classList.toggle("hidden", success);
     if (success) {
@@ -380,27 +413,26 @@ function playerPartCount(level) {
     return build.allParts().filter(p => !seeded.has(p.id)).length;
 }
 function maybeCompleteMotionMission() {
-    if (!motionActive || !activeMotionLevel || !testMode || motionResultShown)
+    if (!labActive || !activeLevel || !testMode || resultShown)
         return;
     const runtime = tests.active();
     if (!runtime)
         return;
-    const result = evaluateMotionMission(activeMotionLevel, build, runtime);
+    const result = evaluateLevel(activeLevel, runtime);
     if (!result.success)
         return;
     if (!tests.isPaused())
         tests.togglePause();
-    motionProgress = completeMotionMission(motionProgress, activeMotionLevel.id);
     checkRunDiscoveries();
-    const outcome = recordMissionSuccess(appSave, activeMotionLevel.id, { playerPartCount: playerPartCount(activeMotionLevel), discoveries: result.discoveries });
-    lastMissionLevelId = activeMotionLevel.id;
+    const outcome = recordMissionSuccess(appSave, activeLevel.id, { playerPartCount: playerPartCount(activeLevel), discoveries: result.discoveries });
+    lastMissionLevelId = activeLevel.id;
     resultReturnsToHub = outcome.labCleared !== undefined;
     // Help used only tunes how often help is offered later; stars and rewards above never see it.
     void commit(withSolveHistory(outcome.save, observer.hintsUsed(), observer.failedTests()), true).catch(() => undefined);
     setHint(undefined);
     hideBoltTip();
     hintButton.classList.remove("offer");
-    const card = result.discoveries.map(id => MOTION_REAL_WORLD_CARDS.find(c => c.discoveryId === id)).find(Boolean);
+    const card = result.discoveries.map(id => [...MOTION_REAL_WORLD_CARDS, ...GEAR_REAL_WORLD_CARDS].find(c => c.discoveryId === id)).find(Boolean);
     const discovered = card ? ` ${card.title}: ${card.example}` : result.discoveries.length ? ` You discovered ${result.discoveries[0].replace("motion.", "").replaceAll("-", " ")}.` : "";
     const cleared = outcome.labCleared ? ` The ${regionById(outcome.labCleared)?.title ?? "lab"} is restored!` : "";
     showMotionResult(true, `Nice invention.${discovered}${cleared}`, outcome.stars, outcome.newStars, outcome.newRewards);
@@ -426,9 +458,9 @@ function loadOpeningStep(step) {
     panStart = undefined;
     camera.reset();
     openingActive = true;
-    motionActive = false;
+    labActive = false;
     freeBuildActive = false;
-    activeMotionLevel = undefined;
+    activeLevel = undefined;
     motionHud.classList.add("hidden");
     openingSuccessShown = false;
     openingSuccess.classList.add("hidden");
@@ -448,7 +480,7 @@ function startOpening(step = openingStepFromSave()) {
 }
 function autoSnapOpeningWheel(id) {
     const openingSnap = openingActive && [1, 4].includes(openingDirector.currentStep());
-    const adaptiveSnap = (motionActive || freeBuildActive) && currentGuidance().wheelSnap;
+    const adaptiveSnap = (labActive || freeBuildActive) && currentGuidance().wheelSnap;
     if (!(openingSnap || adaptiveSnap) || !currentAssistance(appSave).snapAssist)
         return;
     const wheel = build.getPart(id);
@@ -485,7 +517,7 @@ async function advanceOpening() {
         openingHud.classList.add("hidden");
         editingProfileId = undefined;
         creatingExtraProfile = false;
-        selectAvatar("BLUE");
+        resetMaker({ ...DEFAULT_LOOK }, "BLUE");
         document.querySelector("#btn-inventor-cancel").classList.add("hidden");
         document.querySelector("#inventor-form-title").textContent = "CREATE YOUR INVENTOR";
         document.querySelector("#btn-create-inventor").textContent = "✔ CREATE INVENTOR";
@@ -513,7 +545,7 @@ function openInventorForm(editId) {
     const p = editId ? appSave.profiles.find(x => x.id === editId) : undefined;
     creatingExtraProfile = !editId;
     inventorName.value = p?.name ?? "Inventor";
-    selectAvatar(p && PAINTED_AVATARS.includes(p.avatarStyle) ? p.avatarStyle : "BLUE");
+    resetMaker(p ? p.look ?? (PAINTED_AVATARS.includes(p.avatarStyle) ? null : { ...DEFAULT_LOOK }) : { ...DEFAULT_LOOK }, p && PAINTED_AVATARS.includes(p.avatarStyle) ? p.avatarStyle : "BLUE");
     document.querySelector("#inventor-form-title").textContent = p ? `EDIT ${p.name.toUpperCase()}` : "CREATE YOUR INVENTOR";
     document.querySelector("#btn-create-inventor").textContent = p ? "✔ SAVE CHANGES" : "✔ CREATE INVENTOR";
     document.querySelector("#inventor-form-lead").textContent = p ? "Change your nickname or your look." : "Bolt wants to remember who helped.";
@@ -571,7 +603,7 @@ function renderShell() {
     if (current === "PROFILE_SELECT")
         renderProfiles();
     if (current === "MOTION_YARD")
-        renderMotionMenu();
+        renderLabMenu();
     if (current === "HUB")
         renderHubScreen();
     if (current === "CAMPUS_MAP")
@@ -592,6 +624,8 @@ function renderShell() {
         syncSettingsForm();
     if (current === "DISCOVERY_BOOK")
         renderBook();
+    if (current === "CREATE_INVENTOR")
+        renderMaker();
     const activeCard = shellElement.querySelector(`[data-screen="${current}"]`);
     if (activeCard && !inWorkshop) {
         const focusTarget = activeCard.querySelector("button,input") ?? activeCard;
@@ -670,11 +704,11 @@ async function loadAppState() {
     try {
         const loaded = await saveManager.loadWithRecovery();
         openingLevels = await loadOpeningLevels(registry);
-        motionLevels = await loadMotionYardLevels(registry);
+        labLevels.set("motion-yard", await loadMotionYardLevels(registry));
+        labLevels.set("gear-garage", await loadGearGarageLevels(registry));
         appSave = loaded.payload ?? createDefaultAppSave();
         savingBlocked = loaded.futureVersion;
         applySettings();
-        motionProgress = createMotionProgress(motionCompleted());
         const lastBuild = currentLastBuild(appSave);
         if (lastBuild)
             build.replaceAll({ parts: lastBuild.parts, connections: lastBuild.connections });
@@ -735,7 +769,6 @@ function resumeActiveProfile() {
     const lastBuild = p.lastBuild;
     if (lastBuild)
         build.replaceAll({ parts: lastBuild.parts, connections: lastBuild.connections });
-    motionProgress = createMotionProgress(motionCompleted());
     if (!p.openingComplete) {
         startOpening(openingStepFromSave());
         return;
@@ -744,18 +777,21 @@ function resumeActiveProfile() {
         transition("CAMPUS_MAP", true);
         return;
     }
-    if (p.location === "LAB:motion-yard") {
-        showMotionYard();
-        return;
+    if (p.location.startsWith("LAB:")) {
+        const id = p.location.slice(4);
+        if (labIsOpen(id)) {
+            showLab(id);
+            return;
+        }
     }
     showHub();
 }
 function leaveGameplay() {
     stopToBuild();
     openingActive = false;
-    motionActive = false;
+    labActive = false;
     freeBuildActive = false;
-    activeMotionLevel = undefined;
+    activeLevel = undefined;
     forceScanner = false;
     openingHud.classList.add("hidden");
     openingSuccess.classList.add("hidden");
@@ -806,7 +842,7 @@ document.querySelector("#btn-hub-moment").addEventListener("click", () => {
 function renderHubScreen() {
     renderHub(hubRoot, appSave, {
         openMap: () => { mapNote.textContent = "Tap a building."; transition("CAMPUS_MAP"); void commit(withLocation(appSave, "MAP")); },
-        openWorkbench: () => showMotionYard(),
+        openWorkbench: () => showLab(),
         openShelf: () => transition("SHELF"),
         openTrophies: () => transition("TROPHIES"),
         openLocker: () => transition("LOCKER"),
@@ -833,8 +869,8 @@ function renderMap() {
             if (route.kind === "ENTER") {
                 if (id === "workshop-hub")
                     showHub();
-                else if (id === "motion-yard")
-                    showMotionYard();
+                else if (labLevels.has(id))
+                    showLab(id);
                 return;
             }
             if (route.kind === "PARENT_GATE") {
@@ -891,14 +927,15 @@ function startFreeBuild(from) {
     motionObjective.textContent = "Build anything. TEST it. Change it. TEST again.";
     document.querySelector(".motion-badge").textContent = "WORKSHOP";
     resetGuidance(undefined);
-    const scanner = p?.unlockedTools.includes("tool.force-scanner") ?? false;
+    const scanner = (p?.unlockedTools.includes("tool.force-scanner") || p?.unlockedTools.includes("tool.spin-scanner")) ?? false;
+    forceScannerButton.textContent = "Scanner";
     forceScannerButton.classList.toggle("hidden", !scanner);
     forceScannerButton.classList.remove("force-on");
     enterWorkshop();
 }
 function returnToModeMenu() {
-    if (motionActive) {
-        showMotionYard();
+    if (labActive) {
+        showLab();
         return;
     }
     if (freeBuildActive) {
@@ -969,7 +1006,6 @@ function renderParent() {
                     }
                     appSave = imported;
                     applySettings();
-                    motionProgress = createMotionProgress(motionCompleted());
                     parentNotice = `Backup loaded: ${result.profileCount} inventor${result.profileCount === 1 ? "" : "s"}.`;
                 }
                 catch {
@@ -981,6 +1017,11 @@ function renderParent() {
         },
         deleteProfile: id => { void commit(withDeletedProfile(appSave, id), true).then(async () => { applySettings(); parentNotice = "Inventor removed."; lastStorage = await storageReport(appSave); renderParent(); }); },
         setFullGameForTesting: owned => { void commit(withEntitlement(appSave, owned ? "OWNED" : "LOCKED"), true).then(() => renderParent()); },
+        openLabForTesting: labId => { if (!activeProfile(appSave)) {
+            parentNotice = "Choose an inventor first, then open the lab.";
+            renderParent();
+            return;
+        } testingLabs.add(labId); showLab(labId); },
         close: () => transition(parentReturn === "HUB" && activeProfile(appSave) ? "HUB" : parentReturn === "PROFILE_SELECT" ? "PROFILE_SELECT" : "TITLE", true)
     });
 }
@@ -995,7 +1036,7 @@ function resetGuidance(levelId) {
         setHint(currentHint);
         return;
     }
-    hintTracker = levelId && MOTION_HINTS[levelId] ? new HintTracker(levelId) : undefined;
+    hintTracker = levelId && LEVEL_HINTS[levelId] ? new HintTracker(levelId) : undefined;
     observer.reset(now());
     setHint(undefined);
     hintButton.classList.toggle("hidden", !hintTracker);
@@ -1008,8 +1049,8 @@ function setHint(view) {
 }
 function applyTrayGlow() {
     const glow = new Set(currentHint.glowParts);
-    if (activeMotionLevel && hintTracker && motionActive && currentGuidance().highlightParts)
-        for (const id of MOTION_HINTS[activeMotionLevel.id]?.usefulParts ?? [])
+    if (activeLevel && hintTracker && labActive && currentGuidance().highlightParts)
+        for (const id of LEVEL_HINTS[activeLevel.id]?.usefulParts ?? [])
             glow.add(id);
     document.querySelectorAll("[data-part]").forEach(b => b.classList.toggle("hint-glow", glow.has(b.dataset.part)));
 }
@@ -1030,15 +1071,15 @@ function offerAdaptiveHelp() {
         showBoltTip(g.boltTip);
         observer.markTipShown(g.boltTip);
     }
-    else if (g.replayInstruction && activeMotionLevel)
+    else if (g.replayInstruction && activeLevel)
         showBoltTip(`Remember the job: ${motionObjective.textContent ?? ""}`);
 }
 function askForHint() {
-    if (!hintTracker || !activeMotionLevel || testMode)
+    if (!hintTracker || !activeLevel || testMode)
         return;
     const tier = hintTracker.next();
     observer.noteHint();
-    const view = hintView(activeMotionLevel.id, activeMotionLevel, tier);
+    const view = hintView(activeLevel.id, activeLevel, tier);
     setHint(view);
     hintButton.classList.remove("offer");
     hintButton.innerHTML = `<span aria-hidden="true">💡</span> Clue <span class="tier">${tier}/3</span>`;
@@ -1132,7 +1173,7 @@ function openWhyCard() {
     speakCurrentLine();
     whyCard.classList.remove("hidden");
 }
-function keepBuilding() { whyCard.classList.add("hidden"); motionResult.classList.add("hidden"); motionResultShown = false; stopToBuild(); }
+function keepBuilding() { whyCard.classList.add("hidden"); motionResult.classList.add("hidden"); resultShown = false; stopToBuild(); }
 function renderBook() {
     renderDiscoveryBook(bookRoot, appSave, id => artManifest[id], bookTab, tab => { bookTab = tab; renderBook(); });
 }
@@ -1142,11 +1183,37 @@ document.querySelector("#btn-bolt-tip-close").addEventListener("click", hideBolt
 whyButton.addEventListener("click", openWhyCard);
 keepBuildingButton.addEventListener("click", keepBuilding);
 document.querySelector("#btn-why-build").addEventListener("click", keepBuilding);
-window.setInterval(() => { if (motionActive && !testMode && shell.current() === "WORKSHOP" && hintTracker) {
+window.setInterval(() => { if (labActive && !testMode && shell.current() === "WORKSHOP" && hintTracker) {
     if (currentGuidance().offerHint && hintTracker.tier() < 3)
         hintButton.classList.add("offer");
     applyTrayGlow();
 } }, 5000);
+/**
+ * Gears only turn when their rims touch exactly, which is too fiddly to do by finger. A dropped gear slides onto
+ * the shaft or gear centre it was dropped on, or out to exactly touching the gear beside it. Placement only:
+ * the same spots can be reached by hand, and nothing about how gears turn changes. Building Help widens the reach.
+ */
+function snapGear(id) {
+    const part = build.getPart(id);
+    if (!part || part.parameters.locked === true)
+        return;
+    const node = gearNodeFrom(part, registry.get(part.definitionId));
+    if (!node)
+        return;
+    const others = build.allParts().filter(p => p.id !== id).map(p => gearNodeFrom(p, registry.get(p.definitionId))).filter((n) => Boolean(n));
+    const target = gearSnapPosition(node, others, currentAssistance(appSave).snapAssist ? 0.45 : 0.2);
+    if (!target)
+        return;
+    if (Math.abs(target.x - part.position.x) > 1e-9 || Math.abs(target.y - part.position.y) > 1e-9)
+        build.move(id, { x: target.x, y: target.y });
+    // Remember which gear it was snapped against (decides the layer when stacked gears could touch twice).
+    for (const c of build.allConnections())
+        if (c.config.kind === "ROTATIONAL" && c.config.relationship === "GEAR" && (c.fromPartId === id || c.toPartId === id))
+            build.disconnect(c.id);
+    if (target.kind === "MESH")
+        build.connect(id, "axle", target.targetId, "axle", { kind: "ROTATIONAL", relationship: "GEAR", ratio: 1, invertDirection: true });
+    sfx(target.kind === "AXLE" ? 640 : 820, .04);
+}
 async function boot() {
     renderShell();
     const support = detectDeviceSupport();
@@ -1334,21 +1401,135 @@ document.querySelectorAll("[data-shell-action]").forEach(button => button.addEve
         }
     }
 }));
-function selectAvatar(style) {
+// ------------------------------------------------------------------ inventor maker
+/** Rewards the inventor being edited owns (a brand-new inventor owns none yet). */
+function makerOwnedRewards() { return editingProfileId ? appSave.profiles.find(p => p.id === editingProfileId)?.rewards ?? [] : []; }
+function resetMaker(look, style) {
+    makerLook = look;
     selectedAvatar = style;
-    const preview = document.querySelector("#creator-preview-img");
-    if (preview)
-        preview.src = `./assets/avatars/avatar.${style.toLowerCase()}.webp`;
-    document.querySelectorAll(".avatar-choice").forEach(choice => choice.classList.toggle("selected", choice.dataset.avatar === style));
+    makerCategory = look ? "skin" : "ready";
+    makerHairColour = undefined;
+    renderMaker();
 }
-document.querySelectorAll(".avatar-choice").forEach(button => button.addEventListener("click", () => selectAvatar(button.dataset.avatar ?? "BLUE")));
+function renderMaker() {
+    const cats = document.querySelector("#maker-cats");
+    const grid = document.querySelector("#maker-grid");
+    const colours = document.querySelector("#maker-colours");
+    const note = document.querySelector("#maker-note");
+    const preview = document.querySelector("#maker-preview-card");
+    const owned = makerOwnedRewards();
+    cats.replaceChildren();
+    for (const c of [...LOOK_CATEGORIES, { id: "ready", label: "Ready Looks", icon: "⭐", required: false }]) {
+        const b = document.createElement("button");
+        b.className = `maker-cat${makerCategory === c.id ? " on" : ""}`;
+        b.setAttribute("aria-pressed", String(makerCategory === c.id));
+        const ico = document.createElement("span");
+        ico.className = "ico";
+        ico.textContent = c.icon;
+        ico.setAttribute("aria-hidden", "true");
+        b.append(ico, document.createTextNode(c.label));
+        b.addEventListener("click", () => { makerCategory = c.id; sfx(700, .03); renderMaker(); });
+        cats.append(b);
+    }
+    preview.replaceChildren(makerLook ? renderLook(makerLook, artManifest) : Object.assign(document.createElement("img"), { src: AVATAR_PORTRAITS[selectedAvatar] ?? AVATAR_PORTRAITS.BLUE, alt: "" }));
+    grid.replaceChildren();
+    colours.replaceChildren();
+    note.textContent = "";
+    const title = document.querySelector("#maker-options-title");
+    if (makerCategory === "ready") {
+        title.textContent = "READY-MADE INVENTORS";
+        for (const style of PAINTED_AVATARS) {
+            const b = document.createElement("button");
+            b.className = `maker-piece${!makerLook && selectedAvatar === style ? " on" : ""}`;
+            b.setAttribute("aria-label", `${style.toLowerCase()} inventor`);
+            const img = document.createElement("img");
+            img.src = AVATAR_PORTRAITS[style];
+            img.alt = "";
+            b.append(img);
+            b.addEventListener("click", () => { makerLook = null; selectedAvatar = style; sfx(820, .04); renderMaker(); });
+            grid.append(b);
+        }
+        note.textContent = "Or build your own with the buttons on the left!";
+        return;
+    }
+    const category = makerCategory;
+    const meta = LOOK_CATEGORIES.find(c => c.id === category);
+    title.textContent = category === "hair" ? "HAIR STYLE" : category === "skin" ? "SKIN TONE" : meta.label.toUpperCase();
+    let pieces = piecesFor(category);
+    if (category === "hair") {
+        const used = HAIR_COLOURS.filter(c => pieces.some(p => p.colour === c.id));
+        const all = document.createElement("button");
+        all.className = `maker-colour all${makerHairColour ? "" : " on"}`;
+        all.setAttribute("aria-label", "All hair colours");
+        all.addEventListener("click", () => { makerHairColour = undefined; renderMaker(); });
+        colours.append(all);
+        for (const c of used) {
+            const b = document.createElement("button");
+            b.className = `maker-colour${makerHairColour === c.id ? " on" : ""}`;
+            b.setAttribute("aria-label", `${c.label} hair`);
+            const swatch = c.swatch ? pictureUrl(c.swatch, artManifest) ?? `./assets/ui/${c.swatch}.webp` : undefined;
+            b.style.setProperty("--c", swatch ? `url("${swatch}")` : c.css);
+            b.addEventListener("click", () => { makerHairColour = c.id; renderMaker(); });
+            colours.append(b);
+        }
+        if (makerHairColour)
+            pieces = pieces.filter(p => p.colour === makerHairColour);
+    }
+    const current = makerLook ? makerLook[category] : undefined;
+    const choose = (id) => { makerLook = withPiece(makerLook ?? { ...DEFAULT_LOOK }, category, id, owned); sfx(820, .04); renderMaker(); };
+    if (!meta.required) {
+        const none = document.createElement("button");
+        none.className = `maker-piece${makerLook && !current ? " on" : ""}`;
+        none.setAttribute("aria-label", `No ${meta.label.toLowerCase()}`);
+        const x = document.createElement("span");
+        x.className = "none";
+        x.textContent = "✕";
+        none.append(x);
+        none.addEventListener("click", () => choose(undefined));
+        grid.append(none);
+    }
+    for (const piece of pieces) {
+        const unlocked = isPieceUnlocked(piece, owned);
+        const b = document.createElement("button");
+        b.className = `maker-piece${current === piece.id ? " on" : ""}${unlocked ? "" : " locked"}`;
+        b.setAttribute("aria-label", unlocked ? piece.label : `${piece.label} (locked)`);
+        const holder = piece.art.length > 1 ? Object.assign(document.createElement("span"), { className: "pairimgs" }) : b;
+        for (const a of piece.art) {
+            const url = pictureUrl(a, artManifest);
+            if (!url)
+                continue;
+            const img = document.createElement("img");
+            img.src = url;
+            img.alt = "";
+            img.addEventListener("error", () => img.remove());
+            holder.append(img);
+        }
+        if (holder !== b)
+            b.append(holder);
+        if (piece.reward) {
+            const tag = document.createElement("span");
+            tag.className = "tag";
+            tag.textContent = piece.label;
+            b.append(tag);
+        }
+        b.addEventListener("click", () => {
+            if (!unlocked) {
+                note.textContent = `🔒 ${piece.label}: earn it in the Motion Yard${rewardInfo(piece.reward) ? " — then it's in your locker and here too!" : "."}`;
+                sfx(300, .05);
+                return;
+            }
+            choose(piece.id);
+        });
+        grid.append(b);
+    }
+}
 document.querySelector("#btn-create-inventor").addEventListener("click", async () => {
     if (shell.isInputLocked(now()))
         return;
     if (editingProfileId) {
         const id = editingProfileId;
         editingProfileId = undefined;
-        await commit(withEditedProfile(appSave, id, inventorName.value, selectedAvatar), true);
+        await commit(withEditedProfile(appSave, id, inventorName.value, selectedAvatar, makerLook), true);
         profileSelectedId = id;
         transition("PROFILE_SELECT", true);
         return;
@@ -1357,7 +1538,7 @@ document.querySelector("#btn-create-inventor").addEventListener("click", async (
     creatingExtraProfile = false;
     document.querySelector("#btn-inventor-cancel").classList.add("hidden");
     try {
-        await commit(withCreatedProfile(appSave, inventorName.value, selectedAvatar), true);
+        await commit(withCreatedProfile(appSave, inventorName.value, selectedAvatar, Date.now(), makerLook ?? undefined), true);
     }
     catch {
         transition("PROFILE_SELECT", true);
@@ -1380,16 +1561,16 @@ document.querySelector("#btn-skip-line").addEventListener("click", () => {
 document.querySelector("#btn-opening-next").addEventListener("click", () => void advanceOpening());
 goMotionYardButton.addEventListener("click", () => { void saveOpeningProgress(6, true).then(() => showHub()); });
 forceScannerButton.addEventListener("click", () => { forceScanner = !forceScanner; forceScannerButton.classList.toggle("force-on", forceScanner); forceScannerButton.setAttribute("aria-pressed", String(forceScanner)); });
-document.querySelector("#btn-motion-retry").addEventListener("click", () => { if (activeMotionLevel)
-    loadMotionMission(activeMotionLevel.id); });
+document.querySelector("#btn-motion-retry").addEventListener("click", () => { if (activeLevel)
+    loadMission(activeLevel.id); });
 motionBackButton.addEventListener("click", () => { if (freeBuildActive || resultReturnsToHub) {
     resultReturnsToHub = false;
     showHub();
 }
 else
-    showMotionYard(); });
+    showLab(); });
 shelfButton.addEventListener("click", () => {
-    const meta = MOTION_MISSIONS.find(m => m.id === lastMissionLevelId);
+    const meta = lastMissionLevelId ? missionMeta(lastMissionLevelId) : undefined;
     const out = addToShelf(appSave, meta?.title ?? "My Invention", build.snapshot("shelf"), lastMissionLevelId);
     if (out.full) {
         shelfButton.textContent = "Shelf is full";
@@ -1427,7 +1608,7 @@ document.querySelectorAll("[data-part]").forEach(button => button.addEventListen
     const id = button.dataset.part;
     const surfacePart = ["motion.friction-high", "motion.friction-low", "motion.bounce-pad"].includes(id);
     const placed = build.add(id, { x: 8 + Math.random() * 1.5 - 0.75, y: surfacePart ? 8.32 : 3 });
-    if ((openingActive || motionActive) && id === "motion.ramp")
+    if ((openingActive || labActive) && id === "motion.ramp")
         build.rotate(placed.id, -0.18);
     selectedId = placed.id;
     sfx(520, 0.035);
@@ -1450,13 +1631,13 @@ ui.stop.addEventListener("click", () => {
         return;
     if (openingActive)
         openingDirector.noteStop();
-    if ((motionActive || freeBuildActive) && testMode)
+    if ((labActive || freeBuildActive) && testMode)
         checkRunDiscoveries();
-    if (motionActive && activeMotionLevel && testMode && !motionResultShown) {
+    if (labActive && activeLevel && testMode && !resultShown) {
         const runtime = tests.active();
-        const result = evaluateMotionMission(activeMotionLevel, build, runtime);
+        const result = evaluateLevel(activeLevel, runtime);
         if (!result.success) {
-            lastWhy = diagnoseRun(activeMotionLevel, build, runtime);
+            lastWhy = diagnoseRun(activeLevel, build, runtime);
             if (runtime)
                 observer.noteFailure(runtime.snapshotSignature);
             showMotionResult(false, "Change one thing, then TEST again. Fast failure is useful evidence.");
@@ -1522,10 +1703,10 @@ canvas.addEventListener("wheel", event => { if (!gameplayAllowed())
     return; event.preventDefault(); camera.setZoom(camera.zoom * (event.deltaY > 0 ? 0.92 : 1.08)); }, { passive: false });
 window.addEventListener("pointerdown", () => void audio.unlock(), { once: true });
 function pointerWorld(sample) { const logical = renderer.viewport.screenToLogical(sample.x, sample.y); const worldLogical = camera.logicalToWorld(logical); return { x: worldLogical.x / 100, y: worldLogical.y / 100 }; }
-function hitPart(x, y, padding = (motionActive || freeBuildActive) ? currentGuidance().touchPadding : 0.18) {
+function hitPart(x, y, padding = (labActive || freeBuildActive) ? currentGuidance().touchPadding : 0.18) {
     const parts = [...build.allParts()].reverse();
     return parts.find(p => { if (p.parameters.locked === true)
-        return false; const d = registry.get(p.definitionId); const rigid = d.behaviours.find(b => b.kind === "RIGID_BODY"); const w = rigid?.kind === "RIGID_BODY" ? rigid.width : 0.9; const h = rigid?.kind === "RIGID_BODY" ? rigid.height : 0.7; return Math.abs(p.position.x - x) <= w / 2 + padding && Math.abs(p.position.y - y) <= h / 2 + padding; })?.id;
+        return false; const d = registry.get(p.definitionId); const rigid = d.behaviours.find(b => b.kind === "RIGID_BODY"); const gear = d.behaviours.find(b => b.kind === "GEAR"); const w = gear?.kind === "GEAR" ? gear.radius * 2 : rigid?.kind === "RIGID_BODY" ? rigid.width : 0.9; const h = gear?.kind === "GEAR" ? gear.radius * 2 : rigid?.kind === "RIGID_BODY" ? rigid.height : 0.7; return Math.abs(p.position.x - x) <= w / 2 + padding && Math.abs(p.position.y - y) <= h / 2 + padding; })?.id;
 }
 input.on((event, sample) => {
     if (testMode || !gameplayAllowed())
@@ -1566,6 +1747,7 @@ input.on((event, sample) => {
                 observer.noteDragError();
             build.move(droppedId, { x: Math.max(0.4, Math.min(15.6, dragPreview.x)), y: openingRamp ? 7.95 : surfacePart ? 8.32 : Math.max(0.5, Math.min(8.2, dragPreview.y)) });
             snapToGhost(droppedId);
+            snapGear(droppedId);
             autoSnapOpeningWheel(droppedId);
         }
         dragStart = undefined;
@@ -1577,17 +1759,27 @@ function render() {
     maybeCompleteOpeningChallenge();
     maybeCompleteMotionMission();
     renderer.begin(camera);
-    if (motionActive)
-        renderer.drawMotionYardBackdrop();
+    if (labActive) {
+        if (currentLabId === "gear-garage")
+            renderer.drawGearGarageBackdrop(now() / 1000);
+        else
+            renderer.drawMotionYardBackdrop();
+    }
     const runtime = tests.active();
     const states = runtime?.physics.states();
     const parts = build.allParts().map(p => p.id === dragStart?.id && dragPreview ? { ...p, position: dragPreview } : p);
-    renderer.drawParts(parts, registry, states, selectedId);
+    renderer.drawParts(parts, registry, states, selectedId, runtime?.gears, now() / 1000);
+    if (runtime) {
+        renderer.drawGearLinks(runtime.gears.analysis, false);
+        renderer.drawRotationView(runtime.gears, forceScanner);
+    }
+    else if (parts.some(p => registry.get(p.definitionId).behaviours.some(b => b.kind === "GEAR")))
+        renderer.drawGearLinks(analyzeGears(parts, id => registry.has(id) ? registry.get(id) : undefined, build.allConnections()), true);
     if (!testMode && currentHint.ghosts.length)
         renderer.drawGhostParts(currentHint.ghosts, registry, now() / 1000);
-    if ((motionActive || freeBuildActive) && forceScanner && runtime && states)
+    if ((labActive || freeBuildActive) && forceScanner && runtime && states)
         renderer.drawForceVectors(runtime.physics.forceVectors(), states, currentGuidance().showMeasurements);
-    if (testMode && (motionActive || freeBuildActive) && ++discoveryFrame % 15 === 0)
+    if (testMode && (labActive || freeBuildActive) && ++discoveryFrame % 15 === 0)
         checkRunDiscoveries();
     renderer.end();
     const enabled = gameplayAllowed();
@@ -1596,7 +1788,7 @@ function render() {
     ui.test.disabled = !enabled || testMode;
     ui.stop.disabled = !enabled || !testMode;
     const t = telemetry.snapshot();
-    const budgetFlag = motionActive && perf.simulationMs > MOTION_PERFORMANCE_BUDGET.targetSimulationMs ? " | ⚠ SIM BUDGET" : "";
+    const budgetFlag = labActive && perf.simulationMs > MOTION_PERFORMANCE_BUDGET.targetSimulationMs ? " | ⚠ SIM BUDGET" : "";
     ui.debug.textContent = `FPS ${perf.fps} | frame ${perf.frameMs.toFixed(1)}ms | sim ${perf.simulationMs.toFixed(2)}ms | 60 Hz | parts ${build.allParts().length} | TEST ${t.testPresses} | drags ${t.dragAttempts}${runtime ? ` | tick ${runtime.tick}` : ""}${budgetFlag}`;
 }
 function frame(frameNow) {
@@ -1611,5 +1803,5 @@ clock.reset(performance.now());
 requestAnimationFrame(frame);
 if ("serviceWorker" in navigator)
     navigator.serviceWorker.register("./sw.js").catch(() => undefined);
-console.info(`WobbleWorks Milestones 0-11 discoveries and guidance loaded: ${DEFAULT_PARTS.length} technical part definitions`);
+console.info(`WobbleWorks Milestones 0-12 (inventor maker + Gear Garage) loaded: ${DEFAULT_PARTS.length} technical part definitions`);
 void boot();

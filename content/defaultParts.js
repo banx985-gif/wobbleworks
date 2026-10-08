@@ -38,5 +38,29 @@ export const DEFAULT_PARTS = [
     { id: "air.fan", familyId: "air.fan", displayName: "Fan", category: "AIR", behaviours: [{ kind: "RIGID_BODY", bodyType: "STATIC", shape: "BOX", width: 0.8, height: 0.8, density: 1, friction: 0.6, restitution: 0 }, { kind: "FAN", force: 15, range: 4 }], ports: [electricalPort("power-in", "IN"), logicPort("signal-in", "IN"), mechanicalPort("shaft")] },
     { id: "logic.actuator", familyId: "logic.actuator", displayName: "Actuator", category: "LOGIC", behaviours: [{ kind: "RIGID_BODY", bodyType: "DYNAMIC", shape: "BOX", width: 0.9, height: 0.4, density: 1, friction: 0.5, restitution: 0.1 }, { kind: "ACTUATOR", mode: "LINEAR", strength: 6 }], ports: [logicPort("signal-in", "IN")] }
 ];
-export function createDefaultRegistry() { const r = new PartRegistry(); for (const p of DEFAULT_PARTS)
+/**
+ * Gear Garage parts (M12). No physics body: the GearSystem turns them (see src/gears/GearSystem.ts).
+ * Drawn in code behind these ids until the gear art arrives (docs/ART_NEEDED.md).
+ */
+const gearPart = (id, displayName, role, radius, teeth, extra = []) => ({ id, familyId: id, displayName, category: "GEAR", behaviours: [{ kind: "GEAR", role, radius, teeth }, ...extra], ports: [mechanicalPort("axle")] });
+export const GEAR_PARTS = [
+    gearPart("gear.small", "Small Gear", "GEAR", 0.3, 8),
+    gearPart("gear.medium", "Medium Gear", "GEAR", 0.5, 12),
+    gearPart("gear.large", "Large Gear", "GEAR", 0.8, 20),
+    gearPart("gear.belt-pulley", "Pulley", "PULLEY", 0.3, 0),
+    gearPart("gear.belt-pulley-big", "Big Pulley", "PULLEY", 0.6, 0),
+    gearPart("gear.crank", "Hand Crank", "SHAFT", 0.18, 0, [{ kind: "GEAR_DRIVER", driver: "CRANK", speed: 3, torque: 4 }]),
+    gearPart("gear.motor", "Gear Motor", "SHAFT", 0.18, 0, [{ kind: "GEAR_DRIVER", driver: "MOTOR", speed: 4, torque: 6 }]),
+    gearPart("gear.door-wheel", "Door Wheel", "GEAR", 0.8, 20, [{ kind: "GEAR_OUTPUT", output: "DOOR", load: 0.5 }]),
+    gearPart("gear.fan-shaft", "Fan", "SHAFT", 0.18, 0, [{ kind: "GEAR_OUTPUT", output: "FAN", load: 0.2 }]),
+    gearPart("gear.winch", "Winch", "SHAFT", 0.18, 0, [{ kind: "GEAR_OUTPUT", output: "WINCH", load: 0.1, drum: 0.3 }]),
+    gearPart("gear.conveyor-drum", "Conveyor Drum", "SHAFT", 0.18, 0, [{ kind: "GEAR_OUTPUT", output: "CONVEYOR", load: 0.3, drum: 0.35 }]),
+    gearPart("gear.carousel", "Carousel", "SHAFT", 0.18, 0, [{ kind: "GEAR_OUTPUT", output: "CAROUSEL", load: 0.4 }]),
+    gearPart("gear.clock", "Clock", "SHAFT", 0.18, 0, [{ kind: "GEAR_OUTPUT", output: "CLOCK", load: 0.1 }]),
+    gearPart("gear.factory-drive", "Factory Line", "SHAFT", 0.18, 0, [{ kind: "GEAR_OUTPUT", output: "FACTORY", load: 1.2 }]),
+    gearPart("gear.ride", "Big Wheel Ride", "SHAFT", 0.18, 0, [{ kind: "GEAR_OUTPUT", output: "RIDE", load: 0.4 }]),
+    { id: "motion.conveyor", familyId: "motion.conveyor", displayName: "Conveyor", category: "MOTION", behaviours: [{ kind: "RIGID_BODY", bodyType: "STATIC", shape: "BOX", width: 5, height: 0.25, density: 1, friction: 0.6, restitution: 0.02 }, { kind: "CONVEYOR" }], ports: [] },
+    { id: "gear.heavy-crate", familyId: "gear.heavy-crate", displayName: "Heavy Crate", category: "GEAR", behaviours: [{ kind: "RIGID_BODY", bodyType: "DYNAMIC", shape: "BOX", width: 0.9, height: 0.9, density: 4, friction: 0.7, restitution: 0.05 }], ports: [] }
+];
+export function createDefaultRegistry() { const r = new PartRegistry(); for (const p of [...DEFAULT_PARTS, ...GEAR_PARTS])
     r.register(p); return r; }

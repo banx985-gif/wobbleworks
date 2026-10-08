@@ -6,7 +6,9 @@ export const WHY_CHOICES = {
     NOT_CONNECTED: { label: "Not connected", icon: "🔗" },
     UNSTABLE: { label: "Wobbly / tipped", icon: "🙃" },
     TOO_HEAVY: { label: "Too heavy", icon: "🏋️" },
-    TOO_LIGHT: { label: "Too light", icon: "🎈" }
+    TOO_LIGHT: { label: "Too light", icon: "🎈" },
+    TOO_SLOW: { label: "Too slow", icon: "🐌" },
+    JAMMED: { label: "Jammed", icon: "🔒" }
 };
 function tagged(build, tag) { return build.allParts().find(p => p.tags?.includes(tag)); }
 function state(runtime, id) { try {
@@ -22,7 +24,8 @@ function nameOf(part) {
 const m = (v) => `${v.toFixed(1)} m`;
 /** Picks two other answers deterministically so the same failure shows the same card. */
 function choicesFor(reason) {
-    const pool = ["TOO_FAST", "NOT_ENOUGH_FORCE", "TOO_MUCH_FORCE", "WRONG_DIRECTION", "NOT_CONNECTED", "UNSTABLE"].filter(r => r !== reason);
+    const gear = ["JAMMED", "TOO_SLOW", "TOO_HEAVY"].includes(reason);
+    const pool = (gear ? ["TOO_FAST", "TOO_SLOW", "WRONG_DIRECTION", "NOT_CONNECTED", "JAMMED", "TOO_HEAVY"] : ["TOO_FAST", "NOT_ENOUGH_FORCE", "TOO_MUCH_FORCE", "WRONG_DIRECTION", "NOT_CONNECTED", "UNSTABLE"]).filter(r => r !== reason);
     const seed = reason.length;
     const a = pool[seed % pool.length], b = pool[(seed + 2) % pool.length];
     const three = [reason, a, b];
@@ -37,6 +40,10 @@ export function diagnoseRun(level, build, runtime) {
         return undefined;
     const card = (reason, evidence) => ({ reason, evidence, choices: choicesFor(reason) });
     const rules = level?.outcomeRules ?? [];
+    // Gear Garage: the gear train's own measurements explain most failures.
+    const gearCard = diagnoseGears(rules, build, runtime, card);
+    if (gearCard)
+        return gearCard;
     // Structure first: a broken joint or a cart on its roof explains everything after it.
     if (runtime.causalEvents.some(e => e.kind === "STRUCTURE_BROKE"))
         return card("UNSTABLE", "A joint snapped during the test, so the machine came apart.");
@@ -116,6 +123,48 @@ export function diagnoseRun(level, build, runtime) {
             if (Math.hypot(s.vx, s.vy) < 0.1 && d < rule.minDistance)
                 return card("NOT_ENOUGH_FORCE", `${cap(nameOf(subject))} travelled ${m(d)}, but the goal is ${m(rule.minDistance)}. Something slowed it down.`);
         }
+    }
+    return undefined;
+}
+function diagnoseGears(rules, build, runtime, card) {
+    const g = runtime.gears;
+    const n = (v) => v.toFixed(1);
+    const targets = rules.flatMap((r) => r.kind === "GEAR_OUTPUT" ? [{ rule: r, tag: r.targetTag }] : r.kind === "GEAR_COMPARE" ? [{ rule: r, tag: r.aTag }, { rule: r, tag: r.bTag }] : []);
+    // Any jam or stall anywhere is the headline.
+    const jam = runtime.causalEvents.find(e => e.kind === "GEAR_JAMMED");
+    if (jam)
+        return card("JAMMED", jam.data?.reason === "CLASH" ? "Two gears were overlapping, so their teeth crashed and nothing could turn." : jam.data?.reason === "FIGHT" ? "Two drivers were trying to turn the same gears in different ways." : "Gears were meshed in a ring: each one tried to turn its neighbour the wrong way, so they all locked.");
+    const stall = runtime.causalEvents.find(e => e.kind === "GEAR_STALLED");
+    if (stall)
+        return card("TOO_HEAVY", `The load needed ${n(Number(stall.data?.required ?? 0))} units of turning force but the driver only had ${n(Number(stall.data?.available ?? 0))}. A slower gear set-up is stronger.`);
+    for (const { rule, tag } of targets) {
+        const part = tagged(build, tag);
+        if (!part)
+            continue;
+        const st = g.state(part.id);
+        if (!st)
+            continue;
+        if (st.omega === 0) {
+            const near = g.analysis.nearMisses.filter(m => m.a === part.id || m.b === part.id || g.analysis.axleOf.get(m.a) === g.analysis.axleOf.get(part.id) || g.analysis.axleOf.get(m.b) === g.analysis.axleOf.get(part.id)).sort((p, q) => p.gap - q.gap)[0];
+            return card("NOT_CONNECTED", near ? `A gear here was ${n(near.gap)} m away from touching the next one, so the turning never arrived.` : "Nothing was turning this part — no gear touched it and joined it to the driver.");
+        }
+        if (rule.kind !== "GEAR_OUTPUT")
+            continue;
+        if (rule.direction === "CW" && st.omega < 0)
+            return card("WRONG_DIRECTION", "It turned anticlockwise, but it needed to turn clockwise. Each pair of touching gears swaps the direction.");
+        if (rule.direction === "CCW" && st.omega > 0)
+            return card("WRONG_DIRECTION", "It turned clockwise, but it needed to turn anticlockwise. Each pair of touching gears swaps the direction.");
+        if (rule.maxSpeed !== undefined && Math.abs(st.omega) > rule.maxSpeed)
+            return card("TOO_FAST", `It spun at ${n(Math.abs(st.omega))} turns-speed — faster than the safe ${n(rule.maxSpeed)}.`);
+        if (rule.minSpeed !== undefined && Math.abs(st.omega) < rule.minSpeed)
+            return card("TOO_SLOW", `It turned at ${n(Math.abs(st.omega))}, but it needs at least ${n(rule.minSpeed)}. It was ${n(Math.abs(st.factor))} times the driver's speed.`);
+    }
+    const cmp = rules.find(r => r.kind === "GEAR_COMPARE");
+    if (cmp?.kind === "GEAR_COMPARE") {
+        const a = tagged(build, cmp.aTag), b = tagged(build, cmp.bTag);
+        const wa = a ? Math.abs(g.omega(a.id)) : 0, wb = b ? Math.abs(g.omega(b.id)) : 0;
+        if (wa && wb && Math.max(wa, wb) / Math.min(wa, wb) < cmp.minRatio)
+            return card("TOO_SLOW", `A turned at ${n(wa)} and B at ${n(wb)} — almost the same. Make the two set-ups different.`);
     }
     return undefined;
 }

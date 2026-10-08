@@ -1,13 +1,14 @@
 import { completionRewardIds, grantRewardsTo } from "../progression/Rewards.js";
+import { validateLook } from "../inventor/InventorLook.js";
 /**
- * WobbleWorks root save — schema version 2 (Milestone 10).
+ * WobbleWorks root save — schema version 3 (v2 = Milestone 10; v3 adds the inventor maker look).
  *
  * Root fields that are not inside a profile are the *guest* progress made before the
  * first inventor is created (the opening is played before any profile exists).
  * When the first inventor is created, that guest progress moves into the profile.
  * Every later profile owns its own campaign, unlocks, rewards, shelf, settings and assistance.
  */
-export const CURRENT_SAVE_SCHEMA = 2;
+export const CURRENT_SAVE_SCHEMA = 3;
 /** BLUE, PINK and GREEN are the three painted inventors (Aaron's art, 8 Oct). ORANGE/PURPLE remain valid for older saves. */
 export const AVATAR_STYLES = ["ORANGE", "BLUE", "GREEN", "PURPLE", "PINK"];
 export const PAINTED_AVATARS = ["BLUE", "PINK", "GREEN"];
@@ -89,6 +90,8 @@ export function validateProfile(p) {
     if (sanitizeProfileName(p.name) !== p.name)
         return false;
     if (!AVATAR_STYLES.includes(p.avatarStyle))
+        return false;
+    if (p.look !== undefined && !validateLook(p.look))
         return false;
     if (!Number.isFinite(p.createdAtMs) || !Number.isFinite(p.lastPlayedAtMs))
         return false;
@@ -263,10 +266,14 @@ export function withOpeningMetrics(save, metrics) {
  * Creates an inventor and makes it active. The very first inventor inherits the guest progress made
  * during the opening (Create Inventor appears after opening beat 3), and the guest slot is cleared.
  */
-export function withCreatedProfile(save, name, avatarStyle, nowMs = Date.now()) {
+export function withCreatedProfile(save, name, avatarStyle, nowMs = Date.now(), look) {
     if (save.profiles.length >= MAX_PROFILES)
         throw new Error("Profile limit reached");
+    if (look !== undefined && !validateLook(look))
+        throw new Error("Invalid look");
     let profile = createProfile(name, avatarStyle, nowMs);
+    if (look)
+        profile = { ...profile, look: { ...look } };
     const inheritsGuest = save.profiles.length === 0;
     if (inheritsGuest) {
         const levels = {};
@@ -292,10 +299,22 @@ export function withCreatedProfile(save, name, avatarStyle, nowMs = Date.now()) 
         : save;
     return { ...base, profiles: [...base.profiles, profile], activeProfileId: profile.id };
 }
-/** Edit an inventor's nickname and look (the pencil on the inventor card). */
-export function withEditedProfile(save, id, name, avatarStyle) {
+/**
+ * Edit an inventor's nickname and look (the pencil on the inventor card).
+ * `look`: a maker look to save, `null` to go back to the painted portrait, undefined to leave it as it is.
+ */
+export function withEditedProfile(save, id, name, avatarStyle, look) {
     const style = AVATAR_STYLES.includes(avatarStyle) ? avatarStyle : undefined;
-    return updateProfile(save, id, p => ({ ...p, name: sanitizeProfileName(name), ...(style ? { avatarStyle: style } : {}) }));
+    if (look && !validateLook(look))
+        throw new Error("Invalid look");
+    return updateProfile(save, id, p => {
+        const base = { ...p, name: sanitizeProfileName(name), ...(style ? { avatarStyle: style } : {}) };
+        if (look === null) {
+            const { look: _old, ...rest } = base;
+            return rest;
+        }
+        return look ? { ...base, look: { ...look } } : base;
+    });
 }
 export function withActiveProfile(save, id, nowMs = Date.now()) {
     return { ...updateProfile(save, id, p => ({ ...p, lastPlayedAtMs: nowMs })), activeProfileId: id };

@@ -13,9 +13,25 @@ export const MOTION_HINTS = {
     "motion.giant-marble-delivery": { concept: "Mix machines: one part to get the marble rolling, one to send it flying.", usefulParts: ["motion.ramp", "motion.spring"], solution: [g("motion.ramp", 2.5, 4, 0.15), g("motion.spring", 4.0, 8.0)], ghostCount: 1 },
     "motion.runaway-test-cart": { concept: "Stop it gently — no walls! What slows things without crashing?", usefulParts: ["motion.friction-high"], solution: [g("motion.friction-high", 6.5, 8.32)], ghostCount: 1 }
 };
+export const GEAR_HINTS = {
+    "gear.turn-the-door": { concept: "The turning has to travel from the crank to the door…", usefulParts: ["gear.large"], solution: [g("gear.large", 4.8, 5)], ghostCount: 1 },
+    "gear.wrong-way-round": { concept: "Every pair of touching gears swaps the direction.", usefulParts: ["gear.small", "gear.medium"], solution: [g("gear.small", 4.3, 5), g("gear.medium", 5.1, 5)], ghostCount: 1, remove: ["middle"] },
+    "gear.speed-it-up": { concept: "To spin fast, something big should turn something little.", usefulParts: ["gear.large", "gear.small"], solution: [g("gear.large", 3.5, 5), g("gear.small", 4.6, 5)], ghostCount: 1 },
+    "gear.slow-and-strong": { concept: "Slow and steady wins: going slower gives more strength.", usefulParts: ["gear.small", "gear.large"], solution: [g("gear.small", 3.5, 5), g("gear.large", 4.6, 5)], ghostCount: 1 },
+    "gear.lift-bolt": { concept: "It's a long way up. What can reach that far?", usefulParts: ["gear.belt-pulley"], solution: [g("gear.belt-pulley", 4, 6.8), g("gear.belt-pulley", 10, 2.6)], ghostCount: 1 },
+    "gear.three-fans": { concept: "The turning can hop from gear to gear to gear.", usefulParts: ["gear.medium", "gear.large"], solution: [g("gear.medium", 3, 5), g("gear.large", 4.3, 5), g("gear.medium", 5.6, 5), g("gear.large", 6.9, 5)], ghostCount: 2 },
+    "gear.clockwork-trouble": { concept: "Follow the chain from the motor. Where does it stop?", usefulParts: ["gear.medium"], solution: [g("gear.medium", 5.4, 4.5)], ghostCount: 1, remove: ["loose"] },
+    "gear.conveyor-rescue": { concept: "The conveyor has to move toward the bay. Which way is that?", usefulParts: ["gear.belt-pulley"], solution: [g("gear.belt-pulley", 2.5, 5.5), g("gear.belt-pulley", 5.2, 7.2)], ghostCount: 1 },
+    "gear.big-gear-vs-small-gear": { concept: "Make A and B different on purpose — that's a fair test!", usefulParts: ["gear.large", "gear.small"], solution: [g("gear.large", 3, 3.5), g("gear.small", 4.1, 3.5), g("gear.small", 3, 6.5), g("gear.large", 4.1, 6.5)], ghostCount: 2 },
+    "gear.spin-sprocket": { concept: "The motor is speedy. Sprocket needs it calmer.", usefulParts: ["gear.small", "gear.large"], solution: [g("gear.small", 3, 5), g("gear.large", 4.1, 5)], ghostCount: 1 },
+    "gear.the-clockwork-carnival": { concept: "One motor, three rides. Build out from the motor one ride at a time.", usefulParts: ["gear.small", "gear.medium", "gear.large"], solution: [g("gear.small", 2.5, 5), g("gear.large", 3.6, 5), g("gear.medium", 4.25, 3.8742), g("gear.medium", 5.25, 3.874), g("gear.large", 5.9, 5), g("gear.small", 7, 5)], ghostCount: 3 },
+    "gear.jammed-factory-drive": { concept: "TEST it first. Is it stuck, too weak, or going backwards?", usefulParts: ["gear.large"], solution: [g("gear.large", 5.6, 5), g("gear.large", 4.05, 4.603)], ghostCount: 1, remove: ["a", "b", "c", "factory-gear"] }
+};
+/** Every lab's hints, by level id. */
+export const LEVEL_HINTS = { ...MOTION_HINTS, ...GEAR_HINTS };
 /** What each tier shows. Tiers are cumulative: Hint 3 still shows the idea and the glowing parts. */
 export function hintView(levelId, level, tier) {
-    const h = MOTION_HINTS[levelId];
+    const h = LEVEL_HINTS[levelId];
     const concept = h?.concept ?? level?.hints?.[0] ?? "Change ONE thing, then TEST again.";
     const parts = h?.usefulParts.length ? h.usefulParts : [];
     if (tier === 0)

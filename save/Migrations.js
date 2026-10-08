@@ -1,5 +1,6 @@
 import { completionRewardIds, grantRewardsTo } from "../progression/Rewards.js";
-import { CURRENT_SAVE_SCHEMA, DEFAULT_ASSISTANCE, DEFAULT_SETTINGS, OPENING_STARTER_PARTS, sanitizeProfileName } from "../app/AppState.js";
+import { CURRENT_SAVE_SCHEMA, DEFAULT_ASSISTANCE, DEFAULT_SETTINGS, OPENING_STARTER_PARTS, PAINTED_AVATARS, sanitizeProfileName } from "../app/AppState.js";
+import { DEFAULT_LOOK, validateLook } from "../inventor/InventorLook.js";
 function asArray(v) { return Array.isArray(v) ? v : []; }
 function asStrings(v) { return asArray(v).filter((x) => typeof x === "string"); }
 /** v1 (M7–M9): flat root, profiles were {id,name,avatarStyle?}, progress lived on the root. */
@@ -60,7 +61,27 @@ const v1ToV2 = (v1) => {
         out.openingMetrics = v1.openingMetrics;
     return out;
 };
-export const SAVE_MIGRATIONS = Object.freeze({ 1: v1ToV2 });
+/**
+ * v2 (M10–M11) → v3: inventor maker looks.
+ * - Inventors with a painted portrait (BLUE/PINK/GREEN) keep it: no look is added.
+ * - Inventors from before the painted portraits (ORANGE/PURPLE) had only a plain badge; they get the
+ *   default dressed look so they show as a real inventor. They can change it with the pencil.
+ * - Anything in a `look` field that isn't a valid look is dropped (never guessed at).
+ */
+const v2ToV3 = (v2) => {
+    const profiles = asArray(v2.profiles).map(raw => {
+        if (!raw || typeof raw !== "object")
+            return raw;
+        const p = { ...raw };
+        if (p.look !== undefined && !validateLook(p.look))
+            delete p.look;
+        if (p.look === undefined && !PAINTED_AVATARS.includes(p.avatarStyle))
+            p.look = { ...DEFAULT_LOOK };
+        return p;
+    });
+    return { ...v2, schemaVersion: 3, profiles };
+};
+export const SAVE_MIGRATIONS = Object.freeze({ 1: v1ToV2, 2: v2ToV3 });
 export function migrateAppSave(input) {
     if (!input || typeof input !== "object" || Array.isArray(input))
         return { ok: false, reason: "NOT_A_SAVE" };

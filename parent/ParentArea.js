@@ -1,4 +1,5 @@
 import { MOTION_PARENT_MAPPINGS } from "../motion/MotionYard.js";
+import { GEAR_PARENT_MAPPINGS } from "../gears/GearGarage.js";
 import { MAIN_LABS } from "../progression/CampaignData.js";
 import { labCleared } from "../progression/LabProgression.js";
 import { ownsFullGame } from "../progression/Campus.js";
@@ -58,9 +59,9 @@ export function renderParentGate(root, gate, message, onPress, onBack, onDelete 
     actions.append(back, el("span"), el("span"));
     root.append(body, actions);
 }
-function conceptLines(p) {
+function conceptLines(p, mappings = MOTION_PARENT_MAPPINGS) {
     const found = new Set(p.discoveries);
-    return MOTION_PARENT_MAPPINGS.filter(m => found.has(m.discoveryId)).map(m => m.evidence);
+    return mappings.filter(m => found.has(m.discoveryId)).map(m => m.evidence);
 }
 export function renderParentDashboard(root, save, storage, notice, cb) {
     root.replaceChildren();
@@ -76,6 +77,9 @@ export function renderParentDashboard(root, save, storage, notice, cb) {
         const card = el("div", "parent-kid");
         const lines = conceptLines(p);
         card.append(el("strong", "", p.name), el("span", "", `Missions finished: ${done.size} · Labs restored: ${labs.length ? labs.join(", ") : "none yet"} · Inventions saved: ${p.shelf.length}`), el("span", "", `Force & Motion explored: ${lines.length ? lines.join(", ") : "just getting started"}`));
+        const gearLines = conceptLines(p, GEAR_PARENT_MAPPINGS);
+        if (gearLines.length)
+            card.append(el("span", "", `Gears & Mechanisms explored: ${gearLines.join(", ")}`));
         const del = el("button", "danger small", "Remove inventor…");
         del.addEventListener("click", () => { if (window.confirm(`Remove ${p.name} and all of their progress from this device? This can't be undone unless you have a backup.`))
             cb.deleteProfile(p.id); });
@@ -112,6 +116,11 @@ export function renderParentDashboard(root, save, storage, notice, cb) {
     const toggle = el("button", "", ownsFullGame(save.entitlement) ? "Test tool: lock full game again" : "Test tool: pretend full game is owned");
     toggle.addEventListener("click", () => cb.setFullGameForTesting(!ownsFullGame(save.entitlement)));
     own.append(toggle);
+    if (ownsFullGame(save.entitlement) && cb.openLabForTesting) {
+        const peek = el("button", "", "Test tool: open the Gear Garage now");
+        peek.addEventListener("click", () => cb.openLabForTesting("gear-garage"));
+        own.append(peek, el("p", "muted", "For testing: skips finishing the Motion Yard first. Nothing in the save is changed by opening it."));
+    }
     const close = el("button", "primary", "Done");
     close.addEventListener("click", cb.close);
     root.append(kids, store, own, close);

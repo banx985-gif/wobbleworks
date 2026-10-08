@@ -8,7 +8,11 @@ export const PART_CARDS = [
     { partId: "motion.wheel", title: "Wheel", uses: [{ id: "roll", label: "Roll along" }, { id: "carry", label: "Carry a cart" }] },
     { partId: "motion.cart", title: "Cart", uses: [{ id: "carry", label: "Ride on wheels" }] },
     { partId: "motion.ball", title: "Ball", uses: [{ id: "roll", label: "Roll" }, { id: "knock", label: "Knock into things" }] },
-    { partId: "structure.block", title: "Block", uses: [{ id: "support", label: "Hold something up" }] }
+    { partId: "structure.block", title: "Block", uses: [{ id: "support", label: "Hold something up" }] },
+    { partId: "gear.small", title: "Small Gear", uses: [{ id: "spin-fast", label: "Spin fast" }, { id: "drive-big", label: "Turn a big gear strongly" }] },
+    { partId: "gear.medium", title: "Medium Gear", uses: [{ id: "pass-along", label: "Pass the turning along" }, { id: "flip", label: "Flip the direction" }] },
+    { partId: "gear.large", title: "Large Gear", uses: [{ id: "drive-small", label: "Make a small gear zoom" }, { id: "strong", label: "Turn slowly and strongly" }] },
+    { partId: "gear.belt-pulley", title: "Pulley", uses: [{ id: "belt", label: "Share a belt" }] }
 ];
 const HEAVY = new Set(["motion.cart", "motion.parcel", "silly.bolt"]);
 function speed(runtime, id) { try {
@@ -137,6 +141,36 @@ export function observePartUses(build, runtime) {
                 break;
             }
         }
+    }
+    // Gears: uses come from what the GearSystem measured (half a second of real turning).
+    const gears = runtime.gears;
+    const running = (id) => (gears.state(id)?.runTicks ?? 0) >= 30;
+    for (const part of build.allParts()) {
+        const st = gears.state(part.id);
+        if (!st || !running(part.id))
+            continue;
+        const meshes = gears.analysis.links.filter(l => l.kind === "MESH" && (l.a === part.id || l.b === part.id));
+        const partners = meshes.map(l => gears.node(l.a === part.id ? l.b : l.a)).filter(n => running(n.id));
+        if (part.definitionId === "gear.small") {
+            if (Math.abs(st.factor) >= 1.5)
+                add(part.definitionId, "spin-fast");
+            if (partners.some(n => n.radius > 0.6 && Math.abs(gears.omega(n.id)) < Math.abs(st.omega)))
+                add(part.definitionId, "drive-big");
+        }
+        if (part.definitionId === "gear.medium") {
+            if (partners.length >= 2)
+                add(part.definitionId, "pass-along");
+            if (partners.length >= 1)
+                add(part.definitionId, "flip");
+        }
+        if (part.definitionId === "gear.large") {
+            if (partners.some(n => n.radius < 0.4 && Math.abs(gears.omega(n.id)) > Math.abs(st.omega)))
+                add(part.definitionId, "drive-small");
+            if (Math.abs(st.factor) <= 0.7 && st.depth > 0)
+                add(part.definitionId, "strong");
+        }
+        if (part.definitionId === "gear.belt-pulley" && gears.analysis.links.some(l => l.kind === "BELT" && (l.a === part.id || l.b === part.id)))
+            add(part.definitionId, "belt");
     }
     return uses.filter(u => PART_CARDS.some(c => c.partId === u.partId && c.uses.some(x => x.id === u.useId)));
 }

@@ -2,9 +2,15 @@ import { deepClone } from "../core/clone.js";
 import { SIMULATION_PHASES, SimulationPipeline } from "../core/SimulationPipeline.js";
 import { verifyBuildSnapshot } from "../core/BuildSnapshot.js";
 import { PhysicsWorld } from "./PhysicsWorld.js";
+import { GearSystem } from "../gears/GearSystem.js";
 export class RuntimeWorld {
     snapshotSignature;
     physics = new PhysicsWorld();
+    /** Gear Garage rotation (M12): constrained gear relationships, no tooth collisions. */
+    gears;
+    carried = new Set();
+    lifted = new Set();
+    flung = new Set();
     pipeline = new SimulationPipeline();
     causalEvents = [];
     signals = new Map();
@@ -24,6 +30,19 @@ export class RuntimeWorld {
         this.snapshotSignature = snapshot.signature;
         this.registry = registry;
         this.constructPhysics();
+        // A winch carries its rope load: the turning force the load needs (weight × drum radius) goes into the gear train.
+        const extraLoads = new Map();
+        for (const part of this.snapshot.parts) {
+            const rope = part.parameters.ropeTo;
+            const out = registry.get(part.definitionId).behaviours.find(b => b.kind === "GEAR_OUTPUT");
+            if (typeof rope === "string" && out?.kind === "GEAR_OUTPUT" && out.output === "WINCH") {
+                try {
+                    extraLoads.set(part.id, this.physics.mass(rope) * 9.81 * (out.drum ?? 0.3));
+                }
+                catch { /* load missing */ }
+            }
+        }
+        this.gears = new GearSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined, this.snapshot.connections, extraLoads);
         this.installPipeline();
     }
     constructPhysics() {
@@ -58,7 +77,7 @@ export class RuntimeWorld {
         this.pipeline.on("PRE_PHYSICS_SENSORS", () => this.sampleSensors());
         this.pipeline.on("LOGIC_EVALUATION", () => this.evaluateLogic());
         this.pipeline.on("ACTUATOR_RESOLUTION", () => this.resolveActuators());
-        this.pipeline.on("FORCE_AND_COUPLING", () => this.applyCouplings());
+        this.pipeline.on("FORCE_AND_COUPLING", ({ dt }) => { this.applyCouplings(); this.gears.step(dt); this.applyGearCouplings(); });
         this.pipeline.on("PHYSICS_STEP", ({ dt }) => this.physics.step(dt));
         this.pipeline.on("POST_PHYSICS_CONTACTS", () => this.collectPhysicsEvents());
         this.pipeline.on("DOMAIN_TRANSFER", ({ dt }) => this.transferDomains(dt));
@@ -215,6 +234,78 @@ export class RuntimeWorld {
                 }
                 catch { /* non-physics network node */ }
             }
+    }
+    /** Gear outputs reaching back into Motion: winches lift real bodies, conveyors carry them. */
+    applyGearCouplings() {
+        for (const e of this.gears.drainEvents())
+            this.event(e.kind, e.sourceId, e.targetId, e.data);
+        for (const n of this.gears.nodes) {
+            if (!n.output)
+                continue;
+            const w = this.gears.omega(n.id);
+            if (n.output.kind === "WINCH" && typeof n.parameters.ropeTo === "string") {
+                const loadId = n.parameters.ropeTo;
+                const s = this.safeState(loadId);
+                const start = this.snapshot.parts.find(p => p.id === loadId);
+                if (!s || !start)
+                    continue;
+                const rigid = this.definition(loadId).behaviours.find(b => b.kind === "RIGID_BODY");
+                const half = rigid?.kind === "RIGID_BODY" ? rigid.height / 2 : 0.4;
+                const top = n.y + n.output.drum + half + 0.1;
+                const mass = this.physics.mass(loadId);
+                const liftedBy = start.position.y - s.y;
+                const hold = () => { this.physics.setLinearVelocity(loadId, { x: 0, y: 0 }); this.physics.applyForce(loadId, { x: 0, y: -mass * 9.81 }); };
+                if (w !== 0) {
+                    if (s.y <= top) {
+                        this.gears.hold(n.id);
+                        hold();
+                    }
+                    else {
+                        this.physics.setLinearVelocity(loadId, { x: 0, y: -Math.abs(w) * n.output.drum });
+                        this.physics.applyForce(loadId, { x: 0, y: -mass * 9.81 });
+                    }
+                }
+                else if (liftedBy > 0.05)
+                    hold();
+                if (liftedBy > 0.3 && !this.lifted.has(n.id)) {
+                    this.lifted.add(n.id);
+                    this.event("WINCH_LIFT", n.id, loadId, { height: Math.round(liftedBy * 100) / 100 });
+                }
+            }
+            if (n.output.kind === "CONVEYOR" && typeof n.parameters.drives === "string" && w !== 0) {
+                const beltId = n.parameters.drives;
+                const belt = this.snapshot.parts.find(p => p.id === beltId);
+                if (!belt)
+                    continue;
+                const rigid = this.definition(beltId).behaviours.find(b => b.kind === "RIGID_BODY");
+                if (rigid?.kind !== "RIGID_BODY")
+                    continue;
+                const surfaceSpeed = w * n.output.drum;
+                const topY = belt.position.y - rigid.height / 2;
+                for (const part of this.snapshot.parts) {
+                    if (part.id === beltId)
+                        continue;
+                    const s = this.safeState(part.id);
+                    if (!s)
+                        continue;
+                    const r = this.definition(part.id).behaviours.find(b => b.kind === "RIGID_BODY");
+                    if (r?.kind !== "RIGID_BODY" || r.bodyType !== "DYNAMIC")
+                        continue;
+                    const bottom = s.y + r.height / 2;
+                    if (Math.abs(s.x - belt.position.x) <= rigid.width / 2 && bottom >= topY - 0.12 && bottom <= topY + 0.15) {
+                        this.physics.setLinearVelocity(part.id, { x: s.vx + (surfaceSpeed - s.vx) * 0.3, y: s.vy });
+                        if (!this.carried.has(part.id)) {
+                            this.carried.add(part.id);
+                            this.event("CONVEYOR_CARRY", beltId, part.id, { speed: Math.round(surfaceSpeed * 100) / 100 });
+                        }
+                    }
+                }
+            }
+            if (n.output.kind === "CAROUSEL" && Math.abs(w) > Number(n.parameters.flingAbove ?? 2.6) && !this.flung.has(n.id)) {
+                this.flung.add(n.id);
+                this.event("SPROCKET_FLUNG", n.id, undefined, { speed: Math.round(Math.abs(w) * 100) / 100 });
+            }
+        }
     }
     collectPhysicsEvents() {
         for (const broken of this.physics.brokenJointEvents)

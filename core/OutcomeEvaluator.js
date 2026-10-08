@@ -73,6 +73,35 @@ export function evaluateOutcomeRule(rule, build, runtime) {
         const b = new Set(tagged(build, rule.bTag).map(part => part.id));
         return !runtime.causalEvents.some(event => event.kind === "PHYSICS_CONTACT" && event.targetId !== undefined && ((a.has(event.sourceId) && b.has(event.targetId)) || (a.has(event.targetId) && b.has(event.sourceId))));
     }
+    if (rule.kind === "GEAR_OUTPUT") {
+        return tagged(build, rule.targetTag).some(part => {
+            const st = runtime.gears.state(part.id);
+            if (!st || st.omega === 0)
+                return false;
+            if (rule.direction === "CW" && st.omega <= 0)
+                return false;
+            if (rule.direction === "CCW" && st.omega >= 0)
+                return false;
+            const speed = Math.abs(st.omega);
+            if (rule.minSpeed !== undefined && speed < rule.minSpeed)
+                return false;
+            if (rule.maxSpeed !== undefined && speed > rule.maxSpeed)
+                return false;
+            if (rule.minTurns !== undefined && st.turns < rule.minTurns)
+                return false;
+            return st.runTicks >= Math.round((rule.sustainSeconds ?? 0) * 60);
+        });
+    }
+    if (rule.kind === "GEAR_COMPARE") {
+        const a = tagged(build, rule.aTag)[0], b = tagged(build, rule.bTag)[0];
+        if (!a || !b)
+            return false;
+        const sa = runtime.gears.state(a.id), sb = runtime.gears.state(b.id);
+        if (!sa || !sb || !sa.omega || !sb.omega || sa.runTicks < 60 || sb.runTicks < 60)
+            return false;
+        const fast = Math.max(Math.abs(sa.omega), Math.abs(sb.omega)), slow = Math.min(Math.abs(sa.omega), Math.abs(sb.omega));
+        return fast / slow >= rule.minRatio;
+    }
     if (rule.kind === "MECHANISM_FAMILY_COUNT") {
         const present = new Set(build.allParts().filter(part => rule.definitionIds.includes(part.definitionId)).map(part => part.definitionId));
         return present.size >= rule.minimum;

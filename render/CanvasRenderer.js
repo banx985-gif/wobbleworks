@@ -1,5 +1,6 @@
 import { LOGICAL_HEIGHT, LOGICAL_WIDTH, Viewport } from "./Viewport.js";
 import { partArtRect, rampArtRect } from "./PartArt.js";
+import { drawDoorPanel, drawGearGarageBackdrop, drawGearLinks, drawGearPart, drawRotationView, gearBehaviour, gearOutput } from "./GearRenderer.js";
 export class CanvasRenderer {
     canvas;
     ctx;
@@ -104,14 +105,35 @@ export class CanvasRenderer {
             c.strokeRect(x - 24, 600, 66, 12);
         }
     }
-    drawParts(parts, registry, runtimeStates, selectedId) {
+    drawParts(parts, registry, runtimeStates, selectedId, gears, time = 0) {
         const states = new Map(runtimeStates?.map(s => [s.id, s]) ?? []);
-        // Fixed things (zones, ramps, pads) first so moving things are always drawn in front of them. Drawing order only.
-        const isStatic = (p) => { const r = registry.get(p.definitionId).behaviours.find(b => b.kind === "RIGID_BODY"); return !r || (r.kind === "RIGID_BODY" && r.bodyType === "STATIC"); };
-        const ordered = [...parts.filter(isStatic), ...parts.filter(p => !isStatic(p))];
+        // Draw order only: fixed things first (zones, ramps, pads), then shafts, then gears, then moving things in front.
+        const layer = (p) => { const def = registry.get(p.definitionId); const g = gearBehaviour(def); if (g)
+            return g.role === "SHAFT" ? 1 : 2; const r = def.behaviours.find(b => b.kind === "RIGID_BODY"); return !r || (r.kind === "RIGID_BODY" && r.bodyType === "STATIC") ? 0 : 3; };
+        const ordered = [0, 1, 2, 3].flatMap(k => parts.filter(p => layer(p) === k));
+        const gearCtx = { ...(gears ? { gears } : {}), states, parts, registry: (id) => registry.get(id), time };
         for (const part of ordered) {
             const def = registry.get(part.definitionId);
             const rigid = def.behaviours.find(b => b.kind === "RIGID_BODY");
+            if (gearBehaviour(def)) {
+                if (gearOutput(def)?.output === "DOOR")
+                    drawDoorPanel(this.ctx, part, gears?.state(part.id)?.turns ?? 0);
+                drawGearPart(this.ctx, part, def, selectedId === part.id, gearCtx);
+                if (part.parameters.locked === true) {
+                    const c = this.ctx;
+                    c.save();
+                    c.fillStyle = "#203040";
+                    c.font = "900 15px system-ui";
+                    c.textAlign = "center";
+                    c.fillText("●", part.position.x * 100, part.position.y * 100 + 5);
+                    c.restore();
+                }
+                continue;
+            }
+            if (part.definitionId === "motion.conveyor") {
+                this.drawConveyor(part, def, gears);
+                continue;
+            }
             const state = states.get(part.id);
             const x = (state?.x ?? part.position.x) * 100;
             const y = (state?.y ?? part.position.y) * 100;
@@ -160,6 +182,42 @@ export class CanvasRenderer {
             c.restore();
         }
     }
+    /** A Motion conveyor belt; its stripes move with whatever drum drives it. */
+    drawConveyor(part, def, gears) {
+        const r = def.behaviours.find(b => b.kind === "RIGID_BODY");
+        if (r?.kind !== "RIGID_BODY")
+            return;
+        const c = this.ctx;
+        const w = r.width * 100, h = r.height * 100, x = part.position.x * 100, y = part.position.y * 100;
+        const drum = gears?.nodes.find(n => n.parameters.drives === part.id);
+        const travel = drum && gears ? (gears.state(drum.id)?.angle ?? 0) * (drum.output?.drum ?? 0.35) * 100 : 0;
+        c.save();
+        c.fillStyle = "#495057";
+        c.strokeStyle = "#203040";
+        c.lineWidth = 5;
+        c.beginPath();
+        c.roundRect(x - w / 2, y - h / 2, w, h, h / 2);
+        c.fill();
+        c.stroke();
+        c.beginPath();
+        c.roundRect(x - w / 2, y - h / 2, w, h, h / 2);
+        c.clip();
+        c.strokeStyle = "#ffd43b";
+        c.lineWidth = 4;
+        const step = 40;
+        const off = ((travel % step) + step) % step;
+        for (let sx = x - w / 2 - step + off; sx < x + w / 2 + step; sx += step) {
+            c.beginPath();
+            c.moveTo(sx, y - h / 2 + 4);
+            c.lineTo(sx + 10, y);
+            c.lineTo(sx, y + h / 2 - 4);
+            c.stroke();
+        }
+        c.restore();
+    }
+    drawGearGarageBackdrop(time) { drawGearGarageBackdrop(this.ctx, time); }
+    drawGearLinks(analysis, building) { drawGearLinks(this.ctx, analysis, building); }
+    drawRotationView(gears, showValues) { drawRotationView(this.ctx, gears, showValues); }
     /** Painted part picture fitted to the physics size (see PartArt.ts). False when there is no picture yet. */
     drawPartArt(id, w, h, selected) {
         const image = this.art(id);
@@ -257,6 +315,23 @@ export class CanvasRenderer {
             const rigid = def.behaviours.find(b => b.kind === "RIGID_BODY");
             const w = rigid?.kind === "RIGID_BODY" ? rigid.width * 100 : 80, h = rigid?.kind === "RIGID_BODY" ? rigid.height * 100 : 60;
             const x = g.x * 100, y = g.y * 100;
+            const gb = gearBehaviour(def);
+            if (gb) {
+                c.save();
+                c.globalAlpha = 0.4 + 0.12 * Math.sin(pulse * 3);
+                drawGearPart(c, { id: "ghost", definitionId: g.definitionId, position: { x: g.x, y: g.y }, rotation: pulse * 0.6, parameters: {} }, def, false, { states: new Map(), parts: [], registry: id => registry.get(id), time: pulse });
+                c.restore();
+                c.save();
+                c.strokeStyle = "#1c7ed6";
+                c.lineWidth = 4;
+                c.setLineDash([10, 8]);
+                c.beginPath();
+                c.arc(x, y, gb.radius * 100 + 6, 0, Math.PI * 2);
+                c.stroke();
+                c.restore();
+                this.drawPointer(x, y - gb.radius * 100 - 10, pulse);
+                continue;
+            }
             c.save();
             c.globalAlpha = 0.38 + 0.12 * Math.sin(pulse * 3);
             if (!(g.definitionId === "motion.ramp" && this.drawRampArt(x, y, w, g.rotation, false))) {

@@ -5,6 +5,20 @@ import { labCompletionCount } from "../progression/LabProgression.js";
 import { lockerItems, progressSummary } from "../progression/ProgressionManager.js";
 import { hubFeatures, restorationStage, dueVisitors } from "../progression/Restoration.js";
 import { REWARDS, rewardById, MISSION_STARS } from "../progression/Rewards.js";
+import { renderLook } from "../inventor/LookView.js";
+/**
+ * The look to draw: the maker look, wearing whatever the locker has equipped in the avatar slot when that
+ * reward is also a maker piece (hard hat, goggles, cap) — one shared list, so the locker puts it on.
+ */
+export function effectiveLook(profile) {
+    if (!profile.look)
+        return undefined;
+    const piece = profile.equipped?.avatar ? rewardById(profile.equipped.avatar)?.piece : undefined;
+    if (!piece)
+        return profile.look;
+    const category = piece.split(".")[1];
+    return { ...profile.look, [category]: piece };
+}
 /**
  * DOM views for the Milestone 10 screens: Workshop Hub, Campus Map, Customisation Locker,
  * Trophy Shelf, Invention Shelf and Profile Select. Views only — every change goes back to main.ts
@@ -40,6 +54,12 @@ export function avatarBadge(profile, size = 54) {
     const wrap = el("span", "avatar-badge");
     wrap.style.setProperty("--avatar", AVATAR_COLOURS[profile.avatarStyle] ?? "#ff922b");
     wrap.style.width = wrap.style.height = `${size}px`;
+    const look = effectiveLook(profile);
+    if (look) {
+        wrap.classList.add("has-look");
+        wrap.append(renderLook(look, {}, true));
+        return wrap;
+    }
     const portrait = AVATAR_PORTRAITS[profile.avatarStyle];
     if (portrait) {
         const img = el("img", "avatar-portrait");
@@ -335,7 +355,12 @@ export function renderProfileSelect(root, save, selectedId, cb) {
         pick.setAttribute("aria-label", `${p.name}${p.id === selectedId ? " — selected, tap to play" : ""}`);
         const art = el("div", "inventor-art");
         const portrait = AVATAR_PORTRAITS[p.avatarStyle];
-        if (portrait) {
+        const look = effectiveLook(p);
+        if (look) {
+            art.classList.add("has-look");
+            art.append(renderLook(look));
+        }
+        else if (portrait) {
             const img = el("img");
             img.src = portrait;
             img.alt = "";
@@ -343,7 +368,7 @@ export function renderProfileSelect(root, save, selectedId, cb) {
         }
         else
             art.append(avatarBadge(p, 110));
-        const hat = p.equipped.avatar ? rewardById(p.equipped.avatar) : undefined;
+        const hat = !look && p.equipped.avatar ? rewardById(p.equipped.avatar) : undefined;
         if (hat)
             art.append(el("span", "inventor-hat", hat.icon));
         const stars = Object.values(p.levels).reduce((n, r) => n + r.stars.length, 0);

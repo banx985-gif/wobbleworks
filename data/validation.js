@@ -117,6 +117,16 @@ export function assertLevelDefinition(value, knownPartIds) {
         }
         else if (rule.kind === "ELAPSED_AT_LEAST" && rule.seconds < 0)
             throw new ValidationError(`ELAPSED_AT_LEAST cannot be negative`);
+        else if (rule.kind === "GEAR_OUTPUT") {
+            if (!authoredTags.has(rule.targetTag))
+                throw new ValidationError(`GEAR_OUTPUT references unknown authored tag`);
+            if ((rule.minSpeed ?? 0) < 0 || (rule.maxSpeed !== undefined && rule.maxSpeed < (rule.minSpeed ?? 0)) || (rule.minTurns ?? 0) < 0 || (rule.sustainSeconds ?? 0) < 0)
+                throw new ValidationError(`Invalid GEAR_OUTPUT rule`);
+        }
+        else if (rule.kind === "GEAR_COMPARE") {
+            if (!authoredTags.has(rule.aTag) || !authoredTags.has(rule.bTag) || rule.minRatio < 1)
+                throw new ValidationError(`Invalid GEAR_COMPARE rule`);
+        }
     }
     for (const rule of l.evidenceRules) {
         if (!rule.truthContractId)

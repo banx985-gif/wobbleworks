@@ -1,4 +1,5 @@
 import { collectMotionDiscoveries, MOTION_REAL_WORLD_CARDS } from "../motion/MotionYard.js";
+import { collectGearDiscoveries, GEAR_REAL_WORLD_CARDS } from "../gears/GearGarage.js";
 export const DISCOVERIES = [
     { id: "motion.gravity-down", kind: "CONCEPT", title: "Gravity pulls down", line: "Let go of something and it falls.", art: "motion.ball", truthContractId: "truth.motion.v1" },
     { id: "motion.slope-effect", kind: "CONCEPT", title: "Slopes change motion", line: "A ramp turns falling into rolling.", art: "motion.ramp", truthContractId: "truth.motion.v1" },
@@ -14,10 +15,23 @@ export const DISCOVERIES = [
     { id: "secret.duck-trampoline", kind: "SECRET", title: "Duck Trampoline", line: "A rubber duck can bounce too!", art: "motion.bounce-pad", truthContractId: "truth.motion.v1" },
     { id: "secret.bounce-hat-trick", kind: "SECRET", title: "Bounce Hat-Trick", line: "Three bounces in one test!", art: "motion.bounce-pad", truthContractId: "truth.motion.v1" },
     { id: "secret.spring-relay", kind: "SECRET", title: "Spring Relay", line: "Two different springs launched the same thing.", art: "motion.spring", truthContractId: "truth.motion.v1" },
-    { id: "secret.bolt-boing", kind: "SECRET", title: "Bolt Goes Boing", line: "Bolt bounced! (He says he meant to.)", art: "motion.bounce-pad", truthContractId: "truth.motion.v1" }
+    { id: "secret.bolt-boing", kind: "SECRET", title: "Bolt Goes Boing", line: "Bolt bounced! (He says he meant to.)", art: "motion.bounce-pad", truthContractId: "truth.motion.v1" },
+    // Gear Garage (M12) — every one measured by the GearSystem (truth.gears.v1)
+    { id: "gear.direction-flip", kind: "CONCEPT", title: "Touching gears swap direction", line: "When one gear turns clockwise, the gear it touches turns the other way.", art: "gear.medium", truthContractId: "truth.gears.v1" },
+    { id: "gear.speed-up", kind: "CONCEPT", title: "Big turns small = fast", line: "A big gear turning a small gear makes the small one spin faster.", art: "gear.small", truthContractId: "truth.gears.v1" },
+    { id: "gear.slow-strong", kind: "CONCEPT", title: "Slower can be stronger", line: "A small gear turning a big gear goes slower but pushes harder.", art: "gear.large", truthContractId: "truth.gears.v1" },
+    { id: "gear.chain", kind: "CONCEPT", title: "Gear trains pass turning along", line: "Turning can travel through a whole line of gears.", art: "gear.medium", truthContractId: "truth.gears.v1" },
+    { id: "gear.same-way", kind: "CONCEPT", title: "Two flips make the same way", line: "With a gear in the middle, the last gear turns the same way as the first.", art: "gear.small", truthContractId: "truth.gears.v1" },
+    { id: "gear.belt-same-way", kind: "CONCEPT", title: "Belts keep the direction", line: "Pulleys joined by a belt turn the same way.", art: "gear.belt-pulley", truthContractId: "truth.gears.v1" },
+    { id: "gear.power-limit", kind: "CONCEPT", title: "Motors can only push so hard", line: "If a load needs more turning force than the motor has, everything stops.", art: "gear.motor", truthContractId: "truth.gears.v1" },
+    { id: "combo.gear-conveyor", kind: "COMBINATION", title: "Gears + conveyor", line: "Gears turned the old conveyor and it carried the cargo.", art: "motion.conveyor", truthContractId: "truth.gears.v1" },
+    { id: "combo.gear-winch", kind: "COMBINATION", title: "Gears + rope = lift", line: "A gear-driven winch wound up a rope and lifted a load.", art: "gear.winch", truthContractId: "truth.gears.v1" },
+    { id: "secret.gear-gridlock", kind: "SECRET", title: "Gear Gridlock", line: "Three gears in a ring can't turn at all — each one blocks the next!", art: "gear.medium", truthContractId: "truth.gears.v1" },
+    { id: "secret.super-spin", kind: "SECRET", title: "Super Spin", line: "A gear spun five times faster than the crank!", art: "gear.small", truthContractId: "truth.gears.v1" },
+    { id: "secret.sprocket-fling", kind: "SECRET", title: "Sprocket Spin-Out", line: "Too fast! Sprocket went flying (into a soft cushion).", art: "gear.carousel", truthContractId: "truth.gears.v1" }
 ];
 export function discoveryById(id) { return DISCOVERIES.find(d => d.id === id); }
-export function realWorldCard(id) { return MOTION_REAL_WORLD_CARDS.find(c => c.discoveryId === id); }
+export function realWorldCard(id) { return [...MOTION_REAL_WORLD_CARDS, ...GEAR_REAL_WORLD_CARDS].find(c => c.discoveryId === id); }
 // ------------------------------------------------------------------ evidence helpers (read-only)
 /** Separate touches: events on the same object more than `gap` ticks apart count as new episodes. */
 export function episodes(events, gap = 12) {
@@ -133,11 +147,23 @@ const CONCEPT_EVIDENCE = {
     "motion.bounce": "Something hit a bouncy pad and changed direction.",
     "motion.mass-inertia": "The same push was applied to different masses.",
     "motion.momentum": "Something kept moving across the yard after being set going.",
-    "motion.surface-comparison": "Both a grip pad and a slide pad were touched in one test."
+    "motion.surface-comparison": "Both a grip pad and a slide pad were touched in one test.",
+    "gear.direction-flip": "Two meshed gears turned opposite ways for half a second or more.",
+    "gear.speed-up": "A driven gear turned at least 1.5 times faster than the driver.",
+    "gear.slow-strong": "A driven gear turned slower than the driver, with more turning force.",
+    "gear.chain": "Three or more axles turned together in one gear train.",
+    "gear.same-way": "A gear two steps along the train turned the same way as the driver.",
+    "gear.belt-same-way": "Two belted pulleys turned the same way.",
+    "gear.power-limit": "The load needed more turning force than the driver could give, so the train stopped.",
+    "combo.gear-conveyor": "A gear-driven conveyor carried cargo more than 1 m.",
+    "combo.gear-winch": "A gear-driven winch lifted a load.",
+    "secret.gear-gridlock": "Gears meshed in a ring jammed.",
+    "secret.super-spin": "A gear turned five times faster than its driver.",
+    "secret.sprocket-fling": "The carousel spun faster than Sprocket could hold on."
 };
 /** Every discovery this TEST run has real evidence for (concept + combination + secret). */
 export function evaluateRunDiscoveries(build, runtime) {
-    const concepts = collectMotionDiscoveries(undefined, build, runtime).map(id => ({ id, evidence: CONCEPT_EVIDENCE[id] ?? "Seen in a test." }));
+    const concepts = [...collectMotionDiscoveries(undefined, build, runtime), ...collectGearDiscoveries(build, runtime)].map(id => ({ id, evidence: CONCEPT_EVIDENCE[id] ?? "Seen in a test." }));
     return [...concepts, ...collectSpecialDiscoveries(build, runtime)].filter(a => discoveryById(a.id));
 }
 export function eventsFor(runtime, partId, kind) {
