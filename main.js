@@ -939,6 +939,8 @@ function updateMusic() { const place = musicPlace(); if (!place || !(currentSett
     audio.stopMusic();
     return;
 } audio.playMusic(place); }
+/** At most this long per frame on simulation steps (M38): a busy room slows down gently instead of freezing. */
+const STEP_BUDGET_MS = 12;
 /** Machines make their sounds as things happen in a TEST (each family at most every MIN_REPEAT_SECONDS). */
 let soundRuntime;
 let soundsHeard = 0;
@@ -3985,7 +3987,7 @@ function frame(frameNow) {
             if (fairRun && !tests.isPaused())
                 fairRun.sample(rt);
         }
-    } replayer?.step(); }));
+    } replayer?.step(); }, 8, STEP_BUDGET_MS));
     if (replayer?.frame())
         replayNote = "Fast-forwarding…";
     if (challengeRun?.done && testMode && !resultShown)

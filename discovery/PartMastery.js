@@ -60,14 +60,29 @@ export function observePartUses(build, runtime) {
     const add = (partId, useId) => { if (!uses.some(u => u.partId === partId && u.useId === useId))
         uses.push({ partId, useId }); };
     const events = runtime.causalEvents;
+    // Index once per check (M38): each part's own events and a part lookup, instead of scanning every event per part.
+    const byPart = new Map();
+    const push = (id, e) => { if (!id)
+        return; const l = byPart.get(id); if (l)
+        l.push(e);
+    else
+        byPart.set(id, [e]); };
+    for (const e of events) {
+        push(e.sourceId, e);
+        if (e.targetId !== e.sourceId)
+            push(e.targetId, e);
+    }
+    const partsById = new Map(build.allParts().map(q => [q.id, q]));
+    const getPart = (id) => partsById.get(id);
+    const ofPart = (id) => byPart.get(id) ?? [];
     for (const part of build.allParts()) {
-        const mine = events.filter(e => e.sourceId === part.id || e.targetId === part.id);
+        const mine = ofPart(part.id);
         switch (part.definitionId) {
             case "motion.spring": {
                 const launches = mine.filter(e => e.kind === "SPRING_LAUNCH" && e.sourceId === part.id);
                 if (launches.length)
                     add(part.definitionId, "launch");
-                if (launches.some(e => HEAVY.has(build.getPart(e.targetId ?? "")?.definitionId ?? "")))
+                if (launches.some(e => HEAVY.has(getPart(e.targetId ?? "")?.definitionId ?? "")))
                     add(part.definitionId, "launch-heavy");
                 break;
             }
@@ -77,7 +92,7 @@ export function observePartUses(build, runtime) {
                     add(part.definitionId, "roll");
                 // Ramp to ramp: one moving thing touched this ramp and another ramp.
                 for (const m of movers)
-                    if (events.some(e => e.kind === "RAMP_CONTACT" && partner(e, m) && partner(e, m) !== part.id && build.getPart(partner(e, m))?.definitionId === "motion.ramp")) {
+                    if (ofPart(m).some(e => e.kind === "RAMP_CONTACT" && partner(e, m) && partner(e, m) !== part.id && getPart(partner(e, m))?.definitionId === "motion.ramp")) {
                         add(part.definitionId, "chain");
                         break;
                     }
@@ -121,7 +136,7 @@ export function observePartUses(build, runtime) {
                 if (travelled(build, runtime, part.id) > 1 && turned > Math.PI)
                     add(part.definitionId, "roll");
                 const cart = build.allConnections().filter(c => c.config.kind === "HINGE" && (c.fromPartId === part.id || c.toPartId === part.id))
-                    .map(c => build.getPart(c.fromPartId === part.id ? c.toPartId : c.fromPartId)).find(p => p?.definitionId === "motion.cart");
+                    .map(c => getPart(c.fromPartId === part.id ? c.toPartId : c.fromPartId)).find(p => p?.definitionId === "motion.cart");
                 if (cart && travelled(build, runtime, cart.id) > 1 && turned > Math.PI)
                     add(part.definitionId, "carry");
                 break;
@@ -144,7 +159,7 @@ export function observePartUses(build, runtime) {
                 const resting = new Set(mine.filter(e => e.kind === "PHYSICS_CONTACT").map(e => partner(e, part.id)).filter(id => dynamic(runtime, id)));
                 if ([...resting].some(id => { try {
                     const s = runtime.physics.state(id);
-                    return s.y < part.position.y && speed(runtime, id) < 0.08 && eventsSince(events, id, part.id, runtime.tick - 20);
+                    return s.y < part.position.y && speed(runtime, id) < 0.08 && eventsSince(ofPart(id), id, part.id, runtime.tick - 20);
                 }
                 catch {
                     return false;
@@ -190,7 +205,7 @@ export function observePartUses(build, runtime) {
         const ms = st.memberState(m.id);
         if (ms.broken)
             continue;
-        const part = build.getPart(m.partId);
+        const part = getPart(m.partId);
         if (!part)
             continue;
         const carried = st.travellerStates().some(t => t.arrived && st.walkedOnStructure(t.id));
@@ -235,8 +250,8 @@ export function observePartUses(build, runtime) {
         }
     // Magnets: uses from what the MagnetSystem measured.
     for (const e of runtime.causalEvents) {
-        const mag = build.getPart(e.sourceId);
-        const other = e.targetId ? build.getPart(e.targetId) : undefined;
+        const mag = getPart(e.sourceId);
+        const other = e.targetId ? getPart(e.targetId) : undefined;
         for (const [p, q] of [[mag, other], [other, mag]]) {
             if (p?.definitionId !== "magnetic.bar")
                 continue;
@@ -274,7 +289,7 @@ export function observePartUses(build, runtime) {
     }
     // Robot Lab: what each robot's program actually did this run.
     for (const v of runtime.robots.robotViews()) {
-        const mine = (k) => events.filter(e => e.kind === k && e.sourceId === v.id);
+        const mine = (k) => ofPart(v.id).filter(e => e.kind === k && e.sourceId === v.id);
         if (v.done && !v.crashed && mine("ROBOT_MOVED").length && mine("ROBOT_TURNED").length)
             add("robot.bot", "sequence");
         if (mine("SENSOR_DECISION").length)

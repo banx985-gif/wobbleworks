@@ -1,3 +1,4 @@
+import { installImageCache } from "./ImageCache.js";
 import { LOGICAL_HEIGHT, LOGICAL_WIDTH, Viewport } from "./Viewport.js";
 import { PART_ART_SOURCE, partArtRect, rampArtRect } from "./PartArt.js";
 import { drawBuilderBayBackdrop, drawJoints, drawStructurePart, structureKind, structureLayer } from "./StructureRenderer.js";
@@ -28,6 +29,7 @@ export class CanvasRenderer {
         const ctx = canvas.getContext("2d");
         if (!ctx)
             throw new Error("Canvas 2D unavailable");
+        installImageCache(ctx);
         this.ctx = ctx;
         this.resize();
     }
@@ -138,7 +140,9 @@ export class CanvasRenderer {
             return def.behaviours.some(b => b.kind === "WIRE") ? 2.5 : def.behaviours.some(b => b.kind === "GEAR") ? 1 : 0.5; if (structureKind(def))
             return [-2, -1, 1.5, 1.6, 4][structureLayer(def)] ?? 4; const g = gearBehaviour(def); if (g)
             return g.role === "SHAFT" ? 1 : 2; const r = def.behaviours.find(b => b.kind === "RIGID_BODY"); return !r || (r.kind === "RIGID_BODY" && r.bodyType === "STATIC") ? 0 : 3; };
-        const ordered = [-2, -1, 0, 0.5, 0.7, 1, 1.5, 1.6, 2, 2.5, 3, 3.5, 4].flatMap(k => parts.filter(p => layer(p) === k));
+        const LAYERS = [-2, -1, 0, 0.5, 0.7, 1, 1.5, 1.6, 2, 2.5, 3, 3.5, 4];
+        const rank = new Map(LAYERS.map((k, i) => [k, i]));
+        const ordered = parts.map((p, i) => ({ p, i, r: rank.get(layer(p)) })).filter(x => x.r !== undefined).sort((a, b) => a.r - b.r || a.i - b.i).map(x => x.p);
         const structCtx = { ...(structures ? { structures } : {}), registry: (id) => registry.get(id), art: this.art, time, showStress };
         const magnetCtx = { ...(runtime ? { magnets: runtime.magnets } : {}), states, art: this.art, time, scanner: showStress };
         const robotCtx = { ...(runtime ? { robots: runtime.robots } : {}), time, scanner: showStress };

@@ -173,13 +173,9 @@ export class FlightSystem {
         for (const c of this.crafts) {
             if (this.elapsed < Number(c.body.parameters.releaseAt ?? 0))
                 continue;
-            let st;
-            try {
-                st = physics.state(c.id);
-            }
-            catch {
+            if (!physics.has(c.id))
                 continue;
-            }
+            const st = physics.state(c.id);
             const wind = this.windAt(st.x, st.y);
             const rvx = st.vx - wind.x, rvy = st.vy - wind.y;
             const v = Math.hypot(rvx, rvy);
@@ -271,13 +267,9 @@ export class FlightSystem {
                 // Rockets and rovers feel the wind through the Space Centre's own airflow model.
                 if (this.crafts.some(c => c.id === p.id) || this.isAttached(p.id) || this.definition(p.definitionId)?.behaviours.some(b => b.kind === "VESSEL"))
                     continue;
-                let st;
-                try {
-                    st = physics.state(p.id);
-                }
-                catch {
+                if (!physics.has(p.id))
                     continue;
-                }
+                const st = physics.state(p.id);
                 if (!Number.isFinite(physics.mass(p.id)))
                     continue;
                 const wind = this.windAt(st.x, st.y);
@@ -299,13 +291,9 @@ export class FlightSystem {
     /** After the physics step: landings, bumps, gates, how far and how steadily each craft flew. */
     observe(physics) {
         for (const p of this.parts) {
-            let st;
-            try {
-                st = physics.state(p.id);
-            }
-            catch {
+            if (!physics.has(p.id))
                 continue;
-            }
+            const st = physics.state(p.id);
             if (!Number.isFinite(physics.mass(p.id)))
                 continue;
             const prev = this.lastV.get(p.id);
@@ -338,13 +326,9 @@ export class FlightSystem {
             }
         }
         for (const c of this.crafts) {
-            let st;
-            try {
-                st = physics.state(c.id);
-            }
-            catch {
+            if (!physics.has(c.id))
                 continue;
-            }
+            const st = physics.state(c.id);
             // Flying = moving, clear of the floor and touching nothing this tick (bouncing or sliding along the ground isn't flight).
             const touching = physics.contactEvents.some(e => e.a === c.id || e.b === c.id);
             const h = this.halfHeight(c.id);

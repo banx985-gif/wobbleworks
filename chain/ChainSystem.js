@@ -164,13 +164,9 @@ export class ChainSystem {
                 for (const p of this.parts) {
                     if (!this.dynamicDef(p) || this.held.has(p.id))
                         continue;
-                    let st;
-                    try {
-                        st = physics.state(p.id);
-                    }
-                    catch {
+                    if (!physics.has(p.id))
                         continue;
-                    }
+                    const st = physics.state(p.id);
                     if (reach(st.x, st.y) && Math.hypot(st.vx, st.vy) < 0.3) {
                         physics.setLinearVelocity(p.id, { x: d.dir * 1.6, y: st.vy });
                         this.pending.push({ kind: "DOMINO_PUSH", sourceId: d.part.id, targetId: p.id });
@@ -181,13 +177,9 @@ export class ChainSystem {
         for (const p of this.parts) {
             if (!this.nodes.has(p.id) || !this.dynamicDef(p))
                 continue;
-            let st;
-            try {
-                st = physics.state(p.id);
-            }
-            catch {
+            if (!physics.has(p.id))
                 continue;
-            }
+            const st = physics.state(p.id);
             const speed = Math.hypot(st.vx, st.vy);
             if (speed < 0.3)
                 continue;
@@ -267,13 +259,9 @@ export class ChainSystem {
             for (const p of this.parts) {
                 if (!this.dynamicDef(p) || p.id === by)
                     continue;
-                let st;
-                try {
-                    st = physics.state(p.id);
-                }
-                catch {
+                if (!physics.has(p.id))
                     continue;
-                }
+                const st = physics.state(p.id);
                 if ((st.x - m.part.position.x) * side > 0.2 && Math.abs(st.x - m.part.position.x) <= 1.1 && st.y < m.part.position.y && m.part.position.y - st.y < 0.9) {
                     physics.setLinearVelocity(p.id, { x: side * Number(m.part.parameters.throwX ?? 1.2), y: -Number(m.part.parameters.throw ?? 6.5) });
                     this.pending.push({ kind: "SEESAW_LAUNCH", sourceId: m.part.id, targetId: p.id });
@@ -296,12 +284,8 @@ export class ChainSystem {
         }
         // Explicit causes this tick (who pushed, rang, toppled, launched or lifted what).
         const explicit = new Map();
-        const fanFor = (bodyId) => { let st; try {
-            st = world.physics.state(bodyId);
-        }
-        catch {
-            return undefined;
-        } let best; for (const p of this.parts) {
+        const fanFor = (bodyId) => { if (!world.physics.has(bodyId))
+            return undefined; const st = world.physics.state(bodyId); let best; for (const p of this.parts) {
             if (!this.definition(p.definitionId)?.behaviours.some(b => b.kind === "WIND_FAN"))
                 continue;
             const d = Math.hypot(st.x - p.position.x, st.y - p.position.y);
@@ -377,13 +361,9 @@ export class ChainSystem {
         for (const p of this.parts) {
             if (!this.dynamicDef(p) || this.held.has(p.id))
                 continue;
-            let st;
-            try {
-                st = world.physics.state(p.id);
-            }
-            catch {
+            if (!world.physics.has(p.id))
                 continue;
-            }
+            const st = world.physics.state(p.id);
             const speed = Math.hypot(st.vx, st.vy);
             const resting = this.resting.get(p.id) ?? true;
             const ex = explicit.get(p.id);
@@ -532,13 +512,9 @@ export class ChainSystem {
         for (const p of this.parts) {
             if (!this.nodes.has(p.id) || !this.dynamicDef(p))
                 continue;
-            let st;
-            try {
-                st = world.physics.state(p.id);
-            }
-            catch {
+            if (!world.physics.has(p.id))
                 continue;
-            }
+            const st = world.physics.state(p.id);
             const d = Math.hypot(st.x - button.position.x, st.y - button.position.y);
             if (d < 1.2 && (!best || d < best.d))
                 best = { id: p.id, d };

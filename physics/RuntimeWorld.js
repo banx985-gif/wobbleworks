@@ -62,10 +62,13 @@ export class RuntimeWorld {
     snapshot;
     registry;
     pendingEvents = [];
+    /** Parts by id (the snapshot never changes during a TEST). */
+    partById;
     constructor(snapshot, registry) {
         if (!verifyBuildSnapshot(snapshot))
             throw new Error("BuildSnapshot signature invalid");
         this.snapshot = deepClone(snapshot);
+        this.partById = new Map(this.snapshot.parts.map(p => [p.id, p]));
         this.snapshotSignature = snapshot.signature;
         this.registry = registry;
         this.constructPhysics();
@@ -205,13 +208,13 @@ export class RuntimeWorld {
         // A magnet switch closes when the magnetic field where it sits is strong enough (magnetism → electricity/logic).
         const sensor = this.safeDefinition(id)?.behaviours.find(b => b.kind === "MAGNET_SENSOR");
         if (sensor?.kind === "MAGNET_SENSOR") {
-            const p = this.snapshot.parts.find(q => q.id === id);
+            const p = this.partById.get(id);
             if (!p)
                 return false;
             const f = this.magnets.fieldAt(p.position.x, p.position.y);
             return Math.hypot(f.x, f.y) >= sensor.threshold;
         }
-        const part = this.snapshot.parts.find(p => p.id === id);
+        const part = this.partById.get(id);
         if (!part)
             return false;
         // A sensor contact closed by a Robot Lab box resting in its slot ("boxId:slotId").
@@ -309,7 +312,7 @@ export class RuntimeWorld {
     }
     /** A robot listening for a signal: the part it listens to has power, is pressed, or has been set off by the chain. */
     robotSignal(robotId) {
-        const listen = this.snapshot.parts.find(p => p.id === robotId)?.parameters.listen;
+        const listen = this.partById.get(robotId)?.parameters.listen;
         if (typeof listen !== "string")
             return false;
         return (this.circuits.load(listen)?.level ?? 0) > 0.3 || this.buttonPressed(listen) || this.chain.inChain(listen);
@@ -515,7 +518,7 @@ export class RuntimeWorld {
             if (n.output.kind === "WINCH" && typeof n.parameters.ropeTo === "string") {
                 const loadId = n.parameters.ropeTo;
                 const s = this.safeState(loadId);
-                const start = this.snapshot.parts.find(p => p.id === loadId);
+                const start = this.partById.get(loadId);
                 if (!s || !start)
                     continue;
                 const rigid = this.definition(loadId).behaviours.find(b => b.kind === "RIGID_BODY");
@@ -553,7 +556,7 @@ export class RuntimeWorld {
             }
             if (n.output.kind === "CONVEYOR" && typeof n.parameters.drives === "string" && w !== 0) {
                 const beltId = n.parameters.drives;
-                const belt = this.snapshot.parts.find(p => p.id === beltId);
+                const belt = this.partById.get(beltId);
                 if (!belt)
                     continue;
                 const rigid = this.definition(beltId).behaviours.find(b => b.kind === "RIGID_BODY");
@@ -592,7 +595,7 @@ export class RuntimeWorld {
         for (const n of this.gears.nodes) {
             if (n.output?.kind !== "WINCH" || n.parameters.mountOnStructure !== true || typeof n.parameters.ropeTo !== "string")
                 continue;
-            const start = this.snapshot.parts.find(p => p.id === n.parameters.ropeTo);
+            const start = this.partById.get(n.parameters.ropeTo);
             const s = this.safeState(String(n.parameters.ropeTo));
             if (!start || !s)
                 continue;
@@ -603,7 +606,7 @@ export class RuntimeWorld {
         // A magnet mounted on a structure is pulled by whatever it pulls (Newton's third law): that pull loads the structure.
         for (const m of this.magnets.magnets()) {
             const f = this.magnets.force(m.id);
-            const part = this.snapshot.parts.find(p => p.id === m.id);
+            const part = this.partById.get(m.id);
             if (!f || !part || f.y <= 0.05 || !this.structures.hasJointNear(part.position.x, part.position.y))
                 continue;
             hanging.push({ x: part.position.x, y: part.position.y, force: f.y * 0.5, sourceId: m.id });
@@ -668,7 +671,7 @@ export class RuntimeWorld {
         this.pendingEvents.push(value);
     }
     definition(instanceId) {
-        const instance = this.snapshot.parts.find(p => p.id === instanceId);
+        const instance = this.partById.get(instanceId);
         if (!instance)
             throw new Error(`Unknown part instance ${instanceId}`);
         return this.registry.get(instance.definitionId);
@@ -679,12 +682,7 @@ export class RuntimeWorld {
     catch {
         return undefined;
     } }
-    safeState(id) { try {
-        return this.physics.state(id);
-    }
-    catch {
-        return undefined;
-    } }
+    safeState(id) { return this.physics.has(id) ? this.physics.state(id) : undefined; }
     /** Read-only lookups for goals and evidence. */
     partDefinition(instanceId) { return this.safeDefinition(instanceId); }
     isDynamicBody(id) { try {

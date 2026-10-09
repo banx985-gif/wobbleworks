@@ -3,6 +3,8 @@
  * The production adapter boundary is intentionally narrow so Planck can replace this backend
  * without changing BuildSnapshot, connections, goals or content data.
  */
+/** One shared error for "no such body": callers only ever catch it and move on, so no new error (and stack) per miss. */
+const UNKNOWN_BODY = new Error("Unknown physics body");
 export class PhysicsWorld {
     bodies = new Map();
     springs = [];
@@ -350,6 +352,8 @@ export class PhysicsWorld {
         return vectors;
     }
     destroy() { this.bodies.clear(); this.springs.length = this.ropes.length = this.motors.length = this.hinges.length = this.breakables.length = 0; }
+    /** Does this part have a physics body? (Cheap — use before state() in loops over every part.) */
+    has(id) { return this.bodies.has(id); }
     mustBody(id) { const b = this.bodies.get(id); if (!b)
-        throw new Error(`Unknown physics body ${id}`); return b; }
+        throw UNKNOWN_BODY; return b; }
 }
