@@ -160,7 +160,17 @@ const v6ToV7 = (v6) => {
     const list = asArray(v6.customChallenges);
     return { ...v6, schemaVersion: 7, customChallenges: list.length <= MAX_CHALLENGES_ON_DEVICE && list.every(c => validateCustomChallenge(c)) ? list : [] };
 };
-export const SAVE_MIGRATIONS = Object.freeze({ 1: v1ToV2, 2: v2ToV3, 3: v3ToV4, 4: v4ToV5, 5: v5ToV6, 6: v6ToV7 });
+/** v7 (M31–M34) → v8: volume levels and the left-handed layout (M35) join every settings block — the device's and each
+ *  inventor's. A value that is already there and valid is kept; anything missing or broken gets the default. */
+const withV8Settings = (raw) => {
+    if (!raw || typeof raw !== "object")
+        return raw;
+    const s = { ...raw };
+    const vol = (v, d) => typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 1 ? v : d;
+    return { ...s, sfxVolume: vol(s.sfxVolume, DEFAULT_SETTINGS.sfxVolume), musicVolume: vol(s.musicVolume, DEFAULT_SETTINGS.musicVolume), voiceVolume: vol(s.voiceVolume, DEFAULT_SETTINGS.voiceVolume), leftHanded: typeof s.leftHanded === "boolean" ? s.leftHanded : DEFAULT_SETTINGS.leftHanded };
+};
+const v7ToV8 = (v7) => ({ ...v7, schemaVersion: 8, deviceSettings: withV8Settings(v7.deviceSettings), profiles: asArray(v7.profiles).map(p => p && typeof p === "object" ? { ...p, settings: withV8Settings(p.settings) } : p) });
+export const SAVE_MIGRATIONS = Object.freeze({ 1: v1ToV2, 2: v2ToV3, 3: v3ToV4, 4: v4ToV5, 5: v5ToV6, 6: v6ToV7, 7: v7ToV8 });
 export function migrateAppSave(input) {
     if (!input || typeof input !== "object" || Array.isArray(input))
         return { ok: false, reason: "NOT_A_SAVE" };

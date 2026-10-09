@@ -80,6 +80,7 @@ import { DEFAULT_LOOK, HAIR_COLOURS, LOOK_CATEGORIES, isPieceUnlocked, piecesFor
 import { pictureUrl, renderLook } from "./inventor/LookView.js";
 import { AVATAR_PORTRAITS } from "./hub/HubScreens.js";
 import { rewardById as rewardInfo } from "./progression/Rewards.js";
+import { startLocalisation } from "./i18n/Localise.js";
 const canvas = document.querySelector("#game");
 if (!canvas)
     throw new Error("Missing #game canvas");
@@ -266,6 +267,8 @@ function applySettings(settings = currentSettings(appSave)) {
     document.documentElement.classList.toggle("reduced-motion", settings.reducedMotion);
     document.documentElement.classList.toggle("high-contrast", settings.highContrast);
     document.documentElement.classList.toggle("no-subtitles", !settings.subtitles);
+    document.documentElement.classList.toggle("left-handed", settings.leftHanded);
+    audio.setMasterGain(0.35 * settings.sfxVolume);
 }
 function syncSettingsForm() {
     const s = currentSettings(appSave);
@@ -279,6 +282,10 @@ function syncSettingsForm() {
     document.querySelector("#setting-sfx").checked = s.soundEffects;
     document.querySelector("#setting-music").checked = s.music ?? true;
     document.querySelector("#setting-vibration").checked = s.vibration ?? true;
+    document.querySelector("#setting-sfx-volume").value = String(s.sfxVolume);
+    document.querySelector("#setting-music-volume").value = String(s.musicVolume);
+    document.querySelector("#setting-voice-volume").value = String(s.voiceVolume);
+    document.querySelector("#setting-left-handed").checked = s.leftHanded;
     document.querySelector("#setting-hints").checked = a.boltTips;
     document.querySelector("#setting-hints").closest("label").classList.toggle("hidden", !p);
     document.querySelector("#setting-snap").checked = a.snapAssist;
@@ -288,7 +295,9 @@ function syncSettingsForm() {
 function readSettingsForm() {
     const num = Number(document.querySelector("#setting-text-scale").value);
     const chk = (id) => document.querySelector(id).checked;
-    return { textScale: Number.isFinite(num) ? Math.max(0.9, Math.min(1.4, num)) : 1, reducedMotion: chk("#setting-reduced-motion"), highContrast: chk("#setting-high-contrast"), narration: chk("#setting-narration"), subtitles: chk("#setting-subtitles"), soundEffects: chk("#setting-sfx"), music: chk("#setting-music"), vibration: chk("#setting-vibration") };
+    const vol = (id) => { const v = Number(document.querySelector(id).value); return Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 1; };
+    return { textScale: Number.isFinite(num) ? Math.max(0.9, Math.min(1.4, num)) : 1, reducedMotion: chk("#setting-reduced-motion"), highContrast: chk("#setting-high-contrast"), narration: chk("#setting-narration"), subtitles: chk("#setting-subtitles"), soundEffects: chk("#setting-sfx"), music: chk("#setting-music"), vibration: chk("#setting-vibration"),
+        sfxVolume: vol("#setting-sfx-volume"), musicVolume: vol("#setting-music-volume"), voiceVolume: vol("#setting-voice-volume"), leftHanded: chk("#setting-left-handed") };
 }
 /** The nine campaign labs plus the creative modes that use the same mission menu (the Chain Reaction Workshop). */
 const PLAY_SETS = [...MAIN_LABS, CHAIN_WORKSHOP, EXPERIMENT_LAB, FREE_BUILD_ROOMS, CHALLENGE_LAB, CONTRACT_BOARD, SCIENCE_FAIR, CREATURE_MUSIC, GRAND_HALL, PROTOTYPE_LAB];
@@ -359,6 +368,7 @@ function speakCurrentLine(force = false) {
     const utterance = new SpeechSynthesisUtterance(currentNarration);
     utterance.rate = 1.02;
     utterance.pitch = 1.08;
+    utterance.volume = currentSettings(appSave).voiceVolume;
     window.speechSynthesis.speak(utterance);
 }
 /** Put a painted Bolt pose (wearing the equipped costume) into a slot on screen. */
@@ -524,7 +534,7 @@ function loadMission(id) {
     motionResult.classList.add("hidden");
     const meta = missionMeta(id);
     motionTitle.textContent = meta?.title ?? level.title;
-    motionObjective.textContent = meta?.objective ?? level.title;
+    motionObjective.textContent = level.narrationCues?.[0] ?? meta?.objective ?? level.title;
     motionHud.classList.remove("hidden");
     forceScannerButton.classList.remove("hidden", "force-on");
     forceScannerButton.setAttribute("aria-pressed", "false");
@@ -554,7 +564,12 @@ function loadMission(id) {
         motionObjective.textContent = contract.goal;
         document.querySelector(".motion-hud .motion-badge").textContent = `JOB FOR ${who.name.toUpperCase()}`;
     }
+    sayGoal();
 }
+/** Say the mission's goal out loud (Bolt's voice), so a child who can't read yet can still start. */
+function sayGoal(force = false) { const goal = motionObjective.textContent ?? ""; if (!goal)
+    return; currentNarration = goal; speakCurrentLine(force); }
+document.querySelector("#btn-say-again").addEventListener("click", () => sayGoal(true));
 function showMotionResult(success, body, stars = [], newStars = [], rewards = []) {
     resultShown = true;
     motionResult.classList.remove("hidden");
@@ -961,6 +976,7 @@ function advanceBootNotice() {
 async function loadAppState() {
     transition("LOADING", true);
     try {
+        await startLocalisation(document.body);
         const loaded = await saveManager.loadWithRecovery();
         openingLevels = await loadOpeningLevels(registry);
         labLevels.set("motion-yard", await loadMotionYardLevels(registry));
@@ -2131,7 +2147,7 @@ shelfButton.addEventListener("click", () => {
     shelfButton.disabled = true;
     sfx(840, .06);
 });
-for (const id of ["#setting-text-scale", "#setting-reduced-motion", "#setting-high-contrast", "#setting-narration", "#setting-subtitles", "#setting-sfx", "#setting-music", "#setting-vibration"]) {
+for (const id of ["#setting-text-scale", "#setting-reduced-motion", "#setting-high-contrast", "#setting-narration", "#setting-subtitles", "#setting-sfx", "#setting-music", "#setting-vibration", "#setting-sfx-volume", "#setting-music-volume", "#setting-voice-volume", "#setting-left-handed"]) {
     document.querySelector(id).addEventListener(id === "#setting-text-scale" ? "input" : "change", () => { const s = readSettingsForm(); applySettings(s); void commit(withSettings(appSave, s)); });
 }
 document.querySelector("#setting-hints").addEventListener("change", event => {
@@ -3770,8 +3786,10 @@ function render() {
     updateFollowCamera();
     renderer.begin(camera);
     const photoBackground = photo.isOpen() && photo.background !== "room";
+    // Calm Motion stills the decorative backdrops (bubbles, flags, turning wall gears). Gameplay is never changed.
+    const decoTime = currentSettings(appSave).reducedMotion ? 0 : now() / 1000;
     if (photoBackground)
-        drawPhotoBackground(renderer.ctx, photo.background, now() / 1000);
+        drawPhotoBackground(renderer.ctx, photo.background, decoTime);
     if (freeBuildActive && currentRoom && !photoBackground)
         drawRoomBackdrop(currentRoom);
     const themed = challenge ?? contract;
@@ -3783,11 +3801,11 @@ function render() {
         renderer.drawScenery(sceneryId);
     else if (labActive) {
         if (lookLab === "gear-garage")
-            renderer.drawGearGarageBackdrop(now() / 1000);
+            renderer.drawGearGarageBackdrop(decoTime);
         else if (lookLab === "builder-bay")
             renderer.drawBuilderBayBackdrop();
         else if (hasLabBackdrop(lookLab))
-            renderer.drawLabBackdrop(lookLab, now() / 1000);
+            renderer.drawLabBackdrop(lookLab, decoTime);
         else
             renderer.drawMotionYardBackdrop();
         renderer.drawScenery(sceneryId);

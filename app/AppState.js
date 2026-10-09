@@ -8,7 +8,7 @@ import { validateLook } from "../inventor/InventorLook.js";
  * When the first inventor is created, that guest progress moves into the profile.
  * Every later profile owns its own campaign, unlocks, rewards, shelf, settings and assistance.
  */
-export const CURRENT_SAVE_SCHEMA = 7;
+export const CURRENT_SAVE_SCHEMA = 8;
 /** BLUE, PINK and GREEN are the three painted inventors (Aaron's art, 8 Oct). ORANGE/PURPLE remain valid for older saves. */
 export const AVATAR_STYLES = ["ORANGE", "BLUE", "GREEN", "PURPLE", "PINK"];
 export const PAINTED_AVATARS = ["BLUE", "PINK", "GREEN"];
@@ -19,7 +19,7 @@ export const MAX_CHALLENGES_ON_DEVICE = 30;
 export const MAX_INVENTIONS = 40;
 export const MAX_VERSIONS = 25;
 export const INVENTION_NAME_MAX = 40;
-export const DEFAULT_SETTINGS = Object.freeze({ textScale: 1, reducedMotion: false, highContrast: false, subtitles: true, narration: true, soundEffects: true, music: true, vibration: true });
+export const DEFAULT_SETTINGS = Object.freeze({ textScale: 1, reducedMotion: false, highContrast: false, subtitles: true, narration: true, soundEffects: true, music: true, vibration: true, sfxVolume: 1, musicVolume: 0.8, voiceVolume: 1, leftHanded: false });
 export const DEFAULT_ASSISTANCE = Object.freeze({ snapAssist: true, boltTips: true });
 export const MAX_PROFILES = 6;
 export const MAX_SHELF_ITEMS = 24;
@@ -79,7 +79,11 @@ export function validateSettings(s) {
     const v = s;
     return Boolean(v) && typeof v.textScale === "number" && v.textScale >= 0.8 && v.textScale <= 1.6 &&
         isBool(v.reducedMotion) && isBool(v.highContrast) && isBool(v.subtitles) && isBool(v.narration) && isBool(v.soundEffects) &&
-        (v.music === undefined || isBool(v.music)) && (v.vibration === undefined || isBool(v.vibration));
+        (v.music === undefined || isBool(v.music)) && (v.vibration === undefined || isBool(v.vibration)) &&
+        isVolume(v.sfxVolume) && isVolume(v.musicVolume) && isVolume(v.voiceVolume) && isBool(v.leftHanded);
+}
+function isVolume(v) {
+    return typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 1;
 }
 function validateMetrics(m) {
     if (!isCount(m.testPresses) || !isCount(m.stopPresses) || !isCount(m.retries))

@@ -1,3 +1,4 @@
+import { drawConnectionMark } from "./ConnectionMarks.js";
 import { circuitBehaviour, circuitTerminals, wireBehaviour, wireEnds } from "../power/CircuitSystem.js";
 /**
  * Power Lab drawing (M14). Painted where art exists — the big button (`power.big-button`) and the lever switch
@@ -466,13 +467,7 @@ export function drawCircuitTerminals(c, layout) {
         if (t.isWire)
             continue;
         const joined = (counts.get(t.node) ?? 0) >= 2;
-        c.fillStyle = joined ? "#2f9e44" : "#ffd43b";
-        c.strokeStyle = INK;
-        c.lineWidth = 3;
-        c.beginPath();
-        c.arc(t.x * 100, t.y * 100, joined ? 8 : 9, 0, Math.PI * 2);
-        c.fill();
-        c.stroke();
+        drawConnectionMark(c, t.x * 100, t.y * 100, joined, 9);
     }
     c.restore();
 }

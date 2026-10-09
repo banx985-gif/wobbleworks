@@ -1,6 +1,6 @@
 :root { --text-scale:1; --ink:#18323f; --panel:#fffdf5; --accent:#2b8a3e; --danger:#c92a2a; --focus:#1c7ed6; --touch:56px; --sky:#dff4ff; --yellow:#ffd43b; font-size:calc(16px * var(--text-scale)); }
 * { box-sizing:border-box; }
-html,body { margin:0; height:100%; overflow:hidden; background:#18323f; color:var(--ink); font-family:system-ui,-apple-system,Segoe UI,sans-serif; }
+html,body { margin:0; height:100%; overflow:hidden; background:#18323f; color:var(--ink); font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans","Helvetica Neue",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji"; }
 button { min-width:var(--touch); min-height:var(--touch); border:3px solid var(--ink); border-radius:15px; background:#fff; color:var(--ink); font-weight:850; font-size:.95rem; padding:.45rem .8rem; touch-action:manipulation; cursor:pointer; }
 button:focus-visible,input:focus-visible { outline:5px solid var(--focus); outline-offset:2px; } button:disabled { opacity:.45; cursor:default; }
 .hidden { display:none!important; }
@@ -617,3 +617,15 @@ details.parent-kid > summary { cursor: pointer; font-size: 1.15em; padding: 6px 
 .parent-item { line-height: 1.35; }
 .parent-points { margin: 6px 0 0 18px; display: flex; flex-direction: column; gap: 6px; line-height: 1.4; }
 .parent-section details > summary { cursor: pointer; list-style: none; min-height: 56px; display: flex; align-items: center; }
+
+/* M35 accessibility: left-handed layout and the "hear it again" button */
+.say-again { min-width: 56px; min-height: 56px; font-size: 1.4em; }
+.left-handed .controls { flex-direction: row-reverse; }
+.left-handed .motion-hud { grid-template-columns: auto auto 1fr; }
+.left-handed .motion-hud .motion-tools { order: -1; }
+.left-handed .motion-result > div:last-child { flex-direction: row-reverse; }
+/* M35 layout expansion safety: longer languages shrink or wrap instead of colliding */
+.hub-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.station-label{white-space:normal;text-align:center;width:max-content;max-width:14cqw;overflow-wrap:break-word;line-height:1.1}
+.controls .ctl-icon span,.tray button{overflow-wrap:anywhere}
+.motion-copy{min-width:0;overflow-wrap:anywhere}

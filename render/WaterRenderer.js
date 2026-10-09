@@ -1,3 +1,4 @@
+import { drawConnectionMark } from "./ConnectionMarks.js";
 import { fluidBehaviour, fluidPorts, pipeBehaviour, pipeEnds, targetBehaviour } from "../water/FluidSystem.js";
 /**
  * Water Works drawing (M16). Code-drawn behind each part id until the water art arrives (docs/ART_NEEDED.md, Batch W).
@@ -428,13 +429,7 @@ export function drawWaterPorts(c, layout) {
         counts.set(p.node, (counts.get(p.node) ?? 0) + 1);
     for (const p of layout.ports) {
         const joined = (counts.get(p.node) ?? 0) >= 2;
-        c.fillStyle = joined ? "#2f9e44" : "#ffd43b";
-        c.strokeStyle = INK;
-        c.lineWidth = 3;
-        c.beginPath();
-        c.arc(p.x * 100, p.y * 100, joined ? 7 : 9, 0, Math.PI * 2);
-        c.fill();
-        c.stroke();
+        drawConnectionMark(c, p.x * 100, p.y * 100, joined, 8);
     }
     c.restore();
 }
