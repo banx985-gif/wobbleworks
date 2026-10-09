@@ -1,6 +1,7 @@
 import { arenaThing, isRobot } from "../robots/RobotSystem.js";
 import { describeBlock } from "../robots/BlockEditor.js";
 import { parseProgram } from "../robots/RobotProgram.js";
+import { drawPartPicture } from "./PartPictures.js";
 /**
  * Robot Lab drawing (M18): a top-down floor plan of 1 m cells. Code-drawn behind each part id until the robot-lab art
  * arrives (docs/ART_NEEDED.md, Batch R). Drawing only. 100 px per metre.
@@ -150,6 +151,17 @@ export function drawRobotPart(c, part, def, selected, ctx) {
             break;
         case "BUTTON": {
             const on = sys?.isPressed(part.id) ?? false;
+            if (drawPartPicture(c, ctx.art, def.id)) {
+                if (on) {
+                    c.shadowBlur = 0;
+                    c.strokeStyle = "#40c057";
+                    c.lineWidth = 6;
+                    c.beginPath();
+                    c.arc(0, 0, 42, 0, Math.PI * 2);
+                    c.stroke();
+                }
+                break;
+            }
             c.fillStyle = "#495057";
             c.beginPath();
             c.arc(0, 0, 34, 0, Math.PI * 2);
@@ -285,6 +297,8 @@ export function drawRobotPart(c, part, def, selected, ctx) {
                 }
                 c.translate((b.x - Math.round(part.position.x)) * 100, (b.y - Math.round(part.position.y)) * 100);
             }
+            if (!b?.product && drawPartPicture(c, ctx.art, def.id))
+                break;
             c.fillStyle = b?.product ? "#ffd8a8" : "#d9a066";
             c.beginPath();
             c.roundRect(-30, -30, 60, 60, 6);

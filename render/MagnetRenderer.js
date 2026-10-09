@@ -1,7 +1,8 @@
 import { magnetBehaviour, materialOf, isMagnetic } from "../magnets/MagnetSystem.js";
+import { drawPartPicture } from "./PartPictures.js";
 /**
- * Magnet Factory drawing (M15). Code-drawn behind each part id until the magnet art arrives (docs/ART_NEEDED.md, Batch M);
- * the rubber duck uses its painted picture. Drawing only. 100 px per metre.
+ * Magnet Factory drawing (M15). Painted where the part-art map (PartPictures.ts) has a picture: bar magnet, magnet puck,
+ * electromagnet, steel ball and rubber duck. The rest is code-drawn behind its part id (docs/ART_NEEDED.md). Drawing only. 100 px per metre.
  */
 const INK = "#203040", NORTH = "#e03131", SOUTH = "#1c7ed6";
 export function isMagnetPart(def) { return Boolean(magnetBehaviour(def) || materialOf(def)) || def.id === "magnetic.guide"; }
@@ -39,11 +40,15 @@ export function drawMagnetPart(c, part, def, selected, ctx) {
         const axis = live ? live.angle : part.rotation + poleAngle;
         const on = live ? live.on : !bar.electric;
         c.translate(x, y);
-        if (bar.electric)
-            drawElectromagnet(c, on, ctx.time);
+        if (bar.electric) {
+            if (drawPartPicture(c, ctx.art, def.id))
+                drawFieldGlow(c, on, ctx.time);
+            else
+                drawElectromagnet(c, on, ctx.time);
+        }
         else if (def.id === "magnetic.floater")
             drawRing(c, axis);
-        else
+        else if (!drawPaintedMagnet(c, def, axis, part, ctx))
             drawBar(c, def, axis, part);
         if (on && ctx.scanner)
             drawFieldArcs(c, axis, bar.length * 100, ctx.time);
@@ -51,7 +56,8 @@ export function drawMagnetPart(c, part, def, selected, ctx) {
     else if (mat) {
         c.translate(x, y);
         c.rotate(st?.angle ?? part.rotation);
-        drawMaterial(c, def, mat, ctx.art);
+        if (!drawPartPicture(c, ctx.art, def.id))
+            drawMaterial(c, def, mat, ctx.art);
         if (ctx.scanner) {
             c.rotate(-(st?.angle ?? part.rotation));
             c.fillStyle = isMagnetic(def) ? "#2f9e44" : "#868e96";
@@ -62,6 +68,55 @@ export function drawMagnetPart(c, part, def, selected, ctx) {
     }
     c.restore();
     return true;
+}
+/** Painted bar magnet / magnet puck: the picture turns with the pole axis (its red end is north) and keeps N and S letters. */
+function drawPaintedMagnet(c, def, axis, part, ctx) {
+    c.save();
+    c.rotate(axis);
+    const ok = drawPartPicture(c, ctx.art, def.id);
+    if (ok) {
+        const puck = def.id === "magnetic.puck";
+        const nx = puck ? 18 : 30, ny = puck ? -14 : 0;
+        c.shadowBlur = 0;
+        c.font = `900 ${puck ? 14 : 18}px system-ui`;
+        c.textAlign = "center";
+        c.textBaseline = "middle";
+        c.lineWidth = 4;
+        c.strokeStyle = INK;
+        c.fillStyle = "#fff";
+        for (const [lx, t] of [[nx, "N"], [-nx, "S"]]) {
+            c.save();
+            c.translate(lx, ny);
+            c.rotate(-axis);
+            c.strokeText(t, 0, 1);
+            c.fillText(t, 0, 1);
+            c.restore();
+        }
+    }
+    c.restore();
+    if (ok && part.parameters.locked === true && def.id === "magnetic.bar") {
+        c.fillStyle = INK;
+        c.font = "900 12px system-ui";
+        c.textAlign = "center";
+        c.fillText("tap to turn", 0, 44);
+    }
+    return ok;
+}
+/** Switched-on electromagnet: pulsing field lines under its coil. */
+function drawFieldGlow(c, on, time) {
+    if (!on)
+        return;
+    c.save();
+    c.shadowBlur = 0;
+    c.strokeStyle = "#ffd43b";
+    c.lineWidth = 3;
+    c.globalAlpha = 0.6 + 0.4 * Math.sin(time * 10);
+    for (let k = 1; k <= 2; k++) {
+        c.beginPath();
+        c.arc(0, 40, 14 * k, 0.2, Math.PI - 0.2);
+        c.stroke();
+    }
+    c.restore();
 }
 function drawBar(c, def, axis, part) {
     const r = def.behaviours.find(b => b.kind === "RIGID_BODY");

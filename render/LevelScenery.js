@@ -49,12 +49,15 @@ export const LEVEL_SCENERY = {
     "flight.safe-landing": [S("cargo-parachute", 3, 8.2, 1.6)],
     // Robot Lab (top-down floor: scenery sits in spare corners of the arena)
     "robot.press-the-button": [S("robot-gate", 13.5, 3.2, 1.8)],
-    "robot.robot-dance-party": [S("dance-stage", 14.3, 3.4, 1.8)],
+    "robot.robot-dance-party": [S("dance-stage", 14.3, 3.4, 1.8), S("dance-pads", 13.6, 8.3, 1.8)],
     "robot.carry-the-box": [S("supply-crates", 13.6, 8.3, 1.8)],
     "robot.automated-factory": [S("supply-crates", 13.8, 8.3, 1.8)],
     // Space Centre
     "space.build-the-rover": [S("moon-flags", 14.2, 7.6, 1.8)],
-    "space.moon-base-delivery": [S("moon-flags", 1.2, 7.6, 1.6)]
+    "space.moon-base-delivery": [S("moon-flags", 1.2, 7.6, 1.6), S("supply-crates", 11.3, 7.45, 0.9)],
+    // (Safe Touchdown's landing pad picture is the landing pad part itself: see PartPictures.ts.)
+    // Hidden Prototype Lab
+    "prototype.tiny-factory": [S("prototype-machine", 12.4, 8.2, 2.0)]
 };
 /** Picture aspect ratios (width / height), so the layout can be checked without loading pictures. */
 export const SCENERY_ASPECT = {

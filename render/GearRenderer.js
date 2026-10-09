@@ -1,3 +1,4 @@
+import { drawPartPicture, partPictureArt } from "./PartPictures.js";
 /**
  * Code-drawn Gear Garage parts (M12), behind their named ids until the gear art arrives
  * (docs/ART_NEEDED.md, "Gear Garage"). World units are metres; the canvas is 100 px per metre.
@@ -83,8 +84,8 @@ function pulley(c, r, fill, selected) {
     c.stroke();
 }
 /** Draws one Gear Garage part at its place. Returns false for parts that aren't gear parts. */
-/** Decided 9 Oct: blue ring = small 8-tooth, purple hub = medium 12-tooth, green bolt = large 20-tooth. */
-export const GEAR_ART = { "gear.small": "gear.ring-blue", "gear.medium": "gear.hub-purple", "gear.large": "gear.bolt-green" };
+/** Gear pictures come from the one part-art map (PartPictures.ts): gear.small → medium → large → xlarge, smallest to largest. */
+export const GEAR_ART = Object.fromEntries(["gear.small", "gear.medium", "gear.large", "gear.door-wheel"].map(id => [id, partPictureArt(id)]));
 export function drawGearPart(c, part, def, selected, ctx) {
     const g = gearBehaviour(def);
     if (!g)
@@ -93,16 +94,22 @@ export function drawGearPart(c, part, def, selected, ctx) {
     const angle = (st?.angle ?? 0) + part.rotation;
     const x = part.position.x * 100, y = part.position.y * 100, r = g.radius * 100;
     const out = gearOutput(def), drive = gearDriver(def);
+    const turning = Math.abs(st?.omega ?? 0) > 1e-3;
     c.save();
     c.translate(x, y);
-    if (out)
+    // Painted machine bodies (crank, motor, fan): the picture stands still; the shaft (drawn below) turns.
+    // (Lab parts on a shaft — electric motor, water wheel — are painted by their own lab's drawing.)
+    const ownBody = part.definitionId.startsWith("gear.") && (out || drive) && g.role === "SHAFT";
+    const body = ownBody ? drawPartPicture(c, ctx.art, part.definitionId, { selected, spinAngle: angle, spinning: turning }) : Boolean(partPictureArt(part.definitionId) && ctx.art?.(partPictureArt(part.definitionId)));
+    if (out && !(body && out.output === "FAN"))
         drawOutputBody(c, part, out.output, angle, st?.omega ?? 0, ctx, out.drum ?? g.radius);
-    if (drive)
+    if (drive && !body)
         drawDriverBody(c, drive.driver, angle);
     c.rotate(angle);
-    const pic = GEAR_ART[part.definitionId] ? ctx.art?.(GEAR_ART[part.definitionId]) : undefined;
+    const art = partPictureArt(part.definitionId);
+    const pic = art ? ctx.art?.(art) : undefined;
     if (g.role === "GEAR" && pic) {
-        // Painted gear scaled to this gear's size (the painted teeth needn't match the count; the solver uses the real one).
+        // Painted gear scaled to this gear's size and turning with it (the painted teeth needn't match the count; the solver uses the real one).
         if (selected) {
             c.shadowColor = "#ffd43b";
             c.shadowBlur = 24;
@@ -122,9 +129,24 @@ export function drawGearPart(c, part, def, selected, ctx) {
     }
     else if (g.role === "GEAR")
         toothedGear(c, r, Math.max(6, g.teeth), GEAR_COLOURS[part.definitionId] ?? "#ced4da", selected);
+    else if (g.role === "PULLEY" && pic) {
+        // The pulley wheel is painted into its bracket, so the picture stays upright and turning marks go round the rim.
+        c.rotate(-angle);
+        const d = r * 2 * 1.3;
+        drawPartPicture(c, ctx.art, part.definitionId, { selected, spinAngle: angle, spinning: true, box: [d / 100 * 0.85, d / 100] });
+        if (selected) {
+            c.strokeStyle = "#ffd43b";
+            c.lineWidth = 5;
+            c.setLineDash([12, 9]);
+            c.beginPath();
+            c.arc(0, 0, r * 1.15, 0, Math.PI * 2);
+            c.stroke();
+            c.setLineDash([]);
+        }
+    }
     else if (g.role === "PULLEY")
         pulley(c, r, GEAR_COLOURS[part.definitionId] ?? "#b197fc", selected);
-    else {
+    else if (!body || drive) {
         c.fillStyle = selected ? "#ffe066" : "#868e96";
         c.strokeStyle = INK;
         c.lineWidth = 4;
@@ -235,10 +257,15 @@ function drawOutputBody(c, part, kind, angle, omega, ctx, drum) {
             c.moveTo(d, 0);
             c.lineTo(lx, top);
             c.stroke();
-            c.fillStyle = "#495057";
-            c.beginPath();
-            c.arc(lx, top, 7, 0, Math.PI * 2);
-            c.fill();
+            const hook = ctx.art?.("structure.hook");
+            if (hook)
+                c.drawImage(hook, lx - 11, top - 30, 22, 36);
+            else {
+                c.fillStyle = "#495057";
+                c.beginPath();
+                c.arc(lx, top, 7, 0, Math.PI * 2);
+                c.fill();
+            }
         }
         c.fillStyle = INK;
         c.font = "900 14px system-ui";

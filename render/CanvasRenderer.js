@@ -1,6 +1,7 @@
 import { installImageCache } from "./ImageCache.js";
 import { LOGICAL_HEIGHT, LOGICAL_WIDTH, Viewport } from "./Viewport.js";
-import { PART_ART_SOURCE, partArtRect, rampArtRect } from "./PartArt.js";
+import { partArtRect, rampArtRect } from "./PartArt.js";
+import { drawPartPicture, partPictureArt } from "./PartPictures.js";
 import { drawBuilderBayBackdrop, drawJoints, drawStructurePart, structureKind, structureLayer } from "./StructureRenderer.js";
 import { drawLevelScenery } from "./LevelScenery.js";
 import { drawCircuitPart, drawCircuitScanner, drawCircuitTerminals, isCircuitPart } from "./PowerRenderer.js";
@@ -145,11 +146,11 @@ export class CanvasRenderer {
         const ordered = parts.map((p, i) => ({ p, i, r: rank.get(layer(p)) })).filter(x => x.r !== undefined).sort((a, b) => a.r - b.r || a.i - b.i).map(x => x.p);
         const structCtx = { ...(structures ? { structures } : {}), registry: (id) => registry.get(id), art: this.art, time, showStress };
         const magnetCtx = { ...(runtime ? { magnets: runtime.magnets } : {}), states, art: this.art, time, scanner: showStress };
-        const robotCtx = { ...(runtime ? { robots: runtime.robots } : {}), time, scanner: showStress };
+        const robotCtx = { ...(runtime ? { robots: runtime.robots } : {}), time, scanner: showStress, art: this.art };
         // Space Centre: clip-on parts ride on their rocket or rover; in BUILD a rocket on a tilted pad leans with its parts.
         const tilts = runtime ? undefined : (parts.some(p => p.definitionId === "space.launch-pad" && Number(p.parameters.tilt ?? 0) !== 0) ? tiltedPoses(parts, id => registry.has(id) ? registry.get(id) : undefined) : undefined);
         const spacePose = (id) => runtime ? runtime.space.attachedPose(id, runtime.physics) : tilts?.get(id);
-        const chainCtx = { ...(runtime?.chain.active ? { chain: runtime.chain } : {}), time };
+        const chainCtx = { ...(runtime?.chain.active ? { chain: runtime.chain } : {}), time, art: this.art };
         const spaceCtx = { ...(runtime ? { space: runtime.space, robots: runtime.robots } : {}), states, time, scanner: showStress, pose: spacePose, art: this.art };
         const flightCtx = { ...(runtime ? { flight: runtime.flight } : {}), states, art: this.art, time, scanner: showStress, pose: (id) => runtime?.flight.attachedPose(id, runtime.physics) };
         const waterCtx = { ...(runtime ? { water: runtime.water } : {}), art: this.art, time, scanner: showStress, gearAngle: (id) => gears?.state(id)?.angle ?? 0 };
@@ -158,11 +159,11 @@ export class CanvasRenderer {
         for (const placed of ordered) {
             const def = registry.get(placed.definitionId);
             const rigid = def.behaviours.find(b => b.kind === "RIGID_BODY");
-            if (isPrototypePart(def) && drawPrototypePart(this.ctx, placed, def, selectedId === placed.id, { states, time, ...(runtime ? { runtime } : {}), gearAngle: (id) => gears?.state(id)?.angle ?? 0 }))
+            if (isPrototypePart(def) && drawPrototypePart(this.ctx, placed, def, selectedId === placed.id, { states, time, ...(runtime ? { runtime } : {}), gearAngle: (id) => gears?.state(id)?.angle ?? 0, art: this.art }))
                 continue;
-            if (isCreatureOrMusicPart(def) && drawCreatureOrMusicPart(this.ctx, placed, def, selectedId === placed.id, { states, ...(runtime ? { runtime } : {}), time, gearAngle: (id) => gears?.state(id)?.angle ?? 0 }))
+            if (isCreatureOrMusicPart(def) && drawCreatureOrMusicPart(this.ctx, placed, def, selectedId === placed.id, { states, ...(runtime ? { runtime } : {}), time, gearAngle: (id) => gears?.state(id)?.angle ?? 0, art: this.art }))
                 continue;
-            if (isSandboxPart(def) && drawSandboxPart(this.ctx, placed, def, selectedId === placed.id, { states, ...(runtime ? { runtime } : {}), time }))
+            if (isSandboxPart(def) && drawSandboxPart(this.ctx, placed, def, selectedId === placed.id, { states, ...(runtime ? { runtime } : {}), time, art: this.art }))
                 continue;
             if (isExperimentPart(def) && drawExperimentPart(this.ctx, placed, def, selectedId === placed.id))
                 continue;
@@ -223,7 +224,7 @@ export class CanvasRenderer {
             c.lineWidth = selected ? 8 : 5;
             c.lineJoin = "round";
             c.lineCap = "round";
-            if (!this.drawPartArt(part.definitionId, width, height, selected) && !this.drawMotionPart(part.definitionId, width, height, selected)) {
+            if (!this.drawPartArt(part.definitionId, width, height, selected) && !drawPartPicture(c, this.art, part.definitionId, { selected }) && !this.drawMotionPart(part.definitionId, width, height, selected)) {
                 c.fillStyle = selected ? "#ffd14a" : this.categoryColor(def.category);
                 if (rigid?.kind === "RIGID_BODY" && rigid.shape === "CIRCLE") {
                     c.beginPath();
@@ -305,7 +306,8 @@ export class CanvasRenderer {
     drawRotationView(gears, showValues) { drawRotationView(this.ctx, gears, showValues); }
     /** Painted part picture fitted to the physics size (see PartArt.ts). False when there is no picture yet. */
     drawPartArt(id, w, h, selected) {
-        const image = this.art(PART_ART_SOURCE[id] ?? id);
+        const art = partPictureArt(id);
+        const image = art ? this.art(art) : undefined;
         const rect = image ? partArtRect(id, w, h) : undefined;
         if (!image || !rect)
             return false;
@@ -412,7 +414,7 @@ export class CanvasRenderer {
             if (gb) {
                 c.save();
                 c.globalAlpha = 0.4 + 0.12 * Math.sin(pulse * 3);
-                drawGearPart(c, { id: "ghost", definitionId: g.definitionId, position: { x: g.x, y: g.y }, rotation: pulse * 0.6, parameters: {} }, def, false, { states: new Map(), parts: [], registry: id => registry.get(id), time: pulse });
+                drawGearPart(c, { id: "ghost", definitionId: g.definitionId, position: { x: g.x, y: g.y }, rotation: pulse * 0.6, parameters: {} }, def, false, { states: new Map(), parts: [], registry: id => registry.get(id), time: pulse, art: this.art });
                 c.restore();
                 c.save();
                 c.strokeStyle = "#1c7ed6";

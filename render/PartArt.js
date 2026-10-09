@@ -9,11 +9,13 @@
 /** Image aspect ratios (width / height) of the filed art, so layout can be checked without loading pictures. */
 export const PART_ART_ASPECT = {
     "motion.ball": 1.01, "motion.wheel": 0.98, "motion.roller": 1.41, "motion.cart": 1.24, "motion.axle": 1.63,
-    "motion.ramp": 1.24, "motion.spring": 0.61, "motion.friction-high": 1.53, "motion.friction-low": 1.56,
-    "motion.bounce-pad": 1.0, "structure.block": 1.0, "silly.duck": 0.93, "builder.elephant": 1.03, "silly.bolt": 0.72, "structure.crate": 1.03, "air.balloon": 0.81
+    "motion.ramp": 1.24, "motion.friction-high": 1.53, "motion.friction-low": 1.56,
+    "motion.bounce-pad": 1.0, "structure.block": 1.0, "silly.duck": 0.93, "builder.elephant": 1.03, "silly.bolt": 0.72, "structure.crate": 1.03, "air.balloon": 0.81,
+    // 9 Oct part art (picture in brackets)
+    "motion.spring": 0.77 /* spring-pad */, "motion.platform": 1.51 /* structure.platform */, "motion.switch-pad": 1.18 /* power.push-button */,
+    "motion.parcel": 1.03 /* structure.crate */, "gear.heavy-crate": 1.03, "structure.breakable": 1.71 /* beam-wood-long */,
+    "power.motor": 1.24, "power.generator": 1.32, "gear.gear": 1.0 /* gear.medium */, "gear.pulley": 0.85, "water.wheel": 0.99, "logic.actuator": 1.23 /* motion.plunger */
 };
-/** Parts whose picture has a different art id (characters filed under assets/char/). */
-export const PART_ART_SOURCE = { "silly.duck": "duck.plain", "builder.elephant": "toy.elephant", "silly.bolt": "char.bolt.wave" };
 export const PART_ART_FIT = {
     "silly.duck": { widthScale: 0.95, squash: 1, anchor: "CENTER", surface: 0 },
     "silly.bolt": { widthScale: 1.25, squash: 1, anchor: "CENTER", surface: 0 },
@@ -25,13 +27,24 @@ export const PART_ART_FIT = {
     "motion.axle": { widthScale: 1.0, squash: 1, anchor: "CENTER", surface: 0 },
     /** The ramp is placed by rampArtRect (it follows the plank), not by this table. */
     "motion.ramp": { widthScale: 1, squash: 1, anchor: "CENTER", surface: 0 },
-    "motion.spring": { widthScale: 0.72, squash: 1, anchor: "TOP", surface: 0.04 },
+    "motion.spring": { widthScale: 0.85, squash: 0.62, anchor: "TOP", surface: 0.06 },
     "motion.friction-high": { widthScale: 1.0, squash: 0.55, anchor: "TOP", surface: 0.36 },
     "motion.friction-low": { widthScale: 1.0, squash: 0.55, anchor: "TOP", surface: 0.36 },
     "motion.bounce-pad": { widthScale: 1.0, squash: 0.6, anchor: "TOP", surface: 0.34 },
     "structure.block": { widthScale: 1.0, squash: 0.62, anchor: "TOP", surface: 0.3 },
     "structure.crate": { widthScale: 1.0, squash: 1, anchor: "TOP", surface: 0.25 },
-    "air.balloon": { widthScale: 1.0, squash: 1, anchor: "CENTER", surface: 0 }
+    "air.balloon": { widthScale: 1.0, squash: 1, anchor: "CENTER", surface: 0 },
+    "motion.platform": { widthScale: 1.0, squash: 0.5, anchor: "TOP", surface: 0.22 },
+    "motion.switch-pad": { widthScale: 0.8, squash: 0.62, anchor: "TOP", surface: 0.55 },
+    "motion.parcel": { widthScale: 1.0, squash: 0.85, anchor: "CENTER", surface: 0 },
+    "gear.heavy-crate": { widthScale: 1.05, squash: 1, anchor: "CENTER", surface: 0 },
+    "structure.breakable": { widthScale: 1.06, squash: 0.42, anchor: "CENTER", surface: 0 },
+    "power.motor": { widthScale: 1.3, squash: 1, anchor: "CENTER", surface: 0 },
+    "power.generator": { widthScale: 1.35, squash: 1, anchor: "CENTER", surface: 0 },
+    "gear.gear": { widthScale: 1.06, squash: 1, anchor: "ROUND", surface: 0 },
+    "gear.pulley": { widthScale: 1.2, squash: 1, anchor: "CENTER", surface: 0 },
+    "water.wheel": { widthScale: 1.05, squash: 1, anchor: "ROUND", surface: 0 },
+    "logic.actuator": { widthScale: 1.0, squash: 1, anchor: "CENTER", surface: 0 }
 };
 /**
  * Picture rectangle in the part's own (rotated) frame, centred on the body. `w`/`h` are the physics

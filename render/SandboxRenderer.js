@@ -1,3 +1,4 @@
+import { drawPartPicture, PART_PICTURES } from "./PartPictures.js";
 /** Free Build / sandbox drawing (M23). Code-drawn behind each part id (docs/ART_NEEDED.md, Batch X). Drawing only. */
 const INK = "#203040";
 export function isSandboxPart(def) { return def.id.startsWith("sandbox.") || def.id === "magnetic.reed-switch"; }
@@ -14,6 +15,20 @@ export function drawSandboxPart(c, part, def, selected, ctx) {
     if (selected) {
         c.shadowColor = "#ffd43b";
         c.shadowBlur = 20;
+    }
+    // Painted objects (part-art map): the balloon keeps its string, the moving platform its picture.
+    if (def.id === "sandbox.balloon" && ctx.art?.("air.balloon")) {
+        c.rotate(a);
+        c.strokeStyle = "#495057";
+        c.lineWidth = 2;
+        c.beginPath();
+        c.moveTo(0, 26);
+        c.quadraticCurveTo(8, 45, 0, 60);
+        c.stroke();
+    }
+    if (PART_PICTURES[def.id] && drawPartPicture(c, ctx.art, def.id)) {
+        c.restore();
+        return true;
     }
     switch (def.id) {
         case "sandbox.toy-car":

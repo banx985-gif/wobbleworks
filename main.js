@@ -65,6 +65,7 @@ import { isRobot } from "./robots/RobotSystem.js";
 import { attachKind, spaceSnap, vesselBehaviour } from "./space/SpaceSystem.js";
 import { InputManager } from "./input/InputManager.js";
 import { CanvasRenderer } from "./render/CanvasRenderer.js";
+import { trayPictureArt } from "./render/PartPictures.js";
 import { CameraController } from "./render/CameraController.js";
 import { AutosaveScheduler, IndexedDbStore, SaveManager, ThumbnailCache } from "./save/SaveManager.js";
 import { EditorOverlay } from "./tooling/EditorOverlay.js";
@@ -118,6 +119,27 @@ const parentGate = new ParentGate();
 const assets = new AssetManager();
 let artManifest = {};
 renderer.setArt(id => assets.getImage(id));
+/** Build tray pictures come from the one part-art map (render/PartPictures.ts); parts without one keep their tray icon. */
+function applyTrayPictures() {
+    document.querySelectorAll("[data-part]").forEach(button => {
+        const art = trayPictureArt(button.dataset.part);
+        if (!art)
+            return;
+        const url = artManifest[art] ?? `./assets/${/^(duck|toy|char)./.test(art) ? "char" : "parts"}/${art}.webp`;
+        const old = button.querySelector(".part-icon, .emoji-icon, .gear-icon, .beam-icon");
+        if (old instanceof HTMLImageElement && old.getAttribute("src") === url)
+            return;
+        const img = document.createElement("img");
+        img.className = "part-icon";
+        img.src = url;
+        img.alt = "";
+        if (old)
+            old.replaceWith(img);
+        else
+            button.prepend(img);
+    });
+}
+applyTrayPictures();
 /** Loads the painted art listed in assets/manifest.json. Anything missing keeps its code-drawn stand-in. */
 async function loadArt() {
     try {
@@ -128,6 +150,7 @@ async function loadArt() {
     catch {
         return;
     }
+    applyTrayPictures();
     // Recorded sounds arrive the same way as art: "audio.<id>" in the manifest replaces that synthesised sound.
     audio.setRecordings(Object.fromEntries(Object.entries(artManifest).filter(([id]) => id.startsWith("audio.")).map(([id, url]) => [id.slice(6), url])));
     const wanted = Object.keys(artManifest).filter(id => /^(motion|structure|air|level|fx|ui\.hint|duck|toy|char\.bolt|gear|power|water|robot|icon|magnet|flight|space)\./.test(id));

@@ -1,6 +1,7 @@
 import { aeroBehaviour, fanBehaviour, gateHeight, isCraft } from "../flight/FlightSystem.js";
+import { drawPartPicture } from "./PartPictures.js";
 /**
- * Flight Hangar drawing (M17). The fan uses the painted `air.fan-motor`, balloons use `air.balloon`; the rest is code-drawn
+ * Flight Hangar drawing (M17). The fan, balloon and cargo box are painted (part-art map, PartPictures.ts); the rest is code-drawn
  * behind each part id until the flight art arrives (docs/ART_NEEDED.md, Batch F). Drawing only. 100 px per metre.
  */
 const INK = "#203040";
@@ -31,10 +32,8 @@ export function drawFlightPart(c, part, def, selected, ctx) {
         c.fillRect(-147, -197, 294, 16);
     }
     else if (fanBehaviour(def)) {
-        const img = ctx.art("air.fan-motor");
         c.rotate(angle);
-        if (img)
-            c.drawImage(img, -40, -42, 80, 84);
+        if (drawPartPicture(c, ctx.art, def.id, { spinAngle: ctx.time * 9, spinning: Boolean(ctx.flight) && part.parameters.off !== true })) { /* painted fan */ }
         else {
             c.fillStyle = "#74c0fc";
             c.beginPath();
@@ -62,7 +61,8 @@ export function drawFlightPart(c, part, def, selected, ctx) {
     }
     else if (isCraft(def)) {
         c.rotate(angle);
-        drawCraftBody(c, def, ctx.flight?.craft(part.id)?.thrust ?? 0);
+        if (!drawPartPicture(c, ctx.art, def.id))
+            drawCraftBody(c, def, ctx.flight?.craft(part.id)?.thrust ?? 0);
     }
     else if (def.id === "flight.paper-box") {
         c.rotate(angle);
@@ -232,9 +232,7 @@ function drawAero(c, kind, def, ctx) {
         }
     }
     else if (kind === "BALLOON") {
-        const img = ctx.art("air.balloon");
-        if (img)
-            c.drawImage(img, -26, -40, 52, 64);
+        if (drawPartPicture(c, ctx.art, def.id)) { /* painted balloon */ }
         else {
             c.fillStyle = "#fa5252";
             c.beginPath();

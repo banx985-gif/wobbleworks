@@ -1,8 +1,9 @@
 import { drawConnectionMark } from "./ConnectionMarks.js";
+import { drawPartPicture } from "./PartPictures.js";
 import { circuitBehaviour, circuitTerminals, wireBehaviour, wireEnds } from "../power/CircuitSystem.js";
 /**
- * Power Lab drawing (M14). Painted where art exists — the big button (`power.big-button`) and the lever switch
- * (`power.button-lever`); everything else is code-drawn behind its part id (docs/ART_NEEDED.md, Batch P).
+ * Power Lab drawing (M14). Painted where the part-art map (PartPictures.ts) has a picture — batteries, bulb, generator,
+ * motor, power station, big button and lever switch; the rest is code-drawn behind its part id (docs/ART_NEEDED.md).
  * Drawing only: nothing here changes how the circuit behaves. 100 px per metre.
  */
 const INK = "#203040";
@@ -33,8 +34,16 @@ export function drawCircuitPart(c, part, def, selected, ctx) {
     const load = st?.load(part.id);
     const level = load?.level ?? 0;
     const generator = def.id === "circuit.generator";
-    if (generator)
-        drawGenerator(c, st?.source(part.id)?.power ?? 0);
+    const painted = () => drawPartPicture(c, ctx.art, def.id);
+    if (generator) {
+        const power = st?.source(part.id)?.power ?? 0;
+        if (painted())
+            drawPowerBadge(c, power > 0.05, 30, -30);
+        else
+            drawGenerator(c, power);
+    }
+    else if (b.role === "BATTERY" && painted())
+        drawChargeBar(c, part, def, st);
     else if (b.role === "BATTERY")
         drawBattery(c, part, def, st);
     else if (b.role === "SWITCH" && def.id === "music.timer")
@@ -54,14 +63,20 @@ export function drawCircuitPart(c, part, def, selected, ctx) {
         c.arc(0, 0, 4, 0, Math.PI * 2);
         c.fill();
     }
-    else if (b.load === "BULB")
-        drawBulb(c, level);
+    else if (b.load === "BULB") {
+        if (!drawBulbPicture(c, level, ctx))
+            drawBulb(c, level);
+    }
     else if (b.load === "BUZZER")
         drawBuzzer(c, level, ctx.time);
     else if (b.load === "HORN")
         drawHorn(c, level, ctx.time);
-    else if (b.load === "MOTOR")
-        drawMotorBody(c, level);
+    else if (b.load === "MOTOR") {
+        if (painted())
+            drawPowerBadge(c, level >= 0.15, 26, -26);
+        else
+            drawMotorBody(c, level);
+    }
     else
         drawDevice(c, part, level, ctx.time);
     c.shadowBlur = 0;
@@ -157,6 +172,76 @@ function drawGenerator(c, power) {
         c.arc(tx, 42, 6, 0, Math.PI * 2);
         c.fill();
     }
+}
+/** Painted battery or power station: a charge bar (or the station's overload light) under the picture, and its terminals. */
+function drawChargeBar(c, part, def, st) {
+    const b = circuitBehaviour(def);
+    const s = st?.source(part.id);
+    if (part.definitionId === "circuit.power-station") {
+        c.fillStyle = s?.tripped ? "#e03131" : "#69db7c";
+        c.beginPath();
+        c.roundRect(-58, 22, 116, 22, 6);
+        c.fill();
+        c.stroke();
+        c.fillStyle = "#fff";
+        c.font = "900 13px system-ui";
+        c.textAlign = "center";
+        c.fillText(s?.tripped ? "OVERLOAD — OFF" : `max ${Number(part.parameters.maxPower ?? 0)}`, 0, 38);
+        terminalStubs(c, b.terminals);
+        return;
+    }
+    const frac = s ? s.charge / s.capacity : 1;
+    const w = Math.abs(b.terminals[0].x) * 100;
+    c.fillStyle = "#fff";
+    c.strokeStyle = INK;
+    c.lineWidth = 2;
+    c.beginPath();
+    c.roundRect(-w * 0.6, 26, w * 1.2, 9, 4);
+    c.fill();
+    c.stroke();
+    c.fillStyle = frac > 0.3 ? "#ffd43b" : "#fa5252";
+    c.fillRect(-w * 0.6 + 1, 27, (w * 1.2 - 2) * Math.max(0, frac), 7);
+}
+/** A small lightning badge that lights up while a painted generator or motor has power. */
+function drawPowerBadge(c, on, x, y) {
+    if (!on)
+        return;
+    c.save();
+    c.fillStyle = "#ffd43b";
+    c.strokeStyle = INK;
+    c.lineWidth = 3;
+    c.shadowColor = "#ffd43b";
+    c.shadowBlur = 14;
+    c.beginPath();
+    c.arc(x, y, 13, 0, Math.PI * 2);
+    c.fill();
+    c.stroke();
+    c.shadowBlur = 0;
+    c.fillStyle = INK;
+    c.font = "900 15px system-ui";
+    c.textAlign = "center";
+    c.textBaseline = "middle";
+    c.fillText("⚡", x, y + 1);
+    c.restore();
+}
+/** The painted bulb, glowing with the power it gets (dimmed when it has none). */
+function drawBulbPicture(c, level, ctx) {
+    const glow = Math.min(1, level);
+    if (glow > 0.05) {
+        const g = c.createRadialGradient(0, -20, 4, 0, -20, 30 + 60 * glow);
+        g.addColorStop(0, `rgba(255,236,120,${0.85 * glow})`);
+        g.addColorStop(1, "rgba(255,236,120,0)");
+        c.fillStyle = g;
+        c.beginPath();
+        c.arc(0, -20, 30 + 60 * glow, 0, Math.PI * 2);
+        c.fill();
+    }
+    c.save();
+    if (glow <= 0.05)
+        c.filter = "saturate(0.25) brightness(0.92)";
+    const ok = drawPartPicture(c, ctx.art, "circuit.bulb");
+    c.restore();
+    return ok;
 }
 function drawBattery(c, part, def, st) {
     const b = circuitBehaviour(def);

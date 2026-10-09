@@ -1,7 +1,9 @@
 import { drawConnectionMark } from "./ConnectionMarks.js";
+import { drawPartPicture } from "./PartPictures.js";
 import { fluidBehaviour, fluidPorts, pipeBehaviour, pipeEnds, targetBehaviour } from "../water/FluidSystem.js";
 /**
- * Water Works drawing (M16). Code-drawn behind each part id until the water art arrives (docs/ART_NEEDED.md, Batch W).
+ * Water Works drawing (M16). Painted where the part-art map (PartPictures.ts) has a picture: water main tap, tank, valve,
+ * pump, nozzle, drain, water wheel and pipe joint. Pipes, the pond, the sprinkler and the targets are code-drawn.
  * Water drops, jets and puddles are drawing only — the FluidSystem decides where the water really goes. 100 px per metre.
  */
 const INK = "#203040", WATER = "#4dabf7", WATER_DARK = "#1c7ed6";
@@ -25,22 +27,48 @@ export function drawWaterPart(c, part, def, selected, ctx) {
         c.shadowBlur = 22;
     }
     c.translate(x, y);
+    const painted = (opts = {}) => drawPartPicture(c, ctx.art, def.id, opts);
     if (t)
         drawTarget(c, part, def, t.width * 100, t.height * 100, ctx);
-    else if (f?.role === "SOURCE")
-        drawSource(c, part);
-    else if (f?.role === "TANK")
-        drawTank(c, part, ctx);
+    else if (f?.role === "SOURCE") {
+        if (Number(part.parameters.head ?? 1.5) < 0.6 || !painted())
+            drawSource(c, part);
+    }
+    else if (f?.role === "TANK") {
+        if (painted())
+            drawTankLevel(c, part, ctx);
+        else
+            drawTank(c, part, ctx);
+    }
     else if (f?.role === "VALVE") {
         c.rotate(part.rotation);
-        drawValve(c, ctx.water?.isOpen(part.id) ?? part.parameters.open === true);
+        const open = ctx.water?.isOpen(part.id) ?? part.parameters.open === true;
+        if (painted())
+            valveLabel(c, open);
+        else
+            drawValve(c, open);
     }
-    else if (f?.role === "PUMP")
-        drawPump(c, (ctx.water?.flowThrough(part.id) ?? 0) > 0.05, ctx.time);
-    else if (f?.role === "NOZZLE")
-        drawNozzle(c, part.rotation + ctx.gearAngle(part.id), def.id === "plumb.rotor-nozzle");
+    else if (f?.role === "PUMP") {
+        const running = (ctx.water?.flowThrough(part.id) ?? 0) > 0.05;
+        if (!painted())
+            drawPump(c, running, ctx.time);
+        else if (running)
+            drawDrips(c, ctx.time);
+    }
+    else if (f?.role === "NOZZLE") {
+        const a = part.rotation + ctx.gearAngle(part.id);
+        c.save();
+        c.rotate(a);
+        const ok = def.id !== "plumb.rotor-nozzle" && painted();
+        c.restore();
+        if (!ok)
+            drawNozzle(c, a, def.id === "plumb.rotor-nozzle");
+    }
     else if (f?.role === "SPRINKLER")
         drawSprinkler(c);
+    else if (f?.role === "DRAIN" && painted()) { /* painted drain */ }
+    else if (f?.role === "WHEEL" && painted({ spinAngle: ctx.gearAngle(part.id) })) { /* painted wheel, turning with the water */ }
+    else if (f?.role === "JUNCTION" && painted()) { /* painted pipe joint */ }
     else if (f?.role === "DRAIN") {
         c.fillStyle = "#495057";
         c.beginPath();
@@ -107,6 +135,40 @@ function drawSource(c, part) {
         c.stroke();
     }
 }
+/** Painted tank: the glass shows the real water level (from the FluidSystem), not the water painted in the picture. */
+function drawTankLevel(c, part, ctx) {
+    const st = ctx.water?.tank(part.id);
+    const frac = st ? st.fraction : Math.min(1, Number(part.parameters.startVolume ?? 0) / 5);
+    const gx = -37, gy = -36, gw = 74, gh = 78;
+    c.save();
+    c.shadowBlur = 0;
+    c.beginPath();
+    c.roundRect(gx, gy, gw, gh, 6);
+    c.clip();
+    const top = gy + gh * (1 - frac);
+    c.fillStyle = "#eef7ffee";
+    c.fillRect(gx, gy, gw, top - gy);
+    if (frac > 0.01 && frac < 0.99) {
+        c.strokeStyle = "#d0ebff";
+        c.lineWidth = 3;
+        c.beginPath();
+        for (let k = gx; k <= gx + gw; k += 6)
+            c.lineTo(k, top + Math.sin(ctx.time * 4 + k / 8) * 2);
+        c.stroke();
+    }
+    c.restore();
+    c.fillStyle = INK;
+    c.font = "800 13px system-ui";
+    c.textAlign = "center";
+    c.fillText(`${Math.round(frac * 100)}%`, 0, -72);
+}
+function valveLabel(c, open) { c.shadowBlur = 0; c.fillStyle = open ? "#2f9e44" : "#e03131"; c.font = "900 12px system-ui"; c.textAlign = "center"; c.fillText(open ? "OPEN" : "SHUT", 0, 34); }
+function drawDrips(c, time) { c.fillStyle = "#4dabf7"; for (let k = 0; k < 3; k++) {
+    const t = (time * 1.5 + k / 3) % 1;
+    c.beginPath();
+    c.arc(-34 - t * 6, -8 + t * 26, 4, 0, Math.PI * 2);
+    c.fill();
+} }
 function drawTank(c, part, ctx) {
     const st = ctx.water?.tank(part.id);
     const frac = st ? st.fraction : Math.min(1, Number(part.parameters.startVolume ?? 0) / 5);

@@ -2,8 +2,10 @@ import { spaceBehaviour, vesselBehaviour } from "../space/SpaceSystem.js";
 import { describeBlock } from "../robots/BlockEditor.js";
 import { parseProgram } from "../robots/RobotProgram.js";
 import { blockAt } from "./RobotRenderer.js";
+import { drawPartPicture, PART_PICTURES } from "./PartPictures.js";
 /**
- * Space Centre drawing (M19). Code-drawn behind each part id until the space art arrives (docs/ART_NEEDED.md, Batch S).
+ * Space Centre drawing (M19). Wheels, drive motor and solar panel are painted (part-art map, PartPictures.ts); the rest is
+ * code-drawn behind each part id until the space art arrives (docs/ART_NEEDED.md, Batch S).
  * Drawing only — nothing here changes the simulation. 100 px per metre.
  */
 const INK = "#203040";
@@ -49,6 +51,15 @@ export function drawSpacePart(c, part, def, selected, ctx) {
         c.restore();
         drawArm(c, part, selected, ctx);
         return true;
+    }
+    const spinning = Boolean(ctx.space) && (def.id === "space.wheel" || def.id === "space.grip-wheel");
+    if (!img && !vesselBehaviour(def) && def.id !== "space.solar-panel" && PART_PICTURES[def.id]) {
+        c.rotate(angle);
+        if (drawPartPicture(c, ctx.art, def.id, { spinAngle: spinning ? ctx.time * 4 : 0 })) {
+            c.restore();
+            return true;
+        }
+        c.rotate(-angle);
     }
     if (img && !vesselBehaviour(def)) {
         c.rotate(angle);
@@ -386,6 +397,12 @@ export function drawSpacePart(c, part, def, selected, ctx) {
         }
         case "space.solar-panel": {
             const attached = Boolean(pose);
+            c.save();
+            c.rotate(attached ? angle : part.rotation);
+            const painted = drawPartPicture(c, ctx.art, def.id);
+            c.restore();
+            if (painted)
+                break;
             if (!attached) {
                 c.fillStyle = "#868e96";
                 c.fillRect(-6, 0, 12, 32);
@@ -677,18 +694,30 @@ function drawArm(c, part, selected, ctx) {
     c.stroke();
     c.translate(gx, gy);
     c.rotate(heading);
-    c.fillStyle = "#fcc419";
-    c.beginPath();
-    c.roundRect(-16, -16, 32, 32, 6);
-    c.fill();
-    c.stroke();
-    c.lineWidth = 6;
-    for (const s of [-1, 1]) {
+    // The painted claw (robot.claw) points the way the arm faces; code-drawn gripper if the picture isn't loaded.
+    const claw = ctx.art("robot.claw");
+    if (claw) {
+        c.save();
+        c.rotate(-Math.PI / 2);
+        if (v?.holding)
+            c.scale(0.85, 1);
+        c.drawImage(claw, -26, -14, 52, 70);
+        c.restore();
+    }
+    else {
+        c.fillStyle = "#fcc419";
         c.beginPath();
-        c.moveTo(14, s * 12);
-        c.lineTo(36, s * (v?.holding ? 22 : 14));
-        c.lineTo(42, s * 6);
+        c.roundRect(-16, -16, 32, 32, 6);
+        c.fill();
         c.stroke();
+        c.lineWidth = 6;
+        for (const s of [-1, 1]) {
+            c.beginPath();
+            c.moveTo(14, s * 12);
+            c.lineTo(36, s * (v?.holding ? 22 : 14));
+            c.lineTo(42, s * 6);
+            c.stroke();
+        }
     }
     c.rotate(-heading);
     if (v?.holding) {

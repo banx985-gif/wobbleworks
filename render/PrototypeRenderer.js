@@ -1,4 +1,5 @@
 import { PROTOTYPE_PART_IDS } from "../content/prototypeParts.js";
+import { drawPartPicture } from "./PartPictures.js";
 /**
  * Hidden Prototype Lab parts (M33), drawn in code until their art arrives (docs/ART_NEEDED.md, Batch H).
  * Drawing only — every one of them moves and acts through the ordinary systems.
@@ -42,6 +43,12 @@ export function drawPrototypePart(c, part, def, selected, ctx) {
     }
     switch (def.id) {
         case "proto.super-spring": {
+            c.save();
+            c.rotate(part.rotation);
+            const painted = drawPartPicture(c, ctx.art, def.id);
+            c.restore();
+            if (painted)
+                break;
             // A fat red coil on a striped base, with a lightning badge.
             c.rotate(part.rotation);
             stripes(c, -40, 4, 80, 12);
@@ -75,6 +82,8 @@ export function drawPrototypePart(c, part, def, selected, ctx) {
             break;
         }
         case "proto.worm-gear": {
+            if (drawPartPicture(c, ctx.art, def.id))
+                break;
             // A screw: a short barrel with slanted threads that slide along as it turns.
             const turn = ctx.gearAngle(part.id);
             c.fillStyle = "#adb5bd";

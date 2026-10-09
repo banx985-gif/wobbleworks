@@ -1,5 +1,6 @@
 import { creatureBehaviour } from "../creatures/CreatureSystem.js";
 import { musicBehaviour } from "../music/MusicSystem.js";
+import { drawPartPicture } from "./PartPictures.js";
 /** Creature & Music Machines drawing (M29). Code-drawn behind each part id (docs/ART_NEEDED.md, Batch M). Drawing only. */
 const INK = "#203040";
 export function isCreatureOrMusicPart(def) { return Boolean(creatureBehaviour(def) || (musicBehaviour(def) && musicBehaviour(def).family !== "HORN" && musicBehaviour(def).family !== "TIMER")); }
@@ -102,6 +103,13 @@ export function drawCreatureOrMusicPart(c, part, def, selected, ctx) {
             }
             case "CLAW": {
                 const closed = Boolean(view?.grabbed);
+                c.save();
+                if (closed)
+                    c.scale(1, 0.8);
+                const painted = drawPartPicture(c, ctx.art, def.id);
+                c.restore();
+                if (painted)
+                    break;
                 c.fillStyle = "#fa5252";
                 c.beginPath();
                 c.roundRect(-10, -8, 24, 16, 6);

@@ -1,4 +1,5 @@
 import { chainThing } from "../chain/ChainSystem.js";
+import { drawPartPicture } from "./PartPictures.js";
 /**
  * Chain Reaction Workshop drawing (M21). Code-drawn behind each part id until the chain art arrives
  * (docs/ART_NEEDED.md, Batch C). Drawing only. 100 px per metre.
@@ -90,6 +91,14 @@ export function drawChainPart(c, part, def, selected, ctx) {
         case "SEESAW": {
             const side = String(part.parameters.launch ?? "right") === "left" ? -1 : 1;
             const tilt = mech?.fired ? -0.22 * side : 0.22 * side;
+            // The painted seesaw leans left-end-down; it is flipped whenever the right end should be down (and so tips when fired).
+            c.save();
+            if (tilt > 0)
+                c.scale(-1, 1);
+            const painted = drawPartPicture(c, ctx.art, def.id);
+            c.restore();
+            if (painted)
+                break;
             c.fillStyle = "#868e96";
             c.beginPath();
             c.moveTo(-18, 8);

@@ -31,11 +31,12 @@ export function beamArtId(definitionId, material, lengthPx) {
 export function beamArtThickness(definitionId, thicknessPx) { return definitionId === "builder.column" ? Math.max(36, thicknessPx * 2.2) : definitionId === "builder.brace" ? 24 : Math.max(30, thicknessPx * 2.4); }
 function drawMemberArt(c, img, id, len, h, broken) {
     const draw = (x0, w, dy) => {
+        // The post picture stands upright, so it is turned a quarter to lie along the member (its length runs end to end).
         if (id === "builder.column") {
             c.save();
             c.translate(x0 + w / 2, dy);
-            c.rotate(Math.PI / 2);
-            c.drawImage(img, -w / 2 - 6, -h / 2, w + 12, h);
+            c.rotate(-Math.PI / 2);
+            c.drawImage(img, -h / 2, -w / 2 - 6, h, w + 12);
             c.restore();
         }
         else
