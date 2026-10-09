@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "id": "music.water-chimes",
+  "title": "Water Chimes",
+  "environmentId": "env.water-works",
+  "availablePartIds": [
+    "plumb.nozzle",
+    "music.beater",
+    "music.chime"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "main",
+      "definitionId": "plumb.source",
+      "position": {
+        "x": 1.5,
+        "y": 2.6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "head": 4
+      }
+    },
+    {
+      "id": "joint",
+      "definitionId": "plumb.splitter",
+      "position": {
+        "x": 4,
+        "y": 5.6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "p-main",
+      "definitionId": "plumb.pipe",
+      "position": {
+        "x": 3.025,
+        "y": 4.275
+      },
+      "rotation": 0.936414,
+      "parameters": {
+        "length": 3.290137,
+        "locked": true
+      }
+    },
+    {
+      "id": "p-top",
+      "definitionId": "plumb.pipe",
+      "position": {
+        "x": 4.75,
+        "y": 5.2
+      },
+      "rotation": -0.489957,
+      "parameters": {
+        "length": 1.7,
+        "locked": true
+      }
+    },
+    {
+      "id": "p-low",
+      "definitionId": "plumb.pipe",
+      "position": {
+        "x": 4.75,
+        "y": 6.1
+      },
+      "rotation": 0.588003,
+      "parameters": {
+        "length": 1.802776,
+        "locked": true
+      }
+    },
+    {
+      "id": "chime-high",
+      "definitionId": "music.chime",
+      "position": {
+        "x": 9,
+        "y": 4.6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "note": 6
+      },
+      "tags": [
+        "chime"
+      ]
+    },
+    {
+      "id": "chime-low",
+      "definitionId": "music.chime",
+      "position": {
+        "x": 11.5,
+        "y": 7.7
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "note": 3
+      },
+      "tags": [
+        "chime"
+      ]
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "MUSIC_CAUSED",
+      "family": "CHIME",
+      "causes": [
+        "WATER",
+        "BEATER"
+      ],
+      "minNotes": 3
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "music.water",
+      "conceptId": "music.water",
+      "eventKind": "NOTE_PLAYED",
+      "minimumCount": 1,
+      "truthContractId": "truth.music.v1"
+    }
+  ],
+  "hints": [
+    "Water can play music too — if it hits the right thing.",
+    "Put a sprayer on a pipe end and aim it at a chime."
+  ],
+  "narrationCues": [
+    "Make the water play the chimes!"
+  ]
+}

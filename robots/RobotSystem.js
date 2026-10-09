@@ -83,6 +83,8 @@ export class RobotSystem {
     hasRobots() { return this.robots.length > 0 || this.sweepers.length > 0 || this.conveyors.length > 0; }
     /** Is a robot holding down an arena button wired to this (Power Lab) part? Buttons stay pressed once pressed. */
     linkPressed(id) { return this.buttons.some(b => b.pressed && b.link === id); }
+    /** Is a robot pressing any button that is linked to a circuit right now? (Robot Band: whose press made the sound.) */
+    anyLinkPressed() { return this.buttons.some(b => b.pressed && b.link !== undefined); }
     /** `motorDrive`: how hard a Power Lab motor is turning — a conveyor wired to a motor runs only while its motor really turns. */
     /** `signal`: is this robot's signal on (the part it listens to has power, is pressed, or has been set off)? */
     step(dt, motorDrive = () => 0, signal = () => false) {

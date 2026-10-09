@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "id": "music.drum-loop",
+  "title": "Drum Loop",
+  "environmentId": "env.gear-garage",
+  "availablePartIds": [
+    "music.beater",
+    "gear.small",
+    "gear.medium",
+    "gear.large",
+    "music.timer",
+    "circuit.wire",
+    "music.horn",
+    "circuit.battery"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "motor",
+      "definitionId": "gear.motor",
+      "position": {
+        "x": 4,
+        "y": 5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "drum",
+      "definitionId": "music.drum",
+      "position": {
+        "x": 5.05,
+        "y": 5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "note": 1
+      }
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "MUSIC_STEADY_BEAT",
+      "minNotes": 6,
+      "tolerance": 0.2
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "music.beat",
+      "conceptId": "music.beat",
+      "eventKind": "NOTE_PLAYED",
+      "minimumCount": 1,
+      "truthContractId": "truth.music.v1"
+    }
+  ],
+  "hints": [
+    "A drum loop goes boom… boom… boom… at a steady beat.",
+    "Something turning round and round could hit the drum once every turn."
+  ],
+  "narrationCues": [
+    "Make a drum loop: six beats, nice and steady!"
+  ]
+}

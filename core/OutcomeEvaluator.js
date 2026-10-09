@@ -1,4 +1,5 @@
 import { isMagnetic } from "../magnets/MagnetSystem.js";
+import { causesPlayed, familiesPlayed, playedInOrder, playingSeconds, steadyBeat } from "../music/MusicSystem.js";
 /** Does a program contain this block (with a sensor starting with the prefix, for IF/UNTIL)? */
 function programUses(blocks, op, sensorPrefix) {
     return blocks.some(b => (b.op === op && (!sensorPrefix || ((b.op === "IF" || b.op === "UNTIL") && b.sensor.startsWith(sensorPrefix)))) || ((b.op === "REPEAT" || b.op === "UNTIL") && programUses(b.body, op, sensorPrefix)) || (b.op === "IF" && (programUses(b.then, op, sensorPrefix) || programUses(b.else, op, sensorPrefix))));
@@ -260,6 +261,29 @@ export function evaluateOutcomeRule(rule, build, runtime) {
         if (ta === undefined || tb === undefined || ta <= 0)
             return false;
         return tb / ta >= rule.minRatio;
+    }
+    // Creature & Music Machines (M29): measured by the creature and music systems.
+    if (rule.kind === "CREATURE_FLAP_STABLE")
+        return runtime.elapsedTime >= rule.minElapsed && tagged(build, rule.creatureTag).some(p => { const c = runtime.creatures.creatures.find(x => x.id === p.id); return c !== undefined && !c.tipped && c.flaps >= rule.minFlaps && c.maxTilt <= rule.maxLean; });
+    if (rule.kind === "CREATURE_GRABBED")
+        return tagged(build, rule.targetTag).some(p => runtime.creatures.grabbed(p.id));
+    if (rule.kind === "CREATURE_PARTS")
+        return tagged(build, rule.creatureTag).some(p => { const c = runtime.creatures.creatures.find(x => x.id === p.id); return c !== undefined && c.clips.filter(k => k.kind === rule.part || (rule.part === "LEG" && k.kind === "BIG_LEG")).length >= rule.min; });
+    if (rule.kind === "MUSIC_IN_ORDER")
+        return playedInOrder(runtime.music.notes, rule.tags.map(t => tagged(build, t)[0]?.id ?? ""));
+    if (rule.kind === "MUSIC_STEADY_BEAT")
+        return steadyBeat(runtime.music.notes, rule.minNotes, rule.tolerance);
+    if (rule.kind === "MUSIC_VARIETY")
+        return runtime.music.notes.length >= rule.minNotes && familiesPlayed(runtime.music.notes).length >= rule.minFamilies;
+    if (rule.kind === "MUSIC_CAUSED")
+        return runtime.music.notes.filter(n => (!rule.family || n.family === rule.family) && rule.causes.includes(n.cause)).length >= rule.minNotes;
+    if (rule.kind === "MUSIC_BAND") {
+        const band = runtime.music.notes.filter(n => n.cause === "ROBOT");
+        return band.length >= rule.minNotes && new Set(band.map(n => n.instrumentId)).size >= rule.minInstruments;
+    }
+    if (rule.kind === "MUSIC_DURATION") {
+        const n = runtime.music.notes;
+        return n.length >= rule.minNotes && playingSeconds(n) >= rule.seconds && causesPlayed(n).length >= rule.minCauses;
     }
     if (rule.kind === "FLIGHT_DISTANCE")
         return tagged(build, rule.craftTag).some(c => { const st = runtime.flight.craft(c.id); return st !== undefined && st.flying && st.maxX >= rule.minX; });

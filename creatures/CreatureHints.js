@@ -1,0 +1,20 @@
+/** Verified answers and clues for the 12 Creature & Music Machines challenges (M29; checked by tests/m29-creatures-music.test.mjs). */
+const g = (definitionId, x, y, rotation = 0, parameters) => ({ definitionId, x, y, rotation, ...(parameters ? { parameters } : {}) });
+const kit = (x, y) => [g("creature.motor", x, y - 0.1), g("circuit.battery", x - 0.2, y - 0.3)];
+export const CREATURE_HINTS = {
+    "creature.hopping-frog": { concept: "Springy legs underneath store a push, then let it go — boing!", usefulParts: ["creature.spring-leg"], solution: [g("creature.spring-leg", 1.4, 8.2), g("creature.spring-leg", 2.2, 8.2)], ghostCount: 1 },
+    "creature.flapping-bird": { concept: "A wing at the front AND the back keeps the pushes balanced — plus a motor and a battery to flap them.", usefulParts: ["creature.wing", "creature.motor", "circuit.battery"], solution: [g("creature.wing", 8.4, 7.6), g("creature.wing", 7.6, 7.6), ...kit(8, 7.9)], ghostCount: 2 },
+    "creature.crab-grabber": { concept: "Legs at the front and back to walk, a claw at the front to pinch, and power for both.", usefulParts: ["creature.leg", "creature.claw", "creature.motor", "circuit.battery"], solution: [g("creature.leg", 2.45, 7.8), g("creature.leg", 1.55, 7.8), g("creature.claw", 2.7, 7.75), ...kit(2, 7.4)], ghostCount: 2 },
+    "creature.crawling-bug": { concept: "Join three body pieces on behind the head, one after another, and give it power.", usefulParts: ["creature.segment", "creature.motor", "circuit.battery"], solution: [g("creature.segment", 1.4, 8.15), g("creature.segment", 0.9, 8.15), g("creature.segment", 0.4, 8.15), ...kit(2, 8.1)], ghostCount: 2 },
+    "creature.spider-walker": { concept: "Four legs at the front and four at the back, and power to walk them.", usefulParts: ["creature.leg", "creature.motor", "circuit.battery"],
+        solution: [2.25, 2.4, 2.55, 2.7, 1.75, 1.6, 1.45, 1.3].map(x => g("creature.leg", x, 7.8)).concat(kit(2, 7.4)), ghostCount: 2 },
+    "creature.dinosaur-walker": { concept: "Big legs can carry heavy loads that little legs can't.", usefulParts: ["creature.big-leg", "creature.motor", "circuit.battery"], solution: [g("creature.big-leg", 2.45, 7.8), g("creature.big-leg", 1.55, 7.8), ...kit(2, 7.2)], ghostCount: 2 },
+    "music.three-note-machine": { concept: "Tip the ball so it rolls the right way — towards note one first.", usefulParts: ["motion.ramp"], solution: [g("motion.ramp", 12.8, 6.9, -0.45)], ghostCount: 1 },
+    "music.drum-loop": { concept: "A beater on the motor's shaft hits the drum once every turn — a steady beat.", usefulParts: ["music.beater"], solution: [g("music.beater", 4, 5)], ghostCount: 1 },
+    "music.mechanical-melody": { concept: "Line up different instruments along the path the ball rolls.", usefulParts: ["music.drum", "music.chime", "music.tone-block"],
+        solution: [g("music.drum", 4.5, 8.0), g("music.chime", 6.5, 8.0), g("music.tone-block", 8.5, 8.0), g("music.drum", 10.5, 8.0), g("music.chime", 12.5, 8.0)], ghostCount: 2 },
+    "music.water-chimes": { concept: "Put a sprayer on each pipe end and aim it at a chime.", usefulParts: ["plumb.nozzle"], solution: [g("plumb.nozzle", 5.5, 4.8, -0.35), g("plumb.nozzle", 5.5, 6.6, -0.18)], ghostCount: 1 },
+    "music.robot-band": { concept: "Drive to each button, face it and PRESS — three buttons, three horns.", usefulParts: [], solution: [], ghostCount: 0, noPartsLine: "Tap the robot, then add blocks to its program.",
+        programs: { bot: [{ op: "FORWARD", n: 2 }, { op: "TURN", dir: "L" }, { op: "PRESS" }, { op: "TURN", dir: "R" }, { op: "FORWARD", n: 3 }, { op: "TURN", dir: "L" }, { op: "PRESS" }, { op: "TURN", dir: "R" }, { op: "FORWARD", n: 3 }, { op: "TURN", dir: "L" }, { op: "PRESS" }] } },
+    "music.grand-workshop-jam": { concept: "A beater on the motor for the drum, and a timer switch in the horn's gap — two machines keeping time.", usefulParts: ["music.beater", "music.timer"], solution: [g("music.beater", 4, 5), g("music.timer", 9.6, 5.45)], ghostCount: 1 }
+};

@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "id": "creature.flapping-bird",
+  "title": "Flapping Bird",
+  "environmentId": "env.flight-hangar",
+  "availablePartIds": [
+    "creature.leg",
+    "creature.big-leg",
+    "creature.spring-leg",
+    "creature.wing",
+    "creature.claw",
+    "creature.segment",
+    "creature.motor",
+    "circuit.battery"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "creature",
+      "definitionId": "creature.body",
+      "position": {
+        "x": 8,
+        "y": 7.9
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "creature",
+        "creature.bird"
+      ]
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "CREATURE_FLAP_STABLE",
+      "creatureTag": "creature",
+      "minFlaps": 10,
+      "maxLean": 0.3,
+      "minElapsed": 6
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "creature.flap",
+      "conceptId": "creature.flap",
+      "eventKind": "CREATURE_FLAP",
+      "minimumCount": 1,
+      "truthContractId": "truth.creatures.v1"
+    }
+  ],
+  "hints": [
+    "A display bird flaps — but must not fall over.",
+    "Flapping needs power. And a push on one side only will tip it."
+  ],
+  "narrationCues": [
+    "Make the bird flap its wings — and stay steady for the whole show!"
+  ]
+}

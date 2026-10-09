@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "id": "creature.spider-walker",
+  "title": "Spider Walker",
+  "environmentId": "env.robot-lab",
+  "availablePartIds": [
+    "creature.leg",
+    "creature.big-leg",
+    "creature.spring-leg",
+    "creature.wing",
+    "creature.claw",
+    "creature.segment",
+    "creature.motor",
+    "circuit.battery"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "creature",
+      "definitionId": "creature.body",
+      "position": {
+        "x": 2,
+        "y": 7.4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "creature",
+        "creature.spider"
+      ]
+    },
+    {
+      "id": "goal",
+      "definitionId": "motion.goal-zone",
+      "position": {
+        "x": 12,
+        "y": 7.6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "zone.goal"
+      ]
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "OBJECT_ENTERS_ZONE",
+      "objectTag": "creature",
+      "zoneTag": "zone.goal",
+      "radius": 1.2
+    },
+    {
+      "kind": "CREATURE_PARTS",
+      "creatureTag": "creature",
+      "part": "LEG",
+      "min": 8
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "creature.walk",
+      "conceptId": "creature.walk",
+      "eventKind": "CREATURE_WALKING",
+      "minimumCount": 1,
+      "truthContractId": "truth.creatures.v1"
+    }
+  ],
+  "hints": [
+    "How many legs does a spider have?",
+    "The same leg, again and again, front and back."
+  ],
+  "narrationCues": [
+    "Build a spider with eight legs that walks to the web!"
+  ]
+}

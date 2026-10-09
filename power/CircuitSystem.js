@@ -153,6 +153,9 @@ export class CircuitSystem {
     pending = [];
     once = new Set();
     ticks = 0;
+    /** Timer switches (part id → ticks between closes). */
+    timers = new Map();
+    timerTicks = 0;
     constructor(parts, definition) {
         this.layout = analyzeCircuit(parts, definition);
         for (const e of this.layout.elements) {
@@ -164,6 +167,11 @@ export class CircuitSystem {
                 this.loads.set(e.partId, { id: e.partId, kind: e.load ?? "DEVICE", power: 0, level: 0, current: 0, on: false, onTicks: 0, peakLevel: 0, everOn: false });
             if (e.kind === "SWITCH")
                 this.closed.set(e.partId, parts.find(p => p.id === e.partId)?.parameters.closed === true);
+            // M29: a timer switch closes for a moment (1/6 s) at a steady rate.
+            const p = parts.find(q => q.id === e.partId);
+            const timer = definition(p?.definitionId ?? "")?.behaviours.find(b => b.kind === "MUSIC" && b.family === "TIMER");
+            if (e.kind === "SWITCH" && p && timer?.kind === "MUSIC")
+                this.timers.set(e.partId, Math.max(15, Math.round(Number(p.parameters.every ?? timer.every ?? 1) * 60)));
             if (e.kind === "BUTTON")
                 this.closed.set(e.partId, false);
         }
@@ -174,6 +182,9 @@ export class CircuitSystem {
     /** `shaftSpeed`: how fast a generator's shaft is turning (radians per second), from the gear system. */
     step(dt, pressed, flipped = new Set(), shaftSpeed = () => 0) {
         const els = this.layout.elements;
+        this.timerTicks++;
+        for (const [id, period] of this.timers)
+            this.closed.set(id, this.timerTicks % period < 10);
         for (const e of els)
             if (e.generator) {
                 const v = Math.round(GENERATOR_VOLTS_PER_RAD * Math.abs(shaftSpeed(e.partId)) * 1000) / 1000;

@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "id": "music.mechanical-melody",
+  "title": "Mechanical Melody",
+  "environmentId": "env.motion-yard",
+  "availablePartIds": [
+    "motion.ramp",
+    "music.drum",
+    "music.chime",
+    "music.tone-block",
+    "chain.bell"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "ramp",
+      "definitionId": "motion.ramp",
+      "position": {
+        "x": 2.2,
+        "y": 6.9
+      },
+      "rotation": 0.45,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "ball",
+      "definitionId": "motion.ball",
+      "position": {
+        "x": 1.4,
+        "y": 6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "MUSIC_VARIETY",
+      "minNotes": 5,
+      "minFamilies": 3
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "music.melody",
+      "conceptId": "music.melody",
+      "eventKind": "NOTE_PLAYED",
+      "minimumCount": 1,
+      "truthContractId": "truth.music.v1"
+    }
+  ],
+  "hints": [
+    "Five notes in a row — and at least three kinds of instrument.",
+    "Put instruments where the rolling ball goes past them."
+  ],
+  "narrationCues": [
+    "Play a five-note tune using at least three kinds of instrument!"
+  ]
+}

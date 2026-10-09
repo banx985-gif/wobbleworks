@@ -1,0 +1,616 @@
+{
+  "schemaVersion": 1,
+  "id": "music.robot-band",
+  "title": "Robot Band",
+  "environmentId": "env.robot-lab",
+  "availablePartIds": [],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "wall-1-7",
+      "definitionId": "robot.wall",
+      "position": {
+        "x": 1,
+        "y": 7
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "wall-1-5",
+      "definitionId": "robot.wall",
+      "position": {
+        "x": 1,
+        "y": 5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "wall-2-7",
+      "definitionId": "robot.wall",
+      "position": {
+        "x": 2,
+        "y": 7
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "wall-2-5",
+      "definitionId": "robot.wall",
+      "position": {
+        "x": 2,
+        "y": 5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "wall-3-7",
+      "definitionId": "robot.wall",
+      "position": {
+        "x": 3,
+        "y": 7
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "wall-3-5",
+      "definitionId": "robot.wall",
+      "position": {
+        "x": 3,
+        "y": 5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "wall-4-7",
+      "definitionId": "robot.wall",
+      "position": {
+        "x": 4,
+        "y": 7
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "wall-5-7",
+      "definitionId": "robot.wall",
+      "position": {
+        "x": 5,
+        "y": 7
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "wall-5-5",
+      "definitionId": "robot.wall",
+      "position": {
+        "x": 5,
+        "y": 5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "wall-6-7",
+      "definitionId": "robot.wall",
+      "position": {
+        "x": 6,
+        "y": 7
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "wall-6-5",
+      "definitionId": "robot.wall",
+      "position": {
+        "x": 6,
+        "y": 5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "wall-7-7",
+      "definitionId": "robot.wall",
+      "position": {
+        "x": 7,
+        "y": 7
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "wall-8-7",
+      "definitionId": "robot.wall",
+      "position": {
+        "x": 8,
+        "y": 7
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "wall-8-5",
+      "definitionId": "robot.wall",
+      "position": {
+        "x": 8,
+        "y": 5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "wall-9-7",
+      "definitionId": "robot.wall",
+      "position": {
+        "x": 9,
+        "y": 7
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "wall-9-5",
+      "definitionId": "robot.wall",
+      "position": {
+        "x": 9,
+        "y": 5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "wall-10-7",
+      "definitionId": "robot.wall",
+      "position": {
+        "x": 10,
+        "y": 7
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "wall-11-7",
+      "definitionId": "robot.wall",
+      "position": {
+        "x": 11,
+        "y": 7
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "wall-11-5",
+      "definitionId": "robot.wall",
+      "position": {
+        "x": 11,
+        "y": 5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "wall-12-7",
+      "definitionId": "robot.wall",
+      "position": {
+        "x": 12,
+        "y": 7
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "wall-12-5",
+      "definitionId": "robot.wall",
+      "position": {
+        "x": 12,
+        "y": 5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "wall-1-6",
+      "definitionId": "robot.wall",
+      "position": {
+        "x": 1,
+        "y": 6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "wall-12-6",
+      "definitionId": "robot.wall",
+      "position": {
+        "x": 12,
+        "y": 6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "bat-0",
+      "definitionId": "circuit.battery",
+      "position": {
+        "x": 2.4,
+        "y": 3.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "cb-0",
+      "definitionId": "circuit.button",
+      "position": {
+        "x": 3.8,
+        "y": 2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "horn-0",
+      "definitionId": "music.horn",
+      "position": {
+        "x": 3.8,
+        "y": 3.6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "note": 1
+      },
+      "tags": [
+        "horn"
+      ]
+    },
+    {
+      "id": "w-0a",
+      "definitionId": "circuit.wire",
+      "position": {
+        "x": 3.125,
+        "y": 2.625
+      },
+      "rotation": -1.197809,
+      "parameters": {
+        "locked": true,
+        "length": 1.234909
+      }
+    },
+    {
+      "id": "w-0b",
+      "definitionId": "circuit.wire",
+      "position": {
+        "x": 4.2,
+        "y": 2.975
+      },
+      "rotation": 1.624798,
+      "parameters": {
+        "locked": true,
+        "length": 1.852701
+      }
+    },
+    {
+      "id": "w-0c",
+      "definitionId": "circuit.wire",
+      "position": {
+        "x": 2.675,
+        "y": 3.55
+      },
+      "rotation": -2.717398,
+      "parameters": {
+        "locked": true,
+        "length": 1.700735
+      }
+    },
+    {
+      "id": "pad-0",
+      "definitionId": "robot.button",
+      "position": {
+        "x": 4,
+        "y": 5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "link": "cb-0"
+      },
+      "tags": [
+        "button"
+      ]
+    },
+    {
+      "id": "bat-1",
+      "definitionId": "circuit.battery",
+      "position": {
+        "x": 5.4,
+        "y": 3.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "cb-1",
+      "definitionId": "circuit.button",
+      "position": {
+        "x": 6.8,
+        "y": 2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "horn-1",
+      "definitionId": "music.horn",
+      "position": {
+        "x": 6.8,
+        "y": 3.6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "note": 3
+      },
+      "tags": [
+        "horn"
+      ]
+    },
+    {
+      "id": "w-1a",
+      "definitionId": "circuit.wire",
+      "position": {
+        "x": 6.125,
+        "y": 2.625
+      },
+      "rotation": -1.197809,
+      "parameters": {
+        "locked": true,
+        "length": 1.234909
+      }
+    },
+    {
+      "id": "w-1b",
+      "definitionId": "circuit.wire",
+      "position": {
+        "x": 7.2,
+        "y": 2.975
+      },
+      "rotation": 1.624798,
+      "parameters": {
+        "locked": true,
+        "length": 1.852701
+      }
+    },
+    {
+      "id": "w-1c",
+      "definitionId": "circuit.wire",
+      "position": {
+        "x": 5.675,
+        "y": 3.55
+      },
+      "rotation": -2.717398,
+      "parameters": {
+        "locked": true,
+        "length": 1.700735
+      }
+    },
+    {
+      "id": "pad-1",
+      "definitionId": "robot.button",
+      "position": {
+        "x": 7,
+        "y": 5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "link": "cb-1"
+      },
+      "tags": [
+        "button"
+      ]
+    },
+    {
+      "id": "bat-2",
+      "definitionId": "circuit.battery",
+      "position": {
+        "x": 8.4,
+        "y": 3.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "cb-2",
+      "definitionId": "circuit.button",
+      "position": {
+        "x": 9.8,
+        "y": 2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "horn-2",
+      "definitionId": "music.horn",
+      "position": {
+        "x": 9.8,
+        "y": 3.6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "note": 5
+      },
+      "tags": [
+        "horn"
+      ]
+    },
+    {
+      "id": "w-2a",
+      "definitionId": "circuit.wire",
+      "position": {
+        "x": 9.125,
+        "y": 2.625
+      },
+      "rotation": -1.197809,
+      "parameters": {
+        "locked": true,
+        "length": 1.234909
+      }
+    },
+    {
+      "id": "w-2b",
+      "definitionId": "circuit.wire",
+      "position": {
+        "x": 10.2,
+        "y": 2.975
+      },
+      "rotation": 1.624798,
+      "parameters": {
+        "locked": true,
+        "length": 1.852701
+      }
+    },
+    {
+      "id": "w-2c",
+      "definitionId": "circuit.wire",
+      "position": {
+        "x": 8.675,
+        "y": 3.55
+      },
+      "rotation": -2.717398,
+      "parameters": {
+        "locked": true,
+        "length": 1.700735
+      }
+    },
+    {
+      "id": "pad-2",
+      "definitionId": "robot.button",
+      "position": {
+        "x": 10,
+        "y": 5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "link": "cb-2"
+      },
+      "tags": [
+        "button"
+      ]
+    },
+    {
+      "id": "bot",
+      "definitionId": "robot.bot",
+      "position": {
+        "x": 2,
+        "y": 6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "heading": 0,
+        "program": "[]",
+        "pinned": true
+      },
+      "tags": [
+        "robot"
+      ]
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "MUSIC_BAND",
+      "minNotes": 3,
+      "minInstruments": 3
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "music.robot",
+      "conceptId": "music.robot",
+      "eventKind": "NOTE_PLAYED",
+      "minimumCount": 1,
+      "truthContractId": "truth.music.v1"
+    }
+  ],
+  "hints": [
+    "Each button plays a different horn. The robot has to press them.",
+    "Drive to a button, face it, PRESS — then on to the next."
+  ],
+  "narrationCues": [
+    "Program the robot band: press all three buttons to play the horns!"
+  ]
+}

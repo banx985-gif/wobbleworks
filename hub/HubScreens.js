@@ -211,6 +211,8 @@ export function renderHub(root, save, cb) {
     ];
     if (cb.openExperiments)
         stations.push({ id: "experiments", label: "Experiment Lab", x: 52, y: 22, w: 9, h: 18, onTap: cb.openExperiments, art: () => { const img = el("img", "hub-prop"); img.src = "./assets/icons/icon.energy-flask.webp"; img.alt = ""; img.draggable = false; return img; } });
+    if (cb.openCreatures)
+        stations.push({ id: "creatures", label: "Creatures & Music", x: 66, y: 82, w: 15, h: 17, onTap: cb.openCreatures, art: () => el("span", "job-board-art", "🦖🎵") });
     if (cb.openFair)
         stations.push({ id: "fair", label: "Science Fair", x: 2, y: 82, w: 11, h: 17, onTap: cb.openFair, art: () => el("span", "job-board-art", "🎪") });
     if (cb.openJobBoard)

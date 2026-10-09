@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "id": "creature.crawling-bug",
+  "title": "Crawling Bug",
+  "environmentId": "env.motion-yard",
+  "availablePartIds": [
+    "creature.leg",
+    "creature.big-leg",
+    "creature.spring-leg",
+    "creature.wing",
+    "creature.claw",
+    "creature.segment",
+    "creature.motor",
+    "circuit.battery"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "creature",
+      "definitionId": "creature.body",
+      "position": {
+        "x": 2,
+        "y": 8.1
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "creature",
+        "creature.bug"
+      ]
+    },
+    {
+      "id": "goal",
+      "definitionId": "motion.goal-zone",
+      "position": {
+        "x": 10.5,
+        "y": 7.9
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "zone.goal"
+      ]
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "OBJECT_ENTERS_ZONE",
+      "objectTag": "creature",
+      "zoneTag": "zone.goal",
+      "radius": 1.2
+    },
+    {
+      "kind": "CREATURE_PARTS",
+      "creatureTag": "creature",
+      "part": "SEGMENT",
+      "min": 3
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "creature.crawl",
+      "conceptId": "creature.crawl",
+      "eventKind": "CREATURE_CRAWLING",
+      "minimumCount": 1,
+      "truthContractId": "truth.creatures.v1"
+    }
+  ],
+  "hints": [
+    "A bug like this has no legs — it wiggles along.",
+    "Join body pieces on behind its head. How many does a good wiggle need?"
+  ],
+  "narrationCues": [
+    "Build a wiggly bug — a head and at least three body pieces — that crawls to the leaf!"
+  ]
+}

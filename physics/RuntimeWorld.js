@@ -11,6 +11,8 @@ import { FlightSystem } from "../flight/FlightSystem.js";
 import { RobotSystem } from "../robots/RobotSystem.js";
 import { SpaceSystem } from "../space/SpaceSystem.js";
 import { ChainSystem } from "../chain/ChainSystem.js";
+import { CreatureSystem } from "../creatures/CreatureSystem.js";
+import { MusicSystem } from "../music/MusicSystem.js";
 import { SandboxSystem } from "../sandbox/SandboxSystem.js";
 export class RuntimeWorld {
     snapshotSignature;
@@ -33,6 +35,8 @@ export class RuntimeWorld {
     space;
     /** Chain Reaction Workshop (M21): the chain counter and its toy mechanisms. */
     chain;
+    creatures;
+    music;
     /** Sandbox (M23): air drag, floating balloons, moving platforms, fragile things. */
     sandbox;
     reedWas = new Map();
@@ -87,6 +91,9 @@ export class RuntimeWorld {
         this.flight = new FlightSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.water = new FluidSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.magnets = new MagnetSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
+        this.creatures = new CreatureSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
+        this.creatures.start(this.physics);
+        this.music = new MusicSystem(this.snapshot.parts, id => registry.has(id) ? registry.get(id) : undefined);
         this.installPipeline();
     }
     constructPhysics() {
@@ -135,6 +142,10 @@ export class RuntimeWorld {
             this.sandbox.step(dt, this.physics, x => this.space.airAt(x));
             for (const e of this.sandbox.drainEvents())
                 this.event(e.kind, e.sourceId, e.targetId, e.data);
+        } if (this.creatures.active) {
+            this.creatures.step(dt, this.physics);
+            for (const e of this.creatures.drainEvents())
+                this.event(e.kind, e.sourceId, e.targetId, e.data);
         } this.applyCouplings(); this.gears.step(dt); this.applyGearCouplings(); this.stepStructures(dt); });
         this.pipeline.on("PHYSICS_STEP", ({ dt }) => this.physics.step(dt));
         this.pipeline.on("POST_PHYSICS_CONTACTS", () => { this.magnets.applyGuides(this.physics); if (this.flight.hasFlight() || this.space.hasSpace()) {
@@ -150,7 +161,11 @@ export class RuntimeWorld {
             for (const e of this.sandbox.drainEvents())
                 this.event(e.kind, e.sourceId, e.targetId, e.data);
         } this.collectPhysicsEvents(); });
-        this.pipeline.on("DOMAIN_TRANSFER", ({ dt }) => this.transferDomains(dt));
+        this.pipeline.on("DOMAIN_TRANSFER", ({ dt }) => { this.transferDomains(dt); if (this.music.active) {
+            this.music.observe(this.tick, this.physics, id => this.gears.state(id)?.angle, id => this.circuits.load(id)?.on === true, () => this.robots.anyLinkPressed(), this.pendingEvents, id => this.creatures.isClip(id), id => this.water.waterReceived(id));
+            for (const e of this.music.drainEvents())
+                this.event(e.kind, e.sourceId, e.targetId, e.data);
+        } });
         this.pipeline.on("CAUSAL_EVENT_RECORDING", () => { this.causalEvents.push(...this.pendingEvents); });
         this.pipeline.on("GOAL_AND_CONCEPT_EVIDENCE", () => this.observeChain());
         this.pipeline.on("REPLAY_SAMPLE", () => undefined);

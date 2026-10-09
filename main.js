@@ -30,7 +30,9 @@ import { OpeningDirector, evaluateOpeningSuccess } from "./opening/OpeningDirect
 import { loadMotionYardLevels } from "./motion/MotionContent.js";
 import { MOTION_PERFORMANCE_BUDGET } from "./motion/MotionPerformanceBudget.js";
 import { evaluateMotionMission, MOTION_REAL_WORLD_CARDS } from "./motion/MotionYard.js";
-import { CHAIN_WORKSHOP, CHALLENGE_LAB, CONTRACT_BOARD, EXPERIMENT_LAB, FREE_BUILD_ROOMS, MAIN_LABS, SCIENCE_FAIR } from "./progression/CampaignData.js";
+import { CHAIN_WORKSHOP, CHALLENGE_LAB, CONTRACT_BOARD, CREATURE_MUSIC, EXPERIMENT_LAB, FREE_BUILD_ROOMS, MAIN_LABS, SCIENCE_FAIR } from "./progression/CampaignData.js";
+import { CREATURE_MUSIC_LABS, RING_SECONDS, creatureMusicChallengeOpen, creatureMusicOpen } from "./creatures/CreatureMusic.js";
+import { SCALE_HZ, familyOf } from "./music/MusicSystem.js";
 import { FairRun, crowdCheers, fairById, fairHistory, fairOpen, judgeEntry, scienceFairOpen, withFairEntry } from "./fairs/ScienceFairs.js";
 import { acceptVisitor, contractById, contractOpen, contractsOf, jobBoardOpen, visitorById } from "./contracts/Contracts.js";
 import { ChallengeRun, challengeBest, challengeById, challengeLabOpen, challengeOpen, earnedRatings, formatScore, personalityLabel, playerParts, withChallengeResult } from "./challenge/Challenges.js";
@@ -281,7 +283,7 @@ function readSettingsForm() {
     return { textScale: Number.isFinite(num) ? Math.max(0.9, Math.min(1.4, num)) : 1, reducedMotion: chk("#setting-reduced-motion"), highContrast: chk("#setting-high-contrast"), narration: chk("#setting-narration"), subtitles: chk("#setting-subtitles"), soundEffects: chk("#setting-sfx"), music: chk("#setting-music"), vibration: chk("#setting-vibration") };
 }
 /** The nine campaign labs plus the creative modes that use the same mission menu (the Chain Reaction Workshop). */
-const PLAY_SETS = [...MAIN_LABS, CHAIN_WORKSHOP, EXPERIMENT_LAB, FREE_BUILD_ROOMS, CHALLENGE_LAB, CONTRACT_BOARD, SCIENCE_FAIR];
+const PLAY_SETS = [...MAIN_LABS, CHAIN_WORKSHOP, EXPERIMENT_LAB, FREE_BUILD_ROOMS, CHALLENGE_LAB, CONTRACT_BOARD, SCIENCE_FAIR, CREATURE_MUSIC];
 function labDef(id = currentLabId) { return PLAY_SETS.find(l => l.id === id); }
 function labOfLevel(levelId) { return PLAY_SETS.find(l => l.missions.some(m => m.id === levelId))?.id ?? "motion-yard"; }
 function completedSet() { return new Set(completedLevelIds(appSave)); }
@@ -302,6 +304,8 @@ function evaluateLevel(level, runtime) {
     if (lab === SCIENCE_FAIR.id)
         return { levelId: level.id, success: false, discoveries: [] };
     // Job Board: each job uses its lab room's own rules, checked the same way as every other level.
+    if (lab === CREATURE_MUSIC.id)
+        return { levelId: level.id, success: runtime ? evaluateLevelOutcome(level, build, runtime).complete : false, discoveries: [] };
     if (lab === CONTRACT_BOARD.id)
         return { levelId: level.id, success: runtime ? evaluateLevelOutcome(level, build, runtime).complete : false, discoveries: [] };
     if (lab === CHAIN_WORKSHOP.id)
@@ -314,7 +318,8 @@ function evaluateLevel(level, runtime) {
 /** Remember this run so the next TEST can show whether a change (like a brace) really helped. */
 function rememberRun() { const runtime = tests.active(); if (runtime && activeLevel)
     lastRuns.set(activeLevel.id, runSummary(build, runtime)); }
-function labIsOpen(labId) { if (labId === SCIENCE_FAIR.id)
+function labIsOpen(labId) { if (labId === CREATURE_MUSIC.id)
+    return labLevels.has(labId) && (creatureMusicOpen(appSave) || testingLabs.has(labId)); if (labId === SCIENCE_FAIR.id)
     return labLevels.has(labId) && (scienceFairOpen(appSave) || testingLabs.has(labId)); if (labId === CONTRACT_BOARD.id)
     return labLevels.has(labId) && (jobBoardOpen(appSave) || testingLabs.has(labId)); if (labId === CHALLENGE_LAB.id)
     return labLevels.has(labId) && (challengeLabOpen(appSave) || testingLabs.has(labId)); if (labId === FREE_BUILD_ROOMS.id)
@@ -377,7 +382,7 @@ function renderLabMenu() {
     document.querySelector("#lab-lead").textContent = `${lab.concepts}. Build, TEST, watch what happens, then change it.`;
     motionProgressLabel.textContent = `${lab.missions.filter(m => completed.has(m.id)).length} / ${lab.missions.length} ${lab.title} experiences completed`;
     for (const meta of lab.missions) {
-        const unlocked = labMissionUnlocked(lab, meta.id, completed) && (lab.id !== EXPERIMENT_LAB.id || experimentUnlocked(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== FREE_BUILD_ROOMS.id || sandboxOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== CHALLENGE_LAB.id || challengeOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== CONTRACT_BOARD.id || contractOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== SCIENCE_FAIR.id || fairOpen(appSave, meta.id) || testingLabs.has(lab.id));
+        const unlocked = labMissionUnlocked(lab, meta.id, completed) && (lab.id !== EXPERIMENT_LAB.id || experimentUnlocked(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== FREE_BUILD_ROOMS.id || sandboxOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== CHALLENGE_LAB.id || challengeOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== CONTRACT_BOARD.id || contractOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== SCIENCE_FAIR.id || fairOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== CREATURE_MUSIC.id || creatureMusicChallengeOpen(appSave, meta.id) || testingLabs.has(lab.id));
         const button = document.createElement("button");
         button.className = `motion-mission${completed.has(meta.id) ? " done" : ""}${!unlocked ? " locked" : ""}${requiredNext === meta.id ? " required" : ""}`;
         button.disabled = !unlocked;
@@ -393,7 +398,12 @@ function renderLabMenu() {
         const job = lab.id === CONTRACT_BOARD.id ? contractById(meta.id) : undefined;
         const who = job ? visitorById(job.visitorId) : undefined;
         const fd = lab.id === SCIENCE_FAIR.id ? fairById(meta.id) : undefined;
-        if (fd) {
+        const cmLab = lab.id === CREATURE_MUSIC.id ? CREATURE_MUSIC_LABS[meta.id] : undefined;
+        if (cmLab && !unlocked)
+            objective.textContent = `Opens with the ${regionById(cmLab)?.title ?? "lab"}`;
+        else if (cmLab)
+            objective.textContent = labLevels.get(CREATURE_MUSIC.id)?.get(meta.id)?.narrationCues?.[0] ?? meta.objective;
+        else if (fd) {
             const hist = fairHistory(appSave, fd.id);
             slot.textContent = `${fd.icon} FAIR ${fd.number}`;
             objective.textContent = unlocked ? `${fd.prompt}${hist.length ? ` · Entered ${hist.length} time${hist.length === 1 ? "" : "s"}` : ""}` : fd.unlock === "ALL" ? "Opens when every lab is restored." : `Opens after the ${fd.unlock.map(l => regionById(l)?.title ?? l).join(" and ")}.`;
@@ -495,6 +505,8 @@ function loadMission(id) {
     setupChallenge(labId === CHALLENGE_LAB.id ? challengeById(level.id) : undefined);
     contract = labId === CONTRACT_BOARD.id ? contractById(level.id) : undefined;
     setupFair(labId === SCIENCE_FAIR.id ? fairById(level.id) : undefined, level);
+    if (labId === CREATURE_MUSIC.id)
+        motionObjective.textContent = level.narrationCues?.[0] ?? motionObjective.textContent;
     if (contract) {
         const who = visitorById(contract.visitorId);
         motionObjective.textContent = contract.goal;
@@ -880,6 +892,7 @@ async function loadAppState() {
         labLevels.set(CHALLENGE_LAB.id, await loadLabLevels(registry, CHALLENGE_LAB.id, "challenge"));
         labLevels.set(CONTRACT_BOARD.id, await loadLabLevels(registry, CONTRACT_BOARD.id, "contract"));
         labLevels.set(SCIENCE_FAIR.id, await loadLabLevels(registry, SCIENCE_FAIR.id, "fair"));
+        labLevels.set(CREATURE_MUSIC.id, await loadLabLevels(registry, CREATURE_MUSIC.id, "creature"));
         appSave = loaded.payload ?? createDefaultAppSave();
         savingBlocked = loaded.futureVersion;
         applySettings();
@@ -1145,6 +1158,7 @@ function renderHubScreen() {
         ...(challengeLabOpen(appSave) ? { openChallenges: () => showLab(CHALLENGE_LAB.id) } : {}),
         ...(jobBoardOpen(appSave) ? { openJobBoard: () => showLab(CONTRACT_BOARD.id) } : {}),
         ...(scienceFairOpen(appSave) ? { openFair: () => showLab(SCIENCE_FAIR.id) } : {}),
+        ...(creatureMusicOpen(appSave) ? { openCreatures: () => showLab(CREATURE_MUSIC.id) } : {}),
         pokeBolt: () => { const p = activeProfile(appSave); hubQueue.push({ kind: "BOLT", title: p?.openingComplete ? "Fully charged and ready to wobble!" : "Bzzt… still charging…", body: "Tap the Campus Map to pick where to go next." }); showNextHubMoment(); },
         pokeSprocket: () => { sfx(1300, .05); window.setTimeout(() => sfx(1500, .05), 90); hubRoot.querySelector(".station-sprocket")?.classList.add("wiggle"); window.setTimeout(() => hubRoot.querySelector(".station-sprocket")?.classList.remove("wiggle"), 600); },
         meetVisitor: id => {
@@ -2168,6 +2182,11 @@ function pointerWorld(sample) { const logical = renderer.viewport.screenToLogica
 /** Things you can tap while building: switches flip, magnets turn. Locked ones in a level can still be tapped (never moved). */
 function tapAction(p) {
     const def = registry.get(p.definitionId);
+    // Music Machines: tap an instrument to change its note, a timer switch to change its beat.
+    if (def.id === "music.timer")
+        return "EVERY";
+    if (familyOf(def))
+        return "NOTE";
     if (circuitBehaviour(def)?.role === "SWITCH")
         return "FLIP";
     // Space Centre settings: lean the launch pad, choose a booster's burn time, a launcher's power; turn a solar panel.
@@ -2299,6 +2318,20 @@ input.on((event, sample) => {
             if (dropped && tap) {
                 if (tap === "FLIP")
                     build.reshape(droppedId, { parameters: { closed: dropped.parameters.closed !== true } });
+                else if (tap === "NOTE") {
+                    const n = Math.round(Number(dropped.parameters.note ?? 1)) % 8 + 1;
+                    build.reshape(droppedId, { parameters: { note: n } });
+                    sfx(SCALE_HZ[n - 1], .2);
+                    dragStart = undefined;
+                    dragPreview = undefined;
+                    panStart = undefined;
+                    return;
+                }
+                else if (tap === "EVERY") {
+                    const beats = [1, 0.5, 2];
+                    const i = beats.indexOf(Number(dropped.parameters.every ?? 1));
+                    build.reshape(droppedId, { parameters: { every: beats[(i + 1) % beats.length] } });
+                }
                 else if (tap === "TILT")
                     build.reshape(droppedId, { parameters: { tilt: (Number(dropped.parameters.tilt ?? 0) + 15) % 60 } });
                 else if (tap === "BURN") {
@@ -3216,6 +3249,25 @@ function finishFair() {
     sfx(1040, .1);
     buzz(60);
 }
+// ---------------------------------------------------------------- Music Machines: every note the machine plays makes its sound (M29)
+let notesHeard = 0;
+let notesRuntime;
+function playNotes(runtime) {
+    if (!runtime || !runtime.music.active) {
+        notesRuntime = runtime;
+        notesHeard = 0;
+        return;
+    }
+    if (notesRuntime !== runtime) {
+        notesRuntime = runtime;
+        notesHeard = 0;
+    }
+    const notes = runtime.music.notes;
+    for (; notesHeard < notes.length; notesHeard++) {
+        const n = notes[notesHeard];
+        sfx(SCALE_HZ[n.pitch - 1] * (n.family === "DRUM" ? 0.5 : n.family === "HORN" ? 1 : n.family === "CHIME" ? 2 : 1), RING_SECONDS[n.family] ?? 0.1);
+    }
+}
 function render() {
     maybeCompleteOpeningChallenge();
     maybeCompleteMotionMission();
@@ -3261,6 +3313,7 @@ function render() {
     if (runtime?.chain.active)
         renderer.drawChainEdges(runtime, shown);
     updateChainHud(runtime);
+    playNotes(runtime);
     if (currentRoom && !testMode && ++capFrame % 20 === 0)
         updateSandboxCap();
     if (runtime && runtime.space.zones.length && (forceScanner || runtime.space.zones.length >= 2))

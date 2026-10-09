@@ -36,6 +36,8 @@ export function drawCircuitPart(c, part, def, selected, ctx) {
         drawGenerator(c, st?.source(part.id)?.power ?? 0);
     else if (b.role === "BATTERY")
         drawBattery(c, part, def, st);
+    else if (b.role === "SWITCH" && def.id === "music.timer")
+        drawTimer(c, st ? st.isClosed(part.id) : false, Number(part.parameters.every ?? 1));
     else if (b.role === "SWITCH")
         drawSwitch(c, st ? st.isClosed(part.id) : part.parameters.closed === true, ctx.art);
     else if (b.role === "BUTTON")
@@ -55,6 +57,8 @@ export function drawCircuitPart(c, part, def, selected, ctx) {
         drawBulb(c, level);
     else if (b.load === "BUZZER")
         drawBuzzer(c, level, ctx.time);
+    else if (b.load === "HORN")
+        drawHorn(c, level, ctx.time);
     else if (b.load === "MOTOR")
         drawMotorBody(c, level);
     else
@@ -68,6 +72,49 @@ export function drawCircuitPart(c, part, def, selected, ctx) {
     }
     c.restore();
     return !(b.role === "LOAD" && b.load === "MOTOR") && !generator;
+}
+/** Electric horn (M29): a trumpet bell that glows and puffs sound lines while it has power. */
+function drawHorn(c, level, time) {
+    const on = level >= 0.15;
+    c.fillStyle = on ? "#ffd43b" : "#ffe066";
+    c.beginPath();
+    c.moveTo(-30, -8);
+    c.lineTo(10, -8);
+    c.lineTo(34, -26);
+    c.lineTo(34, 26);
+    c.lineTo(10, 8);
+    c.lineTo(-30, 8);
+    c.closePath();
+    c.fill();
+    c.stroke();
+    if (on) {
+        c.strokeStyle = "#f08c00";
+        c.lineWidth = 3;
+        for (let k = 1; k <= 3; k++) {
+            c.beginPath();
+            c.arc(34, 0, 10 * k + (time * 30) % 10, -0.6, 0.6);
+            c.stroke();
+        }
+        c.strokeStyle = INK;
+        c.lineWidth = 4;
+    }
+}
+/** Timer switch (M29): a little clock whose hand ticks round; it closes for a moment each time round. */
+function drawTimer(c, closed, every) {
+    c.fillStyle = closed ? "#b2f2bb" : "#f8f9fa";
+    c.beginPath();
+    c.arc(0, -6, 20, 0, Math.PI * 2);
+    c.fill();
+    c.stroke();
+    c.lineWidth = 3;
+    c.beginPath();
+    c.moveTo(0, -6);
+    c.lineTo(0, -20);
+    c.stroke();
+    c.fillStyle = INK;
+    c.font = "800 12px system-ui";
+    c.textAlign = "center";
+    c.fillText(`${every}s`, 0, 28);
 }
 /** Generator (M27): a coil in a round housing; the bolt lights up while it is making power. Code-drawn (docs/ART_NEEDED.md, Batch V). */
 function drawGenerator(c, power) {

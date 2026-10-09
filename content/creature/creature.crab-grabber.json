@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "id": "creature.crab-grabber",
+  "title": "Crab Grabber",
+  "environmentId": "env.water-works",
+  "availablePartIds": [
+    "creature.leg",
+    "creature.big-leg",
+    "creature.spring-leg",
+    "creature.wing",
+    "creature.claw",
+    "creature.segment",
+    "creature.motor",
+    "circuit.battery"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "creature",
+      "definitionId": "creature.body",
+      "position": {
+        "x": 2,
+        "y": 7.4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "creature",
+        "creature.crab"
+      ]
+    },
+    {
+      "id": "shell",
+      "definitionId": "scrap.wood-block",
+      "position": {
+        "x": 8,
+        "y": 8.175
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "target"
+      ]
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "CREATURE_GRABBED",
+      "targetTag": "target"
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "creature.grab",
+      "conceptId": "creature.grab",
+      "eventKind": "CREATURE_GRABBED",
+      "minimumCount": 1,
+      "truthContractId": "truth.creatures.v1"
+    }
+  ],
+  "hints": [
+    "The crab has to get over there — and then pick it up.",
+    "Legs to scuttle, something to pinch with, and power for both."
+  ],
+  "narrationCues": [
+    "Build a crab that scuttles over and picks up the shell!"
+  ]
+}

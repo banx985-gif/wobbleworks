@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "id": "creature.dinosaur-walker",
+  "title": "Dinosaur Walker",
+  "environmentId": "env.builder-bay",
+  "availablePartIds": [
+    "creature.leg",
+    "creature.big-leg",
+    "creature.spring-leg",
+    "creature.wing",
+    "creature.claw",
+    "creature.segment",
+    "creature.motor",
+    "circuit.battery"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "creature",
+      "definitionId": "creature.body",
+      "position": {
+        "x": 2,
+        "y": 7.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "creature",
+        "creature.dino"
+      ]
+    },
+    {
+      "id": "bag-1",
+      "definitionId": "sandbox.weight",
+      "position": {
+        "x": 1.75,
+        "y": 6.77
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "payload"
+      ]
+    },
+    {
+      "id": "bag-2",
+      "definitionId": "sandbox.weight",
+      "position": {
+        "x": 2.25,
+        "y": 6.77
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "payload"
+      ]
+    },
+    {
+      "id": "goal",
+      "definitionId": "motion.goal-zone",
+      "position": {
+        "x": 12,
+        "y": 7.6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "zone.goal"
+      ]
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "OBJECT_ENTERS_ZONE",
+      "objectTag": "creature",
+      "zoneTag": "zone.goal",
+      "radius": 1.4
+    },
+    {
+      "kind": "ALL_IN_ZONE",
+      "objectTag": "payload",
+      "zoneTag": "zone.goal",
+      "radius": 1.6
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "creature.carry",
+      "conceptId": "creature.carry",
+      "eventKind": "CREATURE_CARRYING",
+      "minimumCount": 1,
+      "truthContractId": "truth.creatures.v1"
+    }
+  ],
+  "hints": [
+    "The dinosaur is carrying two heavy bags. Can little legs hold that?",
+    "Bigger legs carry more weight — or use more of them."
+  ],
+  "narrationCues": [
+    "Our dinosaur carries the supplies! Make it walk them all the way to camp."
+  ]
+}

@@ -13,6 +13,7 @@ import { tiltedPoses } from "../space/SpaceSystem.js";
 import { chainLayer, drawChainEdges, drawChainPart, isChainPart } from "./ChainRenderer.js";
 import { drawExperimentPart, isExperimentPart } from "./ExperimentRenderer.js";
 import { drawSandboxPart, isSandboxPart, sandboxLayer } from "./SandboxRenderer.js";
+import { creatureLayer, drawCreatureOrMusicPart, isCreatureOrMusicPart } from "./CreatureRenderer.js";
 import { drawDoorPanel, drawGearGarageBackdrop, drawGearLinks, drawGearPart, drawRotationView, gearBehaviour, gearOutput } from "./GearRenderer.js";
 export class CanvasRenderer {
     canvas;
@@ -121,7 +122,8 @@ export class CanvasRenderer {
     drawParts(parts, registry, runtimeStates, selectedId, gears, time = 0, structures, showStress = false, runtime) {
         const states = new Map(runtimeStates?.map(s => [s.id, s]) ?? []);
         // Draw order only: fixed things first (zones, ramps, pads), then shafts, then gears, then moving things in front.
-        const layer = (p) => { const def = registry.get(p.definitionId); if (isSandboxPart(def))
+        const layer = (p) => { const def = registry.get(p.definitionId); if (isCreatureOrMusicPart(def))
+            return creatureLayer(def); if (isSandboxPart(def))
             return sandboxLayer(def); if (isExperimentPart(def))
             return def.id === "experiment.test-surface" ? 0 : -1; if (isChainPart(def))
             return chainLayer(def); if (isSpacePart(def))
@@ -150,6 +152,8 @@ export class CanvasRenderer {
         for (const placed of ordered) {
             const def = registry.get(placed.definitionId);
             const rigid = def.behaviours.find(b => b.kind === "RIGID_BODY");
+            if (isCreatureOrMusicPart(def) && drawCreatureOrMusicPart(this.ctx, placed, def, selectedId === placed.id, { states, ...(runtime ? { runtime } : {}), time, gearAngle: (id) => gears?.state(id)?.angle ?? 0 }))
+                continue;
             if (isSandboxPart(def) && drawSandboxPart(this.ctx, placed, def, selectedId === placed.id, { states, ...(runtime ? { runtime } : {}), time }))
                 continue;
             if (isExperimentPart(def) && drawExperimentPart(this.ctx, placed, def, selectedId === placed.id))
@@ -159,7 +163,7 @@ export class CanvasRenderer {
             if (isSpacePart(def) && drawSpacePart(this.ctx, placed, def, selectedId === placed.id, spaceCtx))
                 continue;
             // A Power Lab battery or a Flight Hangar parachute clipped onto a rover or rocket is drawn where it is now.
-            const moved = runtime?.space.hasSpace() ? spacePose(placed.id) : undefined;
+            const moved = (runtime?.space.hasSpace() ? spacePose(placed.id) : undefined) ?? (runtime?.creatures.active ? runtime.creatures.clipPose(placed.id, runtime.physics) : undefined);
             const part = moved ? { ...placed, position: { x: moved.x, y: moved.y }, rotation: moved.angle } : placed;
             if (drawStructurePart(this.ctx, part, def, selectedId === part.id, structCtx))
                 continue;

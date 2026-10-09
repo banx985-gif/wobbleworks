@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "id": "music.three-note-machine",
+  "title": "Three-Note Machine",
+  "environmentId": "env.motion-yard",
+  "availablePartIds": [
+    "motion.ramp",
+    "structure.block",
+    "motion.spring",
+    "music.drum",
+    "music.chime",
+    "music.tone-block",
+    "chain.bell"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "ball",
+      "definitionId": "motion.ball",
+      "position": {
+        "x": 13.6,
+        "y": 6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "note-1",
+      "definitionId": "music.tone-block",
+      "position": {
+        "x": 10,
+        "y": 8
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "note": 1
+      },
+      "tags": [
+        "note.1"
+      ]
+    },
+    {
+      "id": "note-2",
+      "definitionId": "music.tone-block",
+      "position": {
+        "x": 7.5,
+        "y": 8
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "note": 3
+      },
+      "tags": [
+        "note.2"
+      ]
+    },
+    {
+      "id": "note-3",
+      "definitionId": "music.tone-block",
+      "position": {
+        "x": 5,
+        "y": 8
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "note": 5
+      },
+      "tags": [
+        "note.3"
+      ]
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "MUSIC_IN_ORDER",
+      "tags": [
+        "note.1",
+        "note.2",
+        "note.3"
+      ]
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "music.strike",
+      "conceptId": "music.strike",
+      "eventKind": "NOTE_PLAYED",
+      "minimumCount": 1,
+      "truthContractId": "truth.music.v1"
+    }
+  ],
+  "hints": [
+    "Do-re-mi! The notes have to play one, two, three.",
+    "A rolling ball plays each block it passes."
+  ],
+  "narrationCues": [
+    "Play the three notes in order: one, two, three!"
+  ]
+}

@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "id": "music.grand-workshop-jam",
+  "title": "Grand Workshop Jam",
+  "environmentId": "env.everything-lab",
+  "availablePartIds": [
+    "music.beater",
+    "music.timer",
+    "circuit.wire",
+    "gear.small",
+    "gear.medium",
+    "gear.large",
+    "music.drum",
+    "music.chime",
+    "music.tone-block"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "motor",
+      "definitionId": "gear.motor",
+      "position": {
+        "x": 4,
+        "y": 5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "drum",
+      "definitionId": "music.drum",
+      "position": {
+        "x": 5.05,
+        "y": 5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "note": 1
+      }
+    },
+    {
+      "id": "battery",
+      "definitionId": "circuit.battery",
+      "position": {
+        "x": 9,
+        "y": 6.4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "horn",
+      "definitionId": "music.horn",
+      "position": {
+        "x": 11.5,
+        "y": 4.6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "note": 5
+      }
+    },
+    {
+      "id": "w1",
+      "definitionId": "circuit.wire",
+      "position": {
+        "x": 10.675,
+        "y": 5.65
+      },
+      "rotation": -0.568105,
+      "parameters": {
+        "locked": true,
+        "length": 2.78792
+      }
+    },
+    {
+      "id": "w2",
+      "definitionId": "circuit.wire",
+      "position": {
+        "x": 10.575,
+        "y": 5.25
+      },
+      "rotation": 2.594804,
+      "parameters": {
+        "locked": true,
+        "length": 1.346291
+      }
+    },
+    {
+      "id": "w3",
+      "definitionId": "circuit.wire",
+      "position": {
+        "x": 8.85,
+        "y": 6
+      },
+      "rotation": 2.289626,
+      "parameters": {
+        "locked": true,
+        "length": 1.063015
+      }
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "MUSIC_DURATION",
+      "seconds": 20,
+      "minNotes": 10,
+      "minCauses": 2
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "music.jam",
+      "conceptId": "music.jam",
+      "eventKind": "NOTE_PLAYED",
+      "minimumCount": 1,
+      "truthContractId": "truth.music.v1"
+    }
+  ],
+  "hints": [
+    "A jam needs more than one kind of music-maker, playing on and on.",
+    "Something turning, and something electric, both keeping time."
+  ],
+  "narrationCues": [
+    "The Grand Workshop Jam! Make music from more than one kind of machine — and keep it going for 20 seconds."
+  ]
+}

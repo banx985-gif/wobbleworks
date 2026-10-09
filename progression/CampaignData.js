@@ -187,4 +187,13 @@ export const SCIENCE_FAIR = { id: "science-fair", title: "Science Fair", concept
         ["fair.motion-makers", "Fair 1 — Motion Makers"], ["fair.strong-and-powered", "Fair 2 — Strong & Powered"], ["fair.water-and-air-show", "Fair 3 — Water & Air Show"],
         ["fair.smart-machines", "Fair 4 — Smart Machines"], ["fair.anything-goes", "Fair 5 — Anything Goes"]
     ].map(([id, title]) => ({ id: id, title: title, slot: "CHALLENGE", objective: "A Science Fair.", requiredForProgression: false })) };
-export const CREATIVE_MODES = [CHAIN_WORKSHOP, EXPERIMENT_LAB, FREE_BUILD_ROOMS, CHALLENGE_LAB, CONTRACT_BOARD, SCIENCE_FAIR];
+/** Creature & Music Machines (M29): the 12 locked challenges (rules in content/creature, unlocks in src/creatures/CreatureMusic.ts). */
+export const CREATURE_MUSIC = { id: "creature-music", title: "Creature & Music Machines", concepts: "Walking, hopping, flapping — and music", colour: "#b197fc", icon: "🦖", missions: [
+        ["creature.hopping-frog", "Hopping Frog", "Build a spring/hinge creature that crosses the short course."], ["creature.flapping-bird", "Flapping Bird", "Build a mechanically flapping display that remains stable for the test window."],
+        ["creature.crab-grabber", "Crab Grabber", "Build a sideways-moving or articulated machine that picks up a target."], ["creature.crawling-bug", "Crawling Bug", "Build a multi-joint crawler that reaches the goal zone."],
+        ["creature.spider-walker", "Spider Walker", "Build an articulated walker using repeated leg mechanisms."], ["creature.dinosaur-walker", "Dinosaur Walker", "Build a large themed walker that carries a payload."],
+        ["music.three-note-machine", "Three-Note Machine", "Trigger three tone/bell parts in order."], ["music.drum-loop", "Drum Loop", "Create a repeating rhythm with timed logic/mechanical triggers."],
+        ["music.mechanical-melody", "Mechanical Melody", "Play a five-event sequence using at least three instrument families."], ["music.water-chimes", "Water Chimes", "Use water/mechanical motion to trigger chimes."],
+        ["music.robot-band", "Robot Band", "Coordinate robot logic with multiple instrument outputs."], ["music.grand-workshop-jam", "Grand Workshop Jam", "Create a multi-domain music machine that plays for 20 seconds."]
+    ].map(([id, title, objective]) => ({ id: id, title: title, slot: "CHALLENGE", objective: objective, requiredForProgression: false })) };
+export const CREATIVE_MODES = [CHAIN_WORKSHOP, EXPERIMENT_LAB, FREE_BUILD_ROOMS, CHALLENGE_LAB, CONTRACT_BOARD, SCIENCE_FAIR, CREATURE_MUSIC];

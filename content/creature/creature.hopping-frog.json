@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "id": "creature.hopping-frog",
+  "title": "Hopping Frog",
+  "environmentId": "env.motion-yard",
+  "availablePartIds": [
+    "creature.leg",
+    "creature.big-leg",
+    "creature.spring-leg",
+    "creature.wing",
+    "creature.claw",
+    "creature.segment",
+    "creature.motor",
+    "circuit.battery"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "creature",
+      "definitionId": "creature.body",
+      "position": {
+        "x": 1.8,
+        "y": 7.9
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "creature",
+        "creature.frog"
+      ]
+    },
+    {
+      "id": "pond",
+      "definitionId": "sandbox.water-area",
+      "position": {
+        "x": 7,
+        "y": 8.1
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "width": 4,
+        "height": 0.5
+      }
+    },
+    {
+      "id": "goal",
+      "definitionId": "motion.goal-zone",
+      "position": {
+        "x": 13,
+        "y": 7.6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "zone.far"
+      ]
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "OBJECT_ENTERS_ZONE",
+      "objectTag": "creature",
+      "zoneTag": "zone.far",
+      "radius": 1.2
+    },
+    {
+      "kind": "EVENT_OCCURRED",
+      "eventKind": "CREATURE_HOP"
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "creature.spring",
+      "conceptId": "creature.spring",
+      "eventKind": "CREATURE_HOP",
+      "minimumCount": 1,
+      "truthContractId": "truth.creatures.v1"
+    }
+  ],
+  "hints": [
+    "Frogs don't walk across ponds… what do they do?",
+    "Something springy underneath could push it up and along."
+  ],
+  "narrationCues": [
+    "Help the frog get across the pond to the far side!"
+  ]
+}
