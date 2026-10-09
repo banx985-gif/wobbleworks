@@ -437,7 +437,7 @@ html.high-contrast { --ink:#000; --panel:#fff; --accent:#006b1b; --danger:#a0000
 .prog-empty { color: #495057; font-weight: 700; }
 
 /* Campus story moments (M20): short, skippable, never in the way */
-.story-scene { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: #0b1026cc; padding: 16px; }
+.story-scene { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: #0b1026cc; padding: 16px; }
 .story-scene.hidden { display: none; }
 .story-card { width: min(760px, 100%); background: #fff8e8; border: 5px solid #203040; border-radius: 26px; box-shadow: 0 16px 40px #0007; display: grid; grid-template-columns: 150px 1fr; gap: 16px; padding: 18px; animation: story-in .35s ease-out; }
 .story-card.kind-RECORDING { background: #f3f0ff; } .story-card.kind-BLUEPRINT, .story-card.kind-FINALE { background: #e7f5ff; background-image: linear-gradient(#a5d8ff55 1px, transparent 1px), linear-gradient(90deg, #a5d8ff55 1px, transparent 1px); background-size: 24px 24px; } .story-card.kind-MEMORY { background: #fff3bf; }
@@ -598,3 +598,14 @@ html.high-contrast { --ink:#000; --panel:#fff; --accent:#006b1b; --danger:#a0000
 .creator-badge{align-self:flex-start;background:#d3f9d8;border:2px solid #2b8a3e;border-radius:10px;padding:2px 8px;font-weight:900;font-size:.85rem}
 .creator-room{min-height:72px;font-weight:900}
 .photo-on .creator-panel,.replaying .creator-panel{display:none!important}
+
+/* M32 Grand Invention Hall: the restored hub and the credits */
+.hub-restored { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 1; }
+.hub-restored-banner { position: absolute; left: 38%; top: 1%; width: 24%; padding: 6px 8px; text-align: center; font-weight: 900; font-size: clamp(11px, 1.6vw, 20px); color: #18323f; background: #ffe066; border: 4px solid #18323f; border-radius: 14px; box-shadow: 0 4px 0 #18323f; }
+.hub-restored .confetti { position: absolute; top: -12px; width: 10px; height: 16px; border-radius: 3px; animation: confetti-fall 4.2s linear infinite; }
+@keyframes confetti-fall { from { transform: translateY(0) rotate(0); } to { transform: translateY(620px) rotate(540deg); } }
+@media (prefers-reduced-motion: reduce) { .hub-restored .confetti { animation: none; display: none; } }
+.reduced-motion .hub-restored .confetti { display: none; }
+.story-card.kind-CREDITS { background: #18323f; color: #fff9db; text-align: center; }
+.story-card.kind-CREDITS #story-title { color: #ffe066; font-size: 1.6em; }
+.story-card.kind-CREDITS #story-kicker, .story-card.kind-CREDITS #story-speaker { color: #ffd43b; }

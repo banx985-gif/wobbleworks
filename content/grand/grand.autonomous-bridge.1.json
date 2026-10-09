@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "id": "grand.autonomous-bridge.1",
+  "title": "Autonomous Bridge Builder — Stage 1 of 2",
+  "environmentId": "env.robot-lab",
+  "availablePartIds": [],
+  "starterParts": [
+    {
+      "id": "bot",
+      "definitionId": "robot.bot",
+      "position": {
+        "x": 2,
+        "y": 5
+      },
+      "rotation": 0,
+      "parameters": {
+        "heading": 0,
+        "program": "[]",
+        "pinned": true
+      },
+      "tags": [
+        "robot"
+      ]
+    },
+    {
+      "id": "box",
+      "definitionId": "robot.box",
+      "position": {
+        "x": 5,
+        "y": 5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "box"
+      ]
+    }
+  ],
+  "starterConnections": [],
+  "staticObjects": [
+    {
+      "id": "drop",
+      "definitionId": "robot.drop",
+      "position": {
+        "x": 10,
+        "y": 5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "drop"
+      ]
+    },
+    {
+      "id": "wall-7-4",
+      "definitionId": "robot.wall",
+      "position": {
+        "x": 7,
+        "y": 4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "wall-7-6",
+      "definitionId": "robot.wall",
+      "position": {
+        "x": 7,
+        "y": 6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    }
+  ],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "outcomeRules": [
+    {
+      "kind": "BOX_AT",
+      "boxTag": "box",
+      "zoneTag": "drop"
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "robot.actuator",
+      "conceptId": "robot.actuator",
+      "eventKind": "BOX_GRABBED",
+      "minimumCount": 1,
+      "truthContractId": "truth.robotics.v1"
+    }
+  ],
+  "hints": [
+    "The gripper grabs whatever is right in front.",
+    "Grab, carry, drop — and drop needs an empty square in front."
+  ],
+  "narrationCues": [
+    "Program the robot to carry the box over.",
+    "Deliver the box to the drop zone. The robot's gripper can grab and drop."
+  ]
+}

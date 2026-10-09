@@ -196,4 +196,11 @@ export const CREATURE_MUSIC = { id: "creature-music", title: "Creature & Music M
         ["music.mechanical-melody", "Mechanical Melody", "Play a five-event sequence using at least three instrument families."], ["music.water-chimes", "Water Chimes", "Use water/mechanical motion to trigger chimes."],
         ["music.robot-band", "Robot Band", "Coordinate robot logic with multiple instrument outputs."], ["music.grand-workshop-jam", "Grand Workshop Jam", "Create a multi-domain music machine that plays for 20 seconds."]
     ].map(([id, title, objective]) => ({ id: id, title: title, slot: "CHALLENGE", objective: objective, requiredForProgression: false })) };
+/** Grand Invention Hall (M32): the campaign finale's 12 locked challenges (stages and rules in src/grand/GrandHall.ts). */
+export const GRAND_HALL = { id: "grand-invention-hall", title: "Grand Invention Hall", concepts: "Everything you've learned, all at once", colour: "#ffe066", icon: "🏛️", missions: [
+        ["grand.ultimate-delivery", "Ultimate Delivery Machine"], ["grand.three-system-rescue", "Three-System Rescue"], ["grand.egg-extreme", "Keep the Egg Safe — Extreme"],
+        ["grand.power-saving-factory", "The Power-Saving Factory"], ["grand.magnetic-water-lift", "Magnetic Water Lift"], ["grand.autonomous-bridge", "Autonomous Bridge Builder"],
+        ["grand.flight-robot-relay", "Flight + Robot Relay"], ["grand.great-bell-machine", "The Great Bell Machine"], ["grand.bolt-rescue", "Bolt Rescue"],
+        ["grand.sprockets-shortcut", "Sprocket's Impossible Shortcut"], ["grand.giant-chain-reaction", "The Giant Chain Reaction"], ["grand.great-wobbleworks-machine", "The Great WobbleWorks Machine"]
+    ].map(([id, title]) => ({ id: id, title: title, slot: "CHALLENGE", objective: "A Grand Hall challenge.", requiredForProgression: false })) };
 export const CREATIVE_MODES = [CHAIN_WORKSHOP, EXPERIMENT_LAB, FREE_BUILD_ROOMS, CHALLENGE_LAB, CONTRACT_BOARD, SCIENCE_FAIR, CREATURE_MUSIC];

@@ -57,6 +57,8 @@ function evaluateChainRule(rule, build, runtime) {
 export function evaluateOutcomeRule(rule, build, runtime) {
     if (rule.kind === "ELAPSED_AT_LEAST")
         return runtime.elapsedTime >= rule.seconds;
+    if (rule.kind === "ELAPSED_AT_MOST")
+        return runtime.elapsedTime <= rule.seconds;
     if (rule.kind === "OBJECT_ENTERS_ZONE") {
         const objects = tagged(build, rule.objectTag), zones = tagged(build, rule.zoneTag);
         return objects.some(object => zones.some(zone => {

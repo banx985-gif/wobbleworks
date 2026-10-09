@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 1,
+  "id": "grand.great-wobbleworks-machine.9",
+  "title": "The Great WobbleWorks Machine — Stage 9 of 10",
+  "environmentId": "env.space-centre",
+  "availablePartIds": [
+    "space.fins",
+    "space.nose-cone"
+  ],
+  "starterParts": [
+    {
+      "id": "rocket",
+      "definitionId": "space.rocket",
+      "position": {
+        "x": 8,
+        "y": 7.35
+      },
+      "rotation": 0,
+      "parameters": {
+        "pinned": true
+      },
+      "tags": [
+        "rocket"
+      ]
+    },
+    {
+      "id": "booster",
+      "definitionId": "space.booster",
+      "position": {
+        "x": 8,
+        "y": 8.3
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "nose",
+      "definitionId": "space.nose-cone",
+      "position": {
+        "x": 8,
+        "y": 6.4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    }
+  ],
+  "starterConnections": [],
+  "staticObjects": [
+    {
+      "id": "earth",
+      "definitionId": "space.gravity-zone",
+      "position": {
+        "x": 8,
+        "y": 4.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "width": 16,
+        "g": 9.81,
+        "air": true,
+        "label": "EARTH"
+      }
+    },
+    {
+      "id": "pad",
+      "definitionId": "space.launch-pad",
+      "position": {
+        "x": 8,
+        "y": 8.25
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "gust",
+      "definitionId": "flight.fan",
+      "position": {
+        "x": 5.6,
+        "y": 4.6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "ring-1",
+      "definitionId": "flight.hoop",
+      "position": {
+        "x": 8,
+        "y": 5.6
+      },
+      "rotation": 1.570796,
+      "parameters": {
+        "locked": true,
+        "height": 1.6
+      },
+      "tags": [
+        "corridor"
+      ]
+    },
+    {
+      "id": "ring-2",
+      "definitionId": "flight.hoop",
+      "position": {
+        "x": 8,
+        "y": 3.8
+      },
+      "rotation": 1.570796,
+      "parameters": {
+        "locked": true,
+        "height": 1.6
+      },
+      "tags": [
+        "corridor"
+      ]
+    },
+    {
+      "id": "ring-3",
+      "definitionId": "flight.hoop",
+      "position": {
+        "x": 8,
+        "y": 1.8
+      },
+      "rotation": 1.570796,
+      "parameters": {
+        "locked": true,
+        "height": 1.6
+      },
+      "tags": [
+        "corridor"
+      ]
+    }
+  ],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "outcomeRules": [
+    {
+      "kind": "GATES_PASSED",
+      "craftTag": "rocket",
+      "gateTag": "corridor"
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "space.fins",
+      "conceptId": "space.fins",
+      "eventKind": "ROCKET_STRAIGHT",
+      "minimumCount": 1,
+      "truthContractId": "truth.space.v1"
+    }
+  ],
+  "hints": [
+    "TEST it: what happens when the gust hits?",
+    "Arrows fly straight because of the feathers at the back."
+  ],
+  "narrationCues": [
+    "Space! Launch it straight up.",
+    "Launch the test rocket straight up through all three rings — even with the gust machine blowing!"
+  ]
+}

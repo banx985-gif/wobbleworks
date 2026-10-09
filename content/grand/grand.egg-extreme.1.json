@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "id": "grand.egg-extreme.1",
+  "title": "Keep the Egg Safe — Extreme — Stage 1 of 2",
+  "environmentId": "env.flight-hangar",
+  "availablePartIds": [
+    "flight.parachute",
+    "flight.balloon",
+    "flight.wing-small"
+  ],
+  "starterParts": [
+    {
+      "id": "pod",
+      "definitionId": "flight.cargo",
+      "position": {
+        "x": 8,
+        "y": 1.4
+      },
+      "rotation": 0,
+      "parameters": {},
+      "tags": [
+        "cargo"
+      ]
+    }
+  ],
+  "starterConnections": [],
+  "staticObjects": [
+    {
+      "id": "pad",
+      "definitionId": "motion.goal-zone",
+      "position": {
+        "x": 8,
+        "y": 8
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "zone.pad"
+      ]
+    }
+  ],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "outcomeRules": [
+    {
+      "kind": "SAFE_LANDING",
+      "objectTag": "cargo",
+      "maxImpact": 3,
+      "minElapsed": 1
+    },
+    {
+      "kind": "OBJECT_ENTERS_ZONE",
+      "objectTag": "cargo",
+      "zoneTag": "zone.pad",
+      "radius": 0.9
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "flight.drag",
+      "conceptId": "flight.drag",
+      "eventKind": "LANDING",
+      "minimumCount": 1,
+      "truthContractId": "truth.flight.v1"
+    }
+  ],
+  "hints": [
+    "It falls faster and faster. What could slow it down on the way?",
+    "Catching lots of air slows a fall."
+  ],
+  "narrationCues": [
+    "Drop number one: bring it down gently!",
+    "The supply pod is dropping onto the landing pad. Make sure it lands softly!"
+  ]
+}

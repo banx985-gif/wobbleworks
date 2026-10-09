@@ -1,6 +1,6 @@
 import { activeProfile, updateProfile, newId, MAX_FAIR_ENTRIES } from "../app/AppState.js";
-import { clearedLabIds, ownsFullGame } from "../progression/Campus.js";
-import { MAIN_LABS, SCIENCE_FAIR } from "../progression/CampaignData.js";
+import { campaignComplete, clearedLabIds, ownsFullGame } from "../progression/Campus.js";
+import { SCIENCE_FAIR } from "../progression/CampaignData.js";
 import { personalityLabel } from "../challenge/Challenges.js";
 import { VISITORS } from "../contracts/Contracts.js";
 export const SCIENCE_FAIRS = [
@@ -21,8 +21,11 @@ export function fairOpen(save, id) {
     const f = fairById(id);
     if (!f || !activeProfile(save) || !ownsFullGame(save.entitlement))
         return false;
+    // "ALL" is the post-campaign fair: it opens when the whole campus is restored (M32).
+    if (f.unlock === "ALL")
+        return campaignComplete(save);
     const cleared = clearedLabIds(save);
-    return (f.unlock === "ALL" ? MAIN_LABS.map(l => l.id) : f.unlock).every(l => cleared.includes(l));
+    return f.unlock.every(l => cleared.includes(l));
 }
 export function scienceFairOpen(save) { return SCIENCE_FAIRS.some(f => fairOpen(save, f.id)); }
 export function domainOf(definitionId) {

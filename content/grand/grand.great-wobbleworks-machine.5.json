@@ -1,0 +1,231 @@
+{
+  "schemaVersion": 1,
+  "id": "grand.great-wobbleworks-machine.5",
+  "title": "The Great WobbleWorks Machine — Stage 5 of 10",
+  "environmentId": "env.magnet-factory",
+  "availablePartIds": [
+    "circuit.wire",
+    "gear.belt-pulley",
+    "magnetic.bar"
+  ],
+  "starterParts": [
+    {
+      "id": "iron-1",
+      "definitionId": "scrap.iron-block",
+      "position": {
+        "x": 6,
+        "y": 7.85
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "metal"
+      ]
+    },
+    {
+      "id": "can",
+      "definitionId": "scrap.aluminium-can",
+      "position": {
+        "x": 6.8,
+        "y": 7.82
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "nonmetal"
+      ]
+    },
+    {
+      "id": "iron-2",
+      "definitionId": "scrap.iron-block",
+      "position": {
+        "x": 7.6,
+        "y": 7.85
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "metal"
+      ]
+    },
+    {
+      "id": "wood",
+      "definitionId": "scrap.wood-block",
+      "position": {
+        "x": 8.4,
+        "y": 7.85
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "nonmetal"
+      ]
+    }
+  ],
+  "starterConnections": [],
+  "staticObjects": [
+    {
+      "id": "motor",
+      "definitionId": "gear.motor",
+      "position": {
+        "x": 2.5,
+        "y": 5.5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "driver.motor"
+      ]
+    },
+    {
+      "id": "drum",
+      "definitionId": "gear.conveyor-drum",
+      "position": {
+        "x": 5.2,
+        "y": 7.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "drives": "belt"
+      }
+    },
+    {
+      "id": "belt",
+      "definitionId": "motion.conveyor",
+      "position": {
+        "x": 8,
+        "y": 8.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "belt"
+      ]
+    },
+    {
+      "id": "battery",
+      "definitionId": "circuit.battery",
+      "position": {
+        "x": 9.6,
+        "y": 4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "button",
+      "definitionId": "circuit.button",
+      "position": {
+        "x": 11.2,
+        "y": 4.4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "pressFrom": 6,
+        "pressTo": 11.5
+      },
+      "tags": [
+        "control.crane"
+      ]
+    },
+    {
+      "id": "magnet",
+      "definitionId": "magnetic.electromagnet",
+      "position": {
+        "x": 11.4,
+        "y": 7.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "trackFrom": 11.4,
+        "trackTo": 14.6,
+        "trackStart": 8.5,
+        "trackEnd": 10.5
+      },
+      "tags": [
+        "crane"
+      ]
+    },
+    {
+      "id": "hopper",
+      "definitionId": "motion.goal-zone",
+      "position": {
+        "x": 11.6,
+        "y": 8
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "bin.other"
+      ]
+    },
+    {
+      "id": "bin-metal",
+      "definitionId": "motion.goal-zone",
+      "position": {
+        "x": 14.6,
+        "y": 8
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "bin.metal"
+      ]
+    }
+  ],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "outcomeRules": [
+    {
+      "kind": "ALL_IN_ZONE",
+      "objectTag": "metal",
+      "zoneTag": "bin.metal",
+      "radius": 1
+    },
+    {
+      "kind": "ALL_IN_ZONE",
+      "objectTag": "nonmetal",
+      "zoneTag": "bin.other",
+      "radius": 1.5
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "magnet.electromagnet",
+      "conceptId": "magnet.electromagnet",
+      "eventKind": "ELECTROMAGNET_ON",
+      "minimumCount": 1,
+      "truthContractId": "truth.magnetism.v1"
+    }
+  ],
+  "hints": [
+    "Three jobs: get the belt moving, wire the crane, check what goes where.",
+    "The crane magnet lifts out only the magnetic scrap."
+  ],
+  "narrationCues": [
+    "Magnets! Sort the scrap.",
+    "The Giant Scrap Sorter! Restore the belt drive and the electromagnet crane so metal and everything else end up in different bins."
+  ]
+}

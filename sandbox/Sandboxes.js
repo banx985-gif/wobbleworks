@@ -1,6 +1,5 @@
 import { activeProfile } from "../app/AppState.js";
-import { MAIN_LABS } from "../progression/CampaignData.js";
-import { clearedLabIds, ownsFullGame } from "../progression/Campus.js";
+import { campaignComplete, clearedLabIds, ownsFullGame } from "../progression/Campus.js";
 export const CAMPAIGN_PART_CAP = 80;
 export const SANDBOX_PART_CAP = 120;
 export const EVERYTHING_PART_CAP = 180;
@@ -34,7 +33,8 @@ export function sandboxOpen(save, id) {
     if (!ownsFullGame(save.entitlement))
         return false;
     const cleared = new Set(clearedLabIds(save));
-    return s.needs === "ALL" ? MAIN_LABS.every(l => cleared.has(l.id)) : !s.needs || cleared.has(s.needs);
+    // The Everything Lab is the campaign's reward: it opens when the Great WobbleWorks Machine runs (M32).
+    return s.needs === "ALL" ? campaignComplete(save) : !s.needs || cleared.has(s.needs);
 }
 /** The locked sandbox spawn catalogue (§16): every object type maps to a real part. */
 export const SPAWN_CATALOGUE = [

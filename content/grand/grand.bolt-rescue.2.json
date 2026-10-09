@@ -1,0 +1,297 @@
+{
+  "schemaVersion": 1,
+  "id": "grand.bolt-rescue.2",
+  "title": "Bolt Rescue — Stage 2 of 2",
+  "environmentId": "env.builder-bay",
+  "availablePartIds": [
+    "builder.beam-wood",
+    "builder.beam-metal",
+    "builder.brace",
+    "builder.column",
+    "builder.rope"
+  ],
+  "starterParts": [
+    {
+      "id": "roof-1",
+      "definitionId": "builder.beam-metal",
+      "position": {
+        "x": 3.5,
+        "y": 4.5
+      },
+      "rotation": 0,
+      "parameters": {
+        "length": 3,
+        "locked": true
+      },
+      "tags": []
+    },
+    {
+      "id": "roof-2",
+      "definitionId": "builder.beam-wood",
+      "position": {
+        "x": 6.5,
+        "y": 4.5
+      },
+      "rotation": 0,
+      "parameters": {
+        "length": 3,
+        "damage": 0.5
+      },
+      "tags": [
+        "cracked"
+      ]
+    },
+    {
+      "id": "roof-3",
+      "definitionId": "builder.beam-metal",
+      "position": {
+        "x": 9.5,
+        "y": 4.5
+      },
+      "rotation": 0,
+      "parameters": {
+        "length": 3,
+        "locked": true
+      },
+      "tags": []
+    },
+    {
+      "id": "roof-4",
+      "definitionId": "builder.beam-metal",
+      "position": {
+        "x": 12.5,
+        "y": 4.5
+      },
+      "rotation": 0,
+      "parameters": {
+        "length": 3,
+        "locked": true
+      },
+      "tags": []
+    },
+    {
+      "id": "brace-l",
+      "definitionId": "builder.brace",
+      "position": {
+        "x": 3.5,
+        "y": 5.25
+      },
+      "rotation": -0.463648,
+      "parameters": {
+        "length": 3.354102,
+        "locked": true
+      },
+      "tags": []
+    },
+    {
+      "id": "brace-r",
+      "definitionId": "builder.brace",
+      "position": {
+        "x": 12.5,
+        "y": 5.25
+      },
+      "rotation": -2.677945,
+      "parameters": {
+        "length": 3.354102,
+        "locked": true
+      },
+      "tags": []
+    }
+  ],
+  "starterConnections": [],
+  "staticObjects": [
+    {
+      "id": "wall-l",
+      "definitionId": "builder.cliff",
+      "position": {
+        "x": 1.75,
+        "y": 3.85
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "width": 0.5,
+        "height": 4.7
+      },
+      "tags": [
+        "ground"
+      ]
+    },
+    {
+      "id": "wall-r",
+      "definitionId": "builder.cliff",
+      "position": {
+        "x": 14.25,
+        "y": 3.85
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "width": 0.5,
+        "height": 4.7
+      },
+      "tags": [
+        "ground"
+      ]
+    },
+    {
+      "id": "a-l",
+      "definitionId": "builder.anchor",
+      "position": {
+        "x": 2,
+        "y": 4.5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "anchor"
+      ]
+    },
+    {
+      "id": "a-r",
+      "definitionId": "builder.anchor",
+      "position": {
+        "x": 14,
+        "y": 4.5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "anchor"
+      ]
+    },
+    {
+      "id": "a-l2",
+      "definitionId": "builder.anchor",
+      "position": {
+        "x": 2,
+        "y": 6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "anchor"
+      ]
+    },
+    {
+      "id": "a-r2",
+      "definitionId": "builder.anchor",
+      "position": {
+        "x": 14,
+        "y": 6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "anchor"
+      ]
+    },
+    {
+      "id": "snow-1",
+      "definitionId": "builder.sandbag",
+      "position": {
+        "x": 3.5,
+        "y": 3.5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "startAt": 1.5,
+        "weight": 4
+      },
+      "tags": [
+        "load.snow"
+      ]
+    },
+    {
+      "id": "snow-2",
+      "definitionId": "builder.sandbag",
+      "position": {
+        "x": 6.5,
+        "y": 3.5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "startAt": 3,
+        "weight": 4
+      },
+      "tags": [
+        "load.snow"
+      ]
+    },
+    {
+      "id": "snow-3",
+      "definitionId": "builder.sandbag",
+      "position": {
+        "x": 12.5,
+        "y": 3.5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "startAt": 4.5,
+        "weight": 4
+      },
+      "tags": [
+        "load.snow"
+      ]
+    },
+    {
+      "id": "cart",
+      "definitionId": "builder.cart",
+      "position": {
+        "x": 0.6,
+        "y": 8.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "endX": 15,
+        "delay": 3
+      },
+      "tags": [
+        "walker.cart"
+      ]
+    }
+  ],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "outcomeRules": [
+    {
+      "kind": "STRUCT_ARRIVES",
+      "travellerTag": "walker.cart"
+    },
+    {
+      "kind": "STRUCT_STABLE",
+      "maxWobble": 0.12,
+      "sustainSeconds": 1
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "structure.brace",
+      "conceptId": "structure.brace",
+      "eventKind": "STRUCT_COLLAPSE",
+      "minimumCount": 1,
+      "truthContractId": "truth.structures.v1"
+    }
+  ],
+  "hints": [
+    "TEST it and watch: where does the roof give way first?",
+    "A cracked beam is weaker. And the middle needs triangles too."
+  ],
+  "narrationCues": [
+    "Quick, hold the roof up before it falls!",
+    "EMERGENCY! Snow on the roof, a cracked beam, and the equipment cart has to get through!"
+  ]
+}

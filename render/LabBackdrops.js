@@ -259,6 +259,47 @@ T["crazy-lab"] = { title: "CRAZY LAB", top: "#f3d9fa", bottom: "#e5dbff", wall: 
         c.fill();
     } } };
 T["everything-lab"] = { title: "EVERYTHING LAB", top: "#fff3bf", bottom: "#d3f9d8", wall: "#f8f9fa", floor: "#495057", accent: "#f76707", motif: c => { const cols = ["#ff8787", "#ffa94d", "#ffd43b", "#69db7c", "#4dabf7", "#9775fa", "#f783ac", "#63e6be", "#adb5bd"]; cols.forEach((col, i) => { c.fillStyle = col; c.fillRect(0, 140 + i * 62, 1600, 30); }); c.fillStyle = "#ffffffcc"; c.fillRect(0, 130, 1600, 570); } };
+/** Grand Invention Hall (M32): marble columns, golden arches, the nine lab banners and the great machine's gears turning high up. */
+T["grand-invention-hall"] = { title: "GRAND INVENTION HALL", top: "#fff9db", bottom: "#ffec99", wall: "#fff3bf", floor: "#9c7b4a", accent: "#fab005", motif: (c, t) => {
+        c.fillStyle = "#ffe8a3";
+        for (let x = 0; x < 1600; x += 320) {
+            c.beginPath();
+            c.moveTo(x, 700);
+            c.lineTo(x, 330);
+            c.arc(x + 160, 330, 160, Math.PI, 0);
+            c.lineTo(x + 320, 700);
+            c.closePath();
+            c.fill();
+        }
+        c.fillStyle = "#f8f0dc";
+        c.strokeStyle = "#d9c79f";
+        c.lineWidth = 4;
+        for (let x = 0; x <= 1600; x += 320) {
+            c.fillRect(x - 26, 180, 52, 520);
+            c.strokeRect(x - 26, 180, 52, 520);
+            c.fillRect(x - 40, 166, 80, 22);
+        }
+        const banners = ["#ff8787", "#ffa94d", "#ffd43b", "#69db7c", "#9775fa", "#4dabf7", "#74c0fc", "#38d9a9", "#495057"];
+        banners.forEach((col, i) => { const x = 110 + i * 160, sway = Math.sin(t * 1.5 + i) * 3; c.fillStyle = col; c.beginPath(); c.moveTo(x, 200); c.lineTo(x + 56, 200); c.lineTo(x + 56, 300 + sway); c.lineTo(x + 28, 280 + sway); c.lineTo(x, 300 + sway); c.closePath(); c.fill(); });
+        c.globalAlpha = 0.22;
+        c.strokeStyle = "#e67700";
+        c.lineWidth = 10;
+        for (const [gx, gy, r, dir] of [[560, 150, 60, 1], [680, 150, 44, -1.36], [1040, 150, 60, -1], [920, 150, 44, 1.36]]) {
+            c.save();
+            c.translate(gx, gy);
+            c.rotate(t * 0.6 * dir);
+            c.beginPath();
+            c.arc(0, 0, r, 0, Math.PI * 2);
+            c.stroke();
+            for (let k = 0; k < 8; k++) {
+                c.rotate(Math.PI / 4);
+                c.fillStyle = "#e67700";
+                c.fillRect(r - 4, -7, 16, 14);
+            }
+            c.restore();
+        }
+        c.globalAlpha = 1;
+    } };
 export function hasLabBackdrop(labId) { return labId in THEMES; }
 export function drawLabBackdrop(c, labId, time) {
     const th = THEMES[labId];

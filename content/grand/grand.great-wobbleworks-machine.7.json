@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "id": "grand.great-wobbleworks-machine.7",
+  "title": "The Great WobbleWorks Machine — Stage 7 of 10",
+  "environmentId": "env.flight-hangar",
+  "availablePartIds": [
+    "flight.wing-small",
+    "flight.wing-large",
+    "flight.tail",
+    "flight.propeller",
+    "flight.power-pack",
+    "flight.parachute",
+    "flight.nose-weight"
+  ],
+  "starterParts": [
+    {
+      "id": "flyer",
+      "definitionId": "flight.glider",
+      "position": {
+        "x": 2,
+        "y": 4.29
+      },
+      "rotation": 0,
+      "parameters": {
+        "initialVx": 3
+      },
+      "tags": [
+        "craft"
+      ]
+    }
+  ],
+  "starterConnections": [],
+  "staticObjects": [
+    {
+      "id": "cliff-l",
+      "definitionId": "flight.cliff",
+      "position": {
+        "x": 1.5,
+        "y": 6.4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "cliff-r",
+      "definitionId": "flight.cliff",
+      "position": {
+        "x": 11.6,
+        "y": 7.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "cliff-r2",
+      "definitionId": "flight.cliff",
+      "position": {
+        "x": 14.6,
+        "y": 7.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "payload",
+      "definitionId": "flight.payload",
+      "position": {
+        "x": 2,
+        "y": 4.61
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "gate",
+      "definitionId": "flight.hoop",
+      "position": {
+        "x": 7,
+        "y": 4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "gate"
+      ]
+    },
+    {
+      "id": "pad",
+      "definitionId": "motion.goal-zone",
+      "position": {
+        "x": 13.4,
+        "y": 5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "zone.far"
+      ]
+    }
+  ],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "outcomeRules": [
+    {
+      "kind": "GATES_PASSED",
+      "craftTag": "craft",
+      "gateTag": "gate"
+    },
+    {
+      "kind": "OBJECT_ENTERS_ZONE",
+      "objectTag": "craft",
+      "zoneTag": "zone.far",
+      "radius": 2
+    },
+    {
+      "kind": "SAFE_LANDING",
+      "objectTag": "craft",
+      "maxImpact": 4
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "flight.thrust",
+      "conceptId": "flight.thrust",
+      "eventKind": "PROPELLER_THRUST",
+      "minimumCount": 1,
+      "truthContractId": "truth.flight.v1"
+    }
+  ],
+  "hints": [
+    "Three jobs: get across, go through the gate, land gently.",
+    "Every system you've learned in this hangar is needed."
+  ],
+  "narrationCues": [
+    "Air! Fly the canyon.",
+    "The Canyon Flyer! Build a machine that carries the payload over the workshop canyon, through the gate, and lands softly on the far side."
+  ]
+}

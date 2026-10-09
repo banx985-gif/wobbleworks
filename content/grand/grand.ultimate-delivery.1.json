@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "id": "grand.ultimate-delivery.1",
+  "title": "Ultimate Delivery Machine — Stage 1 of 3",
+  "environmentId": "env.motion-yard",
+  "availablePartIds": [
+    "motion.ramp",
+    "motion.spring",
+    "motion.roller",
+    "structure.block",
+    "motion.friction-low"
+  ],
+  "starterParts": [
+    {
+      "id": "marble",
+      "definitionId": "motion.marble",
+      "position": {
+        "x": 2,
+        "y": 3
+      },
+      "rotation": 0,
+      "parameters": {},
+      "tags": [
+        "subject.marble"
+      ]
+    }
+  ],
+  "starterConnections": [],
+  "staticObjects": [
+    {
+      "id": "goal",
+      "definitionId": "motion.goal-zone",
+      "position": {
+        "x": 13.1,
+        "y": 7.55
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "zone.delivery"
+      ]
+    }
+  ],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "outcomeRules": [
+    {
+      "kind": "OBJECT_ENTERS_ZONE",
+      "objectTag": "subject.marble",
+      "zoneTag": "zone.delivery",
+      "radius": 1
+    },
+    {
+      "kind": "MECHANISM_FAMILY_COUNT",
+      "definitionIds": [
+        "motion.ramp",
+        "motion.spring",
+        "motion.roller",
+        "motion.friction-low"
+      ],
+      "minimum": 2
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "mega-slope-evidence",
+      "conceptId": "motion.systems",
+      "eventKind": "PHYSICS_CONTACT",
+      "minimumCount": 2,
+      "truthContractId": "truth.motion.v1"
+    }
+  ],
+  "hints": [
+    "This one wants stages. Use at least two different Motion mechanisms.",
+    "TEST each stage, then connect the whole route."
+  ],
+  "narrationCues": [
+    "First, the giant marble has to roll all the way to the bin!",
+    "Big machine time. One marble. Entire yard. No pressure."
+  ]
+}

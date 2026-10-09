@@ -1,12 +1,12 @@
 import { activeProfile, MAX_PROFILES } from "../app/AppState.js";
 import { MAIN_LABS } from "../progression/CampaignData.js";
-import { CAMPUS_REGIONS, regionStatus } from "../progression/Campus.js";
+import { CAMPUS_REGIONS, campaignComplete, regionStatus } from "../progression/Campus.js";
 import { labCompletionCount } from "../progression/LabProgression.js";
 import { lockerItems, progressSummary } from "../progression/ProgressionManager.js";
 import { hubFeatures, restorationStage, dueVisitors, restorationProps } from "../progression/Restoration.js";
 import { REWARDS, rewardById, MISSION_STARS } from "../progression/Rewards.js";
 import { renderLook } from "../inventor/LookView.js";
-import { CENTRAL_MACHINE_SYSTEMS, collectedStory } from "../story/CampusStory.js";
+import { CENTRAL_MACHINE_SYSTEMS, CREDITS, ENDING_SCENES, collectedStory } from "../story/CampusStory.js";
 import { dueContractVisitors, openJobs } from "../contracts/Contracts.js";
 /**
  * The look to draw: the maker look, wearing whatever the locker has equipped in the avatar slot when that
@@ -246,6 +246,20 @@ export function renderHub(root, save, cb) {
         box.append(hubProp(d.id));
         scene.append(box);
     }
+    // The whole campus restored (M32): the hub celebrates — bunting, a banner and confetti.
+    if (features.includes("campus-restored")) {
+        const party = el("div", "hub-restored");
+        party.setAttribute("aria-hidden", "true");
+        party.append(el("div", "hub-restored-banner", "🎉 WOBBLEWORKS RESTORED! 🎉"));
+        for (let i = 0; i < 18; i++) {
+            const bit = el("span", "confetti");
+            bit.style.left = `${(i * 37) % 100}%`;
+            bit.style.animationDelay = `${(i % 6) * 0.7}s`;
+            bit.style.background = ["#ff8787", "#ffd43b", "#69db7c", "#4dabf7", "#da77f2"][i % 5];
+            party.append(bit);
+        }
+        scene.append(party);
+    }
     for (const s of stations) {
         const b = el("button", `hub-station station-${s.id}`);
         b.style.left = `${s.x}%`;
@@ -443,6 +457,7 @@ function storyBook(save, cb) {
         return wrap;
     };
     book.append(list("Old inventor recordings", c.recordings, "Finish a lab's Mega Build to find its recording."), list("Bolt's memories", c.memories, "Restore a lab to help Bolt remember."));
+    book.append(list("The ending", campaignComplete(save) ? [...ENDING_SCENES, CREDITS] : [], "Run the Great WobbleWorks Machine in the Grand Invention Hall."));
     return book;
 }
 export function renderShelf(root, save, cb) {

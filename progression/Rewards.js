@@ -274,7 +274,20 @@ export const REWARDS = [
     // hidden prototype lab key pieces — one from a silly mission in each of the first three labs (exploration, never stars)
     { id: "key.prototype-1", kind: "KEY_PIECE", title: "Strange Key Piece", icon: "🗝️", description: "A piece of something. It hums." },
     { id: "key.prototype-2", kind: "KEY_PIECE", title: "Another Strange Key Piece", icon: "🗝️", description: "It fits the first one. Sort of." },
-    { id: "key.prototype-3", kind: "KEY_PIECE", title: "Last Strange Key Piece", icon: "🗝️", description: "Somewhere, a door is waiting." }
+    { id: "key.prototype-3", kind: "KEY_PIECE", title: "Last Strange Key Piece", icon: "🗝️", description: "Somewhere, a door is waiting." },
+    // Grand Invention Hall (M32): a sticker per challenge, and the finale's badge (it marks the campaign complete).
+    { id: "sticker.grand-ultimate-delivery", kind: "STICKER", title: "Ultimate Deliverer", icon: "📦", description: "Grand Invention Hall: Three deliveries, three ways." },
+    { id: "sticker.grand-three-system-rescue", kind: "STICKER", title: "Triple Rescuer", icon: "🛟", description: "Grand Invention Hall: Gears, a bridge and a ramp to the rescue." },
+    { id: "sticker.grand-egg-extreme", kind: "STICKER", title: "Egg Guardian", icon: "🥚", description: "Grand Invention Hall: Two drops, not one crack." },
+    { id: "sticker.grand-power-saving-factory", kind: "STICKER", title: "Power Saver", icon: "🔋", description: "Grand Invention Hall: Ran the factory without wasting power." },
+    { id: "sticker.grand-magnetic-water-lift", kind: "STICKER", title: "Magnet & Water Lifter", icon: "🧲", description: "Grand Invention Hall: Lifted with magnets, then with water." },
+    { id: "sticker.grand-autonomous-bridge", kind: "STICKER", title: "Robot Bridge Builder", icon: "🤖", description: "Grand Invention Hall: A robot fetched, a bridge held." },
+    { id: "sticker.grand-flight-robot-relay", kind: "STICKER", title: "Relay Runner", icon: "✈️", description: "Grand Invention Hall: Flew it across, then the robot took over." },
+    { id: "sticker.grand-great-bell-machine", kind: "STICKER", title: "Bell Master", icon: "🔔", description: "Grand Invention Hall: Rang every bell on campus." },
+    { id: "sticker.grand-bolt-rescue", kind: "STICKER", title: "Bolt's Hero", icon: "🦺", description: "Grand Invention Hall: Got Bolt safely off the roof!" },
+    { id: "sticker.grand-sprockets-shortcut", kind: "STICKER", title: "Shortcut Champion", icon: "🐕", description: "Grand Invention Hall: Beat Sprocket's clock." },
+    { id: "sticker.grand-giant-chain-reaction", kind: "STICKER", title: "Giant Chain Maker", icon: "⛓️", description: "Grand Invention Hall: The biggest chain reactions on campus." },
+    { id: "badge.campus-restored", kind: "BADGE", title: "WobbleWorks Restored", icon: "🏛️", description: "The Great WobbleWorks Machine runs — the whole campus is alive again!" }
 ];
 export function rewardById(id) { return REWARDS.find(r => r.id === id); }
 export const MISSION_REWARDS = Object.freeze({
@@ -453,7 +466,19 @@ export const MISSION_REWARDS = Object.freeze({
     "exp.which-wing-flies-farther": { onComplete: ["sticker.exp-wing"] },
     "exp.which-route-is-faster": { onComplete: ["sticker.exp-route"] },
     "exp.bounce-grip-or-slide": { onComplete: ["sticker.exp-bounce", "prop.lab-flask"] },
-    "exp.earth-gravity-vs-moon-gravity": { onComplete: ["sticker.exp-gravity"] }
+    "exp.earth-gravity-vs-moon-gravity": { onComplete: ["sticker.exp-gravity"] },
+    "grand.ultimate-delivery": { onComplete: ["sticker.grand-ultimate-delivery"] },
+    "grand.three-system-rescue": { onComplete: ["sticker.grand-three-system-rescue"] },
+    "grand.egg-extreme": { onComplete: ["sticker.grand-egg-extreme"] },
+    "grand.power-saving-factory": { onComplete: ["sticker.grand-power-saving-factory"] },
+    "grand.magnetic-water-lift": { onComplete: ["sticker.grand-magnetic-water-lift"] },
+    "grand.autonomous-bridge": { onComplete: ["sticker.grand-autonomous-bridge"] },
+    "grand.flight-robot-relay": { onComplete: ["sticker.grand-flight-robot-relay"] },
+    "grand.great-bell-machine": { onComplete: ["sticker.grand-great-bell-machine"] },
+    "grand.bolt-rescue": { onComplete: ["sticker.grand-bolt-rescue"] },
+    "grand.sprockets-shortcut": { onComplete: ["sticker.grand-sprockets-shortcut"] },
+    "grand.giant-chain-reaction": { onComplete: ["sticker.grand-giant-chain-reaction"] },
+    "grand.great-wobbleworks-machine": { onComplete: ["badge.campus-restored"] }
 });
 /** Rewards owed for missions already completed (used when old saves or guest progress move into a profile). */
 export function completionRewardIds(levelIds) {

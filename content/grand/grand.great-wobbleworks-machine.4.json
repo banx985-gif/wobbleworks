@@ -1,0 +1,193 @@
+{
+  "schemaVersion": 1,
+  "id": "grand.great-wobbleworks-machine.4",
+  "title": "The Great WobbleWorks Machine — Stage 4 of 10",
+  "environmentId": "env.power-lab",
+  "availablePartIds": [
+    "circuit.wire",
+    "circuit.splitter"
+  ],
+  "starterParts": [
+    {
+      "id": "bus-n",
+      "definitionId": "circuit.wire",
+      "position": {
+        "x": 7.2,
+        "y": 6.9
+      },
+      "rotation": -1.849096,
+      "parameters": {
+        "length": 1.456022
+      }
+    },
+    {
+      "id": "bus-p",
+      "definitionId": "circuit.wire",
+      "position": {
+        "x": 8.8,
+        "y": 6.9
+      },
+      "rotation": -1.292497,
+      "parameters": {
+        "length": 1.456022,
+        "broken": true
+      }
+    },
+    {
+      "id": "lights-n",
+      "definitionId": "circuit.wire",
+      "position": {
+        "x": 4.65,
+        "y": 4.91
+      },
+      "rotation": -2.639567,
+      "parameters": {
+        "length": 5.361567
+      }
+    },
+    {
+      "id": "siren-p",
+      "definitionId": "circuit.wire",
+      "position": {
+        "x": 11.4,
+        "y": 4.95
+      },
+      "rotation": -0.480175,
+      "parameters": {
+        "length": 5.412024
+      }
+    }
+  ],
+  "starterConnections": [],
+  "staticObjects": [
+    {
+      "id": "battery",
+      "definitionId": "circuit.battery-big",
+      "position": {
+        "x": 8,
+        "y": 7.6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "bus-minus",
+      "definitionId": "circuit.splitter",
+      "position": {
+        "x": 7,
+        "y": 6.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "bus-plus",
+      "definitionId": "circuit.splitter",
+      "position": {
+        "x": 9,
+        "y": 6.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "lights",
+      "definitionId": "circuit.bulb",
+      "position": {
+        "x": 2.5,
+        "y": 3.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "critical"
+      ]
+    },
+    {
+      "id": "fan",
+      "definitionId": "circuit.device",
+      "position": {
+        "x": 5.5,
+        "y": 2.6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "label": "Fan",
+        "icon": "🌀"
+      },
+      "tags": [
+        "critical"
+      ]
+    },
+    {
+      "id": "door",
+      "definitionId": "circuit.device",
+      "position": {
+        "x": 10.5,
+        "y": 2.6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "label": "Door",
+        "icon": "🚪",
+        "ohms": 8
+      },
+      "tags": [
+        "critical"
+      ]
+    },
+    {
+      "id": "siren",
+      "definitionId": "circuit.buzzer",
+      "position": {
+        "x": 13.5,
+        "y": 3.4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "critical"
+      ]
+    }
+  ],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "outcomeRules": [
+    {
+      "kind": "CIRCUIT_POWERED",
+      "targetTag": "critical",
+      "minLevel": 0.4,
+      "sustainSeconds": 2
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "power.parallel",
+      "conceptId": "power.parallel",
+      "eventKind": "CIRCUIT_COMPLETE",
+      "minimumCount": 1,
+      "truthContractId": "truth.electricity.v1"
+    }
+  ],
+  "hints": [
+    "The yellow posts are the main power lines: one for −, one for +.",
+    "Each machine needs a wire to BOTH posts. And check the main lines!"
+  ],
+  "narrationCues": [
+    "Electricity! Power the grid.",
+    "Every lab's power runs through this grid. Reconnect the lights, the fan, the door and the siren!"
+  ]
+}

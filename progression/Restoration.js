@@ -1,6 +1,6 @@
 import { activeProfile, currentOpening } from "../app/AppState.js";
 import { MAIN_LABS } from "./CampaignData.js";
-import { clearedLabIds } from "./Campus.js";
+import { campaignComplete, clearedLabIds } from "./Campus.js";
 export const RESTORATION_ORDER = [
     "DORMANT", "WORKSHOP_AWAKE", "MOTION_RESTORED", "GEARS_TURNING", "STRUCTURES_SOUND", "POWER_ON",
     "MAGNETS_HUMMING", "WATER_FLOWING", "AIR_MOVING", "ROBOTS_ACTIVE", "SPACE_READY", "CAMPUS_RESTORED"
@@ -19,7 +19,7 @@ export const RESTORATION_MOMENTS = Object.freeze({
     AIR_MOVING: { stage: "AIR_MOVING", boltLine: "Planes! Real planes!", change: "Little aircraft loop overhead." },
     ROBOTS_ACTIVE: { stage: "ROBOTS_ACTIVE", boltLine: "New robot friends! Hello! HELLO!", change: "Helper robots roll around the hub." },
     SPACE_READY: { stage: "SPACE_READY", boltLine: "The launch tower is ready. Wow.", change: "A rocket appears through the window." },
-    CAMPUS_RESTORED: { stage: "CAMPUS_RESTORED", boltLine: "We did it. The whole campus is alive again!", change: "Everything runs at once." }
+    CAMPUS_RESTORED: { stage: "CAMPUS_RESTORED", boltLine: "We did it. The whole campus is alive again!", change: "Everything runs at once — and the Everything Lab and the last Science Fair are open!" }
 });
 export function restorationStage(save) {
     if (!currentOpening(save).complete)
@@ -32,8 +32,7 @@ export function restorationStage(save) {
             break;
         stage = STAGE_FOR_LAB[lab.id];
     }
-    const finaleDone = activeProfile(save)?.rewards.includes("badge.campus-restored") ?? false;
-    return finaleDone ? "CAMPUS_RESTORED" : stage;
+    return campaignComplete(save) ? "CAMPUS_RESTORED" : stage;
 }
 export function stageIndex(stage) { return RESTORATION_ORDER.indexOf(stage); }
 /** Restoration moments reached but not yet shown to this profile, oldest first. */
@@ -69,6 +68,8 @@ export function hubFeatures(stage) {
         f.push("robots-visiting");
     if (i >= 10)
         f.push("rocket-visible");
+    if (i >= 11)
+        f.push("campus-restored");
     return f;
 }
 export const VISITOR_HOOKS = [

@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "id": "grand.magnetic-water-lift.2",
+  "title": "Magnetic Water Lift — Stage 2 of 2",
+  "environmentId": "env.water-works",
+  "availablePartIds": [
+    "plumb.pipe",
+    "circuit.wire"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "staticObjects": [
+    {
+      "id": "pond",
+      "definitionId": "plumb.source",
+      "position": {
+        "x": 1.6,
+        "y": 7.4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "head": 0.3
+      }
+    },
+    {
+      "id": "high",
+      "definitionId": "plumb.tank",
+      "position": {
+        "x": 12,
+        "y": 2.6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "target.tank"
+      ]
+    },
+    {
+      "id": "pump",
+      "definitionId": "plumb.pump",
+      "position": {
+        "x": 5,
+        "y": 7.4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "battery",
+      "definitionId": "circuit.battery",
+      "position": {
+        "x": 5,
+        "y": 5.8
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "shelf",
+      "definitionId": "motion.platform",
+      "position": {
+        "x": 12,
+        "y": 3.35
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    }
+  ],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "outcomeRules": [
+    {
+      "kind": "TANK_LEVEL",
+      "tankTag": "target.tank",
+      "minFraction": 0.6
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "water.pump",
+      "conceptId": "water.pump",
+      "eventKind": "PUMP_LIFT",
+      "minimumCount": 1,
+      "truthContractId": "truth.water.v1"
+    }
+  ],
+  "hints": [
+    "The tank is higher than the pond. Can water climb on its own?",
+    "A pump adds a push — but it needs electricity."
+  ],
+  "narrationCues": [
+    "Now pump the water all the way up!",
+    "Get pond water up into the tower tank. It's uphill all the way!"
+  ]
+}

@@ -1,6 +1,6 @@
 import { activeProfile, updateProfile } from "../app/AppState.js";
 import { MAIN_LABS } from "../progression/CampaignData.js";
-import { clearedLabIds } from "../progression/Campus.js";
+import { campaignComplete, clearedLabIds } from "../progression/Campus.js";
 /** The founder's old recordings and Bolt's memories, one set per lab (campaign order). */
 const LAB_STORY = {
     "motion-yard": { entry: ["This is where every invention starts: rolling, pushing and bumping.", "The test track has been asleep for ages. Let's wake it up!"],
@@ -65,6 +65,17 @@ export function labStoryScenes(labId) {
 }
 export const CENTRAL_MACHINE_SYSTEMS = MAIN_LABS.map(l => LAB_STORY[l.id].system);
 export const FINALE_CLUE = scene("finale.blueprint", "FINALE", "grand-invention-hall", "BLUEPRINT COMPLETE", "The Great WobbleWorks Machine", "Bolt", ["All nine pieces fit together!", "The great machine needs motion, gears, structures, electricity, magnets, water, air and programs — all at once.", "It's waiting in the Grand Invention Hall."], "ui.icon.blueprint");
+// ---------------------------------------------------------------- the Grand Invention Hall and the ending (M32)
+const HALL = "grand-invention-hall";
+/** Bolt shows you into the Grand Invention Hall the first time. */
+export const GRAND_HALL_ENTRY = scene(`entry.${HALL}`, "ENTRY", HALL, "THE GRAND INVENTION HALL", "Grand Invention Hall", "Bolt", ["Wow. The Grand Invention Hall! Every system on campus meets in here.", "Twelve big challenges — and last of all, the Great WobbleWorks Machine. Ready?"], "ui.icon.blueprint");
+/** The ending: played once, when the Great WobbleWorks Machine runs. Then the credits. */
+export const ENDING_SCENES = [
+    scene("finale.machine-runs", "FINALE", HALL, "THE GREAT MACHINE", "It's running!", "Bolt", ["Listen! Every gear, every wire, every pipe — all running together!", "The lights are on in every lab. WobbleWorks is wide awake!"], "ui.icon.blueprint"),
+    scene("finale.founder", "RECORDING", HALL, "ONE LAST RECORDING", `${FOUNDER}'s message`, FOUNDER, ["If you can hear this, the great machine is running again — safely, one careful step at a time.", "Thank you, inventor. Keep building, keep testing, and never be afraid of a wobble."], "ui.icon.voice-bubble"),
+    scene("finale.partners", "MEMORY", HALL, "BOLT", "Partners", "Bolt", ["She left me charging so I could help the next inventor.", "I'm so glad it was you. Shall we keep on inventing?"], "hub.prop.bolt-charger")
+];
+export const CREDITS = scene("finale.credits", "CREDITS", HALL, "THE END… FOR NOW", "WobbleWorks", "", ["Made with love by Banx Games.", "Starring Bolt, Sprocket — and you, the inventor!", "Thank you for playing. The Everything Lab is open now: go and build anything!"], "ui.icon.tools");
 function seen(save) { return new Set(activeProfile(save)?.restorationSeen ?? []); }
 function megaDone(save, labId) { const lab = MAIN_LABS.find(l => l.id === labId); const p = activeProfile(save); const mega = lab?.missions.find(m => m.slot === "MEGA"); return Boolean(p && mega && p.levels[mega.id]?.completed); }
 /** Every story piece this inventor has found so far, in campaign order (derived from progress). */
@@ -84,7 +95,11 @@ export function collectedStory(save) {
 }
 /** The first-visit moment for a lab, if this inventor hasn't watched it yet. */
 export function pendingEntryScene(save, labId) {
-    if (!activeProfile(save) || !LAB_STORY[labId])
+    if (!activeProfile(save))
+        return undefined;
+    if (labId === HALL)
+        return seen(save).has(`story.${GRAND_HALL_ENTRY.id}`) ? undefined : GRAND_HALL_ENTRY;
+    if (!LAB_STORY[labId])
         return undefined;
     const s = labStoryScenes(labId).entry;
     return seen(save).has(`story.${s.id}`) ? undefined : s;
@@ -102,8 +117,14 @@ export function pendingStoryScenes(save) {
                 out.push(s);
     if (c.complete && !done.has(`story.${FINALE_CLUE.id}`))
         out.push(FINALE_CLUE);
+    if (campaignComplete(save))
+        for (const s of ENDING_SCENES)
+            if (!done.has(`story.${s.id}`))
+                out.push(s);
     return out;
 }
+/** The credits roll once, after the ending (and after the hub's last restoration moment). */
+export function creditsPending(save) { return campaignComplete(save) && !seen(save).has(`story.${CREDITS.id}`); }
 export function markStorySeen(save, scenes) {
     const p = activeProfile(save);
     if (!p)

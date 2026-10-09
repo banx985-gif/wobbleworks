@@ -14,7 +14,7 @@ import { renderParentDashboard, renderParentGate } from "./parent/ParentArea.js"
 import { OWNERSHIP_CHILD_COPY, regionById, routeToRegion } from "./progression/Campus.js";
 import { addToShelf, equipCosmetic, markRestorationSeen, markRewardsSeen, meetVisitor, recordMissionSuccess } from "./progression/ProgressionManager.js";
 import { pendingRestorationMoments } from "./progression/Restoration.js";
-import { markStorySeen, pendingEntryScene, pendingStoryScenes } from "./story/CampusStory.js";
+import { CREDITS, creditsPending, markStorySeen, pendingEntryScene, pendingStoryScenes } from "./story/CampusStory.js";
 import { rewardById } from "./progression/Rewards.js";
 import { backupFileName, exportBackup, importBackup, IMPORT_MESSAGES } from "./save/BackupPackage.js";
 import { migrateAppSave } from "./save/Migrations.js";
@@ -33,7 +33,8 @@ import { OpeningDirector, evaluateOpeningSuccess } from "./opening/OpeningDirect
 import { loadMotionYardLevels } from "./motion/MotionContent.js";
 import { MOTION_PERFORMANCE_BUDGET } from "./motion/MotionPerformanceBudget.js";
 import { evaluateMotionMission, MOTION_REAL_WORLD_CARDS } from "./motion/MotionYard.js";
-import { CHAIN_WORKSHOP, CHALLENGE_LAB, CONTRACT_BOARD, CREATURE_MUSIC, EXPERIMENT_LAB, FREE_BUILD_ROOMS, MAIN_LABS, SCIENCE_FAIR } from "./progression/CampaignData.js";
+import { CHAIN_WORKSHOP, CHALLENGE_LAB, CONTRACT_BOARD, CREATURE_MUSIC, EXPERIMENT_LAB, FREE_BUILD_ROOMS, GRAND_HALL, MAIN_LABS, SCIENCE_FAIR } from "./progression/CampaignData.js";
+import { CAMPUS_SWITCH_ROOM, FINAL_CHALLENGE_ID, GRAND_STAGE_LEVEL_IDS, grandChallengeById, grandChallengeOpen, grandHallOpen, grandStage, grandStageLevelId, grandStageOf, completeGrandStage } from "./grand/GrandHall.js";
 import { CREATURE_MUSIC_LABS, RING_SECONDS, creatureMusicChallengeOpen, creatureMusicOpen } from "./creatures/CreatureMusic.js";
 import { SCALE_HZ, familyOf } from "./music/MusicSystem.js";
 import { FairRun, crowdCheers, fairById, fairHistory, fairOpen, judgeEntry, scienceFairOpen, withFairEntry } from "./fairs/ScienceFairs.js";
@@ -55,7 +56,7 @@ import { magnetBehaviour } from "./magnets/MagnetSystem.js";
 import { analyzeFluid, fluidBehaviour, pipeEnds, pipeEndSnap } from "./water/FluidSystem.js";
 import { aeroBehaviour, craftSnap, fanBehaviour, isCraft } from "./flight/FlightSystem.js";
 import { LAB_MODULES, evaluateLabMission, labModule } from "./labs/Labs.js";
-import { loadLabLevels } from "./labs/LabModule.js";
+import { loadLabLevels, loadLevelFiles } from "./labs/LabModule.js";
 import { hasLabBackdrop } from "./render/LabBackdrops.js";
 import { renderBlockEditor } from "./robots/BlockEditor.js";
 import { parseProgram } from "./robots/RobotProgram.js";
@@ -216,6 +217,9 @@ const resultStars = document.querySelector("#motion-result-stars");
 const resultRewards = document.querySelector("#motion-result-rewards");
 const shelfButton = document.querySelector("#btn-motion-shelf");
 const motionBackButton = document.querySelector("#btn-motion-back");
+const nextStageButton = document.querySelector("#btn-next-stage");
+/** The Grand Hall challenge and stage being played (M32). */
+let grandRun;
 const hintButton = document.querySelector("#btn-hint");
 const boltTip = document.querySelector("#bolt-tip");
 const discoveryPop = document.querySelector("#discovery-pop");
@@ -286,9 +290,10 @@ function readSettingsForm() {
     return { textScale: Number.isFinite(num) ? Math.max(0.9, Math.min(1.4, num)) : 1, reducedMotion: chk("#setting-reduced-motion"), highContrast: chk("#setting-high-contrast"), narration: chk("#setting-narration"), subtitles: chk("#setting-subtitles"), soundEffects: chk("#setting-sfx"), music: chk("#setting-music"), vibration: chk("#setting-vibration") };
 }
 /** The nine campaign labs plus the creative modes that use the same mission menu (the Chain Reaction Workshop). */
-const PLAY_SETS = [...MAIN_LABS, CHAIN_WORKSHOP, EXPERIMENT_LAB, FREE_BUILD_ROOMS, CHALLENGE_LAB, CONTRACT_BOARD, SCIENCE_FAIR, CREATURE_MUSIC];
+const PLAY_SETS = [...MAIN_LABS, CHAIN_WORKSHOP, EXPERIMENT_LAB, FREE_BUILD_ROOMS, CHALLENGE_LAB, CONTRACT_BOARD, SCIENCE_FAIR, CREATURE_MUSIC, GRAND_HALL];
 function labDef(id = currentLabId) { return PLAY_SETS.find(l => l.id === id); }
-function labOfLevel(levelId) { return PLAY_SETS.find(l => l.missions.some(m => m.id === levelId))?.id ?? "motion-yard"; }
+function labOfLevel(levelId) { if (levelId.startsWith("grand."))
+    return GRAND_HALL.id; return PLAY_SETS.find(l => l.missions.some(m => m.id === levelId))?.id ?? "motion-yard"; }
 function completedSet() { return new Set(completedLevelIds(appSave)); }
 function missionMeta(levelId) { return PLAY_SETS.flatMap(l => l.missions).find(m => m.id === levelId); }
 /** The lab's own evaluator: same success rules as the level file, plus that lab's evidence-backed discoveries. */
@@ -307,6 +312,9 @@ function evaluateLevel(level, runtime) {
     if (lab === SCIENCE_FAIR.id)
         return { levelId: level.id, success: false, discoveries: [] };
     // Job Board: each job uses its lab room's own rules, checked the same way as every other level.
+    // Grand Invention Hall: each stage is a lab room, checked by that room's own rules.
+    if (lab === GRAND_HALL.id)
+        return { levelId: level.id, success: runtime ? evaluateLevelOutcome(level, build, runtime).complete : false, discoveries: [] };
     if (lab === CREATURE_MUSIC.id)
         return { levelId: level.id, success: runtime ? evaluateLevelOutcome(level, build, runtime).complete : false, discoveries: [] };
     if (lab === CONTRACT_BOARD.id)
@@ -321,7 +329,8 @@ function evaluateLevel(level, runtime) {
 /** Remember this run so the next TEST can show whether a change (like a brace) really helped. */
 function rememberRun() { const runtime = tests.active(); if (runtime && activeLevel)
     lastRuns.set(activeLevel.id, runSummary(build, runtime)); }
-function labIsOpen(labId) { if (labId === CREATURE_MUSIC.id)
+function labIsOpen(labId) { if (labId === GRAND_HALL.id)
+    return labLevels.has(labId) && (grandHallOpen(appSave) || testingLabs.has(labId)); if (labId === CREATURE_MUSIC.id)
     return labLevels.has(labId) && (creatureMusicOpen(appSave) || testingLabs.has(labId)); if (labId === SCIENCE_FAIR.id)
     return labLevels.has(labId) && (scienceFairOpen(appSave) || testingLabs.has(labId)); if (labId === CONTRACT_BOARD.id)
     return labLevels.has(labId) && (jobBoardOpen(appSave) || testingLabs.has(labId)); if (labId === CHALLENGE_LAB.id)
@@ -380,13 +389,13 @@ function renderLabMenu() {
     const completed = completedSet();
     const requiredNext = nextRequiredLabMission(lab, completed);
     document.querySelector("#btn-creator").classList.toggle("hidden", lab.id !== CHALLENGE_LAB.id || !activeProfile(appSave));
-    document.querySelector("#lab-badge").textContent = MAIN_LABS.includes(lab) ? `LAB ${MAIN_LABS.indexOf(lab) + 1}` : "WORKSHOP MODE";
+    document.querySelector("#lab-badge").textContent = MAIN_LABS.includes(lab) ? `LAB ${MAIN_LABS.indexOf(lab) + 1}` : lab.id === GRAND_HALL.id ? "FINALE" : "WORKSHOP MODE";
     document.querySelector("#lab-badge").style.background = lab.colour;
     document.querySelector("#lab-title").textContent = lab.title;
     document.querySelector("#lab-lead").textContent = `${lab.concepts}. Build, TEST, watch what happens, then change it.`;
     motionProgressLabel.textContent = `${lab.missions.filter(m => completed.has(m.id)).length} / ${lab.missions.length} ${lab.title} experiences completed`;
     for (const meta of lab.missions) {
-        const unlocked = labMissionUnlocked(lab, meta.id, completed) && (lab.id !== EXPERIMENT_LAB.id || experimentUnlocked(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== FREE_BUILD_ROOMS.id || sandboxOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== CHALLENGE_LAB.id || challengeOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== CONTRACT_BOARD.id || contractOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== SCIENCE_FAIR.id || fairOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== CREATURE_MUSIC.id || creatureMusicChallengeOpen(appSave, meta.id) || testingLabs.has(lab.id));
+        const unlocked = labMissionUnlocked(lab, meta.id, completed) && (lab.id !== EXPERIMENT_LAB.id || experimentUnlocked(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== FREE_BUILD_ROOMS.id || sandboxOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== CHALLENGE_LAB.id || challengeOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== CONTRACT_BOARD.id || contractOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== SCIENCE_FAIR.id || fairOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== CREATURE_MUSIC.id || creatureMusicChallengeOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== GRAND_HALL.id || grandChallengeOpen(appSave, meta.id, completed) || testingLabs.has(lab.id));
         const button = document.createElement("button");
         button.className = `motion-mission${completed.has(meta.id) ? " done" : ""}${!unlocked ? " locked" : ""}${requiredNext === meta.id ? " required" : ""}`;
         button.disabled = !unlocked;
@@ -403,14 +412,20 @@ function renderLabMenu() {
         const who = job ? visitorById(job.visitorId) : undefined;
         const fd = lab.id === SCIENCE_FAIR.id ? fairById(meta.id) : undefined;
         const cmLab = lab.id === CREATURE_MUSIC.id ? CREATURE_MUSIC_LABS[meta.id] : undefined;
-        if (cmLab && !unlocked)
+        const gc = lab.id === GRAND_HALL.id ? grandChallengeById(meta.id) : undefined;
+        if (gc) {
+            slot.textContent = `${gc.icon} CHALLENGE ${lab.missions.indexOf(meta) + 1}`;
+            const at = grandStage(appSave, gc.id);
+            objective.textContent = unlocked ? `${gc.story} · ${gc.stages.length} stages${at > 0 ? ` · on stage ${at + 1}` : ""}` : "Finish the other 11 challenges to start the great machine.";
+        }
+        else if (cmLab && !unlocked)
             objective.textContent = `Opens with the ${regionById(cmLab)?.title ?? "lab"}`;
         else if (cmLab)
             objective.textContent = labLevels.get(CREATURE_MUSIC.id)?.get(meta.id)?.narrationCues?.[0] ?? meta.objective;
         else if (fd) {
             const hist = fairHistory(appSave, fd.id);
             slot.textContent = `${fd.icon} FAIR ${fd.number}`;
-            objective.textContent = unlocked ? `${fd.prompt}${hist.length ? ` · Entered ${hist.length} time${hist.length === 1 ? "" : "s"}` : ""}` : fd.unlock === "ALL" ? "Opens when every lab is restored." : `Opens after the ${fd.unlock.map(l => regionById(l)?.title ?? l).join(" and ")}.`;
+            objective.textContent = unlocked ? `${fd.prompt}${hist.length ? ` · Entered ${hist.length} time${hist.length === 1 ? "" : "s"}` : ""}` : fd.unlock === "ALL" ? "Opens when the Great WobbleWorks Machine runs." : `Opens after the ${fd.unlock.map(l => regionById(l)?.title ?? l).join(" and ")}.`;
         }
         else if (job && who) {
             slot.textContent = `${who.icon} ${who.name.toUpperCase()}`;
@@ -421,7 +436,7 @@ function renderLabMenu() {
             objective.textContent = unlocked ? `${ch.icon} ${ch.goal}${best ? ` · Best: ${formatScore(ch, best.value)}` : ""}` : `Opens with the ${regionById(ch.labId)?.title ?? "lab"}`;
         }
         else if (room)
-            objective.textContent = unlocked ? `${room.icon} ${room.prompts[0]}` : room.free ? "Finish the opening first." : room.needs === "ALL" ? "Opens when every lab is restored." : `Opens with the ${regionById(room.needs ?? "")?.title ?? "lab"}`;
+            objective.textContent = unlocked ? `${room.icon} ${room.prompts[0]}` : room.free ? "Finish the opening first." : room.needs === "ALL" ? "Opens when the Great WobbleWorks Machine runs." : `Opens with the ${regionById(room.needs ?? "")?.title ?? "lab"}`;
         else
             objective.textContent = tpl ? (unlocked ? `${tpl.question} ${savedExperiments(appSave, meta.id).length ? `· ${savedExperiments(appSave, meta.id).length} saved` : ""}` : `Opens with the ${regionById(tpl.labId)?.title ?? "lab"}`) : meta.objective;
         button.append(slot, title, objective);
@@ -462,7 +477,12 @@ function loadMission(id) {
             startSandbox(level);
         return;
     }
-    if (!labMissionUnlocked(lab, id, completedSet()))
+    // Grand Hall: a challenge id plays the stage this inventor is on; a stage id plays that stage.
+    const gChallenge = labId === GRAND_HALL.id ? grandChallengeById(id) : undefined;
+    const grand = labId === GRAND_HALL.id ? grandStageOf(id) ?? (gChallenge ? { challenge: gChallenge, stage: grandStage(appSave, gChallenge.id) } : undefined) : undefined;
+    if (labId === GRAND_HALL.id && (!grand || !(grandChallengeOpen(appSave, grand.challenge.id, completedSet()) || testingLabs.has(labId))))
+        return;
+    if (!grand && !labMissionUnlocked(lab, id, completedSet()))
         return;
     photo.exit();
     editingInvention = undefined;
@@ -471,7 +491,7 @@ function loadMission(id) {
     invSave.classList.add("hidden");
     endReplay();
     lastRecording = undefined;
-    const level = labLevels.get(labId)?.get(id);
+    const level = labLevels.get(labId)?.get(grand ? grandStageLevelId(grand.challenge.id, grand.stage) : id);
     if (!level) {
         loadingError.textContent = `${lab.title} content is missing: ${id}.`;
         transition("LOADING_FAILURE", true);
@@ -501,7 +521,9 @@ function loadMission(id) {
     forceScannerButton.classList.remove("hidden", "force-on");
     forceScannerButton.setAttribute("aria-pressed", "false");
     document.querySelector(".motion-hud .motion-badge").textContent = lab.title.toUpperCase();
-    forceScannerButton.textContent = labModule(labId)?.scannerName ?? (labId === "gear-garage" ? "Spin Scanner" : labId === "builder-bay" ? "Stress Scanner" : "Force Scanner");
+    const gBase = grand ? grand.challenge.stages[grand.stage].baseLevelId : undefined;
+    const scanLab = gBase ? (gBase === CAMPUS_SWITCH_ROOM ? "power-lab" : labOfLevel(gBase)) : labId;
+    forceScannerButton.textContent = labModule(scanLab)?.scannerName ?? (scanLab === "gear-garage" ? "Spin Scanner" : scanLab === "builder-bay" ? "Stress Scanner" : "Force Scanner");
     updateOpeningTray(level);
     resetGuidance(level.id);
     enterWorkshop();
@@ -511,6 +533,14 @@ function loadMission(id) {
     setupFair(labId === SCIENCE_FAIR.id ? fairById(level.id) : undefined, level);
     if (labId === CREATURE_MUSIC.id)
         motionObjective.textContent = level.narrationCues?.[0] ?? motionObjective.textContent;
+    grandRun = grand;
+    nextStageButton.classList.add("hidden");
+    if (grand) {
+        const st = grand.challenge.stages[grand.stage];
+        motionTitle.textContent = grand.challenge.title;
+        motionObjective.textContent = `Stage ${grand.stage + 1} of ${grand.challenge.stages.length}: ${st.line}`;
+        document.querySelector(".motion-hud .motion-badge").textContent = "🏛️ GRAND INVENTION HALL";
+    }
     if (contract) {
         const who = visitorById(contract.visitorId);
         motionObjective.textContent = contract.goal;
@@ -520,6 +550,7 @@ function loadMission(id) {
 function showMotionResult(success, body, stars = [], newStars = [], rewards = []) {
     resultShown = true;
     motionResult.classList.remove("hidden");
+    nextStageButton.classList.add("hidden");
     motionResult.classList.toggle("success", success);
     motionResultTitle.textContent = success ? "IT WORKED!" : "GOOD TEST!";
     motionResultBody.textContent = body;
@@ -575,9 +606,17 @@ function maybeCompleteMotionMission() {
     if (!tests.isPaused())
         tests.togglePause();
     checkRunDiscoveries();
-    const outcome = recordMissionSuccess(appSave, activeLevel.id, { playerPartCount: playerPartCount(activeLevel), discoveries: result.discoveries });
+    // Grand Hall: every stage but the last moves the challenge on; the last one completes the challenge itself.
+    const evidence = { playerPartCount: playerPartCount(activeLevel), discoveries: result.discoveries };
+    const g = grandRun;
+    const gDone = g ? completeGrandStage(appSave, g.challenge.id, g.stage, evidence) : undefined;
+    if (g && gDone?.next !== undefined) {
+        grandStageDone(g, gDone.save);
+        return;
+    }
+    const outcome = gDone?.outcome ?? recordMissionSuccess(appSave, activeLevel.id, evidence);
     lastMissionLevelId = activeLevel.id;
-    resultReturnsToHub = outcome.labCleared !== undefined;
+    resultReturnsToHub = outcome.labCleared !== undefined || g?.challenge.id === FINAL_CHALLENGE_ID;
     // Help used only tunes how often help is offered later; stars and rewards above never see it.
     void commit(withSolveHistory(outcome.save, observer.hintsUsed(), observer.failedTests()), true).catch(() => undefined);
     setHint(undefined);
@@ -592,9 +631,31 @@ function maybeCompleteMotionMission() {
     rememberRun();
     const discovered = card ? ` ${card.title}: ${card.example}` : result.discoveries.length ? ` You discovered ${result.discoveries[0].replace("motion.", "").replaceAll("-", " ")}.` : "";
     const cleared = outcome.labCleared ? ` The ${regionById(outcome.labCleared)?.title ?? "lab"} is restored!` : "";
+    if (g) {
+        showMotionResult(true, g.challenge.id === FINAL_CHALLENGE_ID ? "THE GREAT WOBBLEWORKS MACHINE IS RUNNING! Every system, all at once. Let's go and see the campus wake up!" : `${g.challenge.title}: all ${g.challenge.stages.length} stages done! A Grand Hall champion.`, outcome.stars, outcome.newStars, outcome.newRewards);
+        resultStars.querySelectorAll(".result-star:not(.on)").forEach(s => s.remove());
+        sfx(1180, .12);
+        buzz(90);
+        return;
+    }
     showMotionResult(true, `${helped ? "Job done!" : "Nice invention."}${thanks}${chainNote}${discovered}${cleared}`, outcome.stars, outcome.newStars, outcome.newRewards);
     sfx(980, .09);
     buzz(60);
+}
+/** A Grand Hall stage (not the last) is done: remember the next stage and offer it. */
+function grandStageDone(g, saved) {
+    const next = g.stage + 1;
+    lastMissionLevelId = activeLevel?.id;
+    void commit(saved, true).catch(() => undefined);
+    setHint(undefined);
+    hideBoltTip();
+    hintButton.classList.remove("offer");
+    rememberRun();
+    showMotionResult(true, `Stage ${g.stage + 1} of ${g.challenge.stages.length} done! Next: ${g.challenge.stages[next].line}`);
+    resultStars.classList.add("hidden");
+    nextStageButton.classList.remove("hidden");
+    sfx(880, .08);
+    buzz(40);
 }
 async function saveOpeningProgress(step, complete = false) {
     await commit(syncOpeningMetrics(withOpeningProgress(appSave, step, complete)), complete);
@@ -906,6 +967,7 @@ async function loadAppState() {
         labLevels.set(CONTRACT_BOARD.id, await loadLabLevels(registry, CONTRACT_BOARD.id, "contract"));
         labLevels.set(SCIENCE_FAIR.id, await loadLabLevels(registry, SCIENCE_FAIR.id, "fair"));
         labLevels.set(CREATURE_MUSIC.id, await loadLabLevels(registry, CREATURE_MUSIC.id, "creature"));
+        labLevels.set(GRAND_HALL.id, await loadLevelFiles(registry, GRAND_STAGE_LEVEL_IDS, "grand", GRAND_HALL.title));
         appSave = loaded.payload ?? createDefaultAppSave();
         savingBlocked = loaded.futureVersion;
         applySettings();
@@ -1001,6 +1063,8 @@ function leaveGameplay() {
     creator = undefined;
     customPlay = undefined;
     creatorPanel.classList.add("hidden");
+    grandRun = undefined;
+    nextStageButton.classList.add("hidden");
     currentRoom = undefined;
     sandboxBar.classList.add("hidden");
     sandboxDrawer.classList.add("hidden");
@@ -1046,6 +1110,8 @@ function queueHubMoments() {
     const unseen = (activeProfile(appSave)?.unseenRewards ?? []).filter(id => { const k = rewardById(id)?.kind; return k === "PART" || k === "TOOL" || k === "KEY_PIECE" || k === "PROP"; });
     if (unseen.length)
         hubQueue.push({ kind: "REWARD", title: "New things for your workshop!", body: unseen.map(id => `${rewardById(id).icon} ${rewardById(id).title}`).join("   "), onDone: () => { void commit(markRewardsSeen(appSave, unseen)); } });
+    if (creditsPending(appSave))
+        hubQueue.push({ kind: "STORY", title: CREDITS.title, body: CREDITS.lines.join(" "), scene: CREDITS });
 }
 function showNextHubMoment() {
     const next = hubQueue[0];
@@ -1104,7 +1170,7 @@ function showStoryScene() {
     storyKicker.textContent = s.kicker;
     storyTitle.textContent = s.title;
     storySpeaker.textContent = s.kind === "RECORDING" ? `🎙️ ${s.speaker}` : s.speaker === "Bolt" ? "Bolt says:" : s.speaker;
-    storyArt.replaceChildren(s.kind === "ENTRY" || s.kind === "MEMORY" ? boltArt(activeProfile(appSave)?.equipped.bolt, s.kind === "MEMORY" ? "sign" : "wave") : (() => { const img = document.createElement("img"); img.alt = ""; const a = assets.getImage(s.art); if (a)
+    storyArt.replaceChildren(s.kind === "ENTRY" || s.kind === "MEMORY" || s.kind === "CREDITS" ? boltArt(activeProfile(appSave)?.equipped.bolt, s.kind === "MEMORY" ? "sign" : s.kind === "CREDITS" ? "cheer" : "wave") : (() => { const img = document.createElement("img"); img.alt = ""; const a = assets.getImage(s.art); if (a)
         img.src = a.src; return img; })());
     showStoryLine();
     window.clearInterval(st.timer);
@@ -2012,6 +2078,8 @@ goMotionYardButton.addEventListener("click", () => { void saveOpeningProgress(6,
 forceScannerButton.addEventListener("click", () => { forceScanner = !forceScanner; forceScannerButton.classList.toggle("force-on", forceScanner); forceScannerButton.setAttribute("aria-pressed", String(forceScanner)); });
 document.querySelector("#btn-motion-retry").addEventListener("click", () => { if (activeLevel)
     loadMission(activeLevel.id); });
+nextStageButton.addEventListener("click", () => { const g = grandRun; if (g && g.stage + 1 < g.challenge.stages.length)
+    loadMission(grandStageLevelId(g.challenge.id, g.stage + 1)); });
 motionBackButton.addEventListener("click", () => { if (freeBuildActive || resultReturnsToHub) {
     resultReturnsToHub = false;
     showHub();
@@ -2888,7 +2956,7 @@ function openInvention(id, n) {
     const env = inv.environment;
     if (env.startsWith("sandbox:") && labLevels.get(FREE_BUILD_ROOMS.id)?.get(env.slice(8)) && (sandboxOpen(appSave, env.slice(8)) || testingLabs.has(FREE_BUILD_ROOMS.id)))
         startSandbox(labLevels.get(FREE_BUILD_ROOMS.id).get(env.slice(8)));
-    else if (env.startsWith("lab:") && labLevels.get(labOfLevel(env.slice(4)))?.get(env.slice(4)) && labMissionUnlocked(labDef(labOfLevel(env.slice(4))), env.slice(4), completedSet()) && labIsOpen(labOfLevel(env.slice(4))))
+    else if (env.startsWith("lab:") && labLevels.get(labOfLevel(env.slice(4)))?.get(env.slice(4)) && (labMissionUnlocked(labDef(labOfLevel(env.slice(4))), env.slice(4), completedSet()) || Boolean(grandStageOf(env.slice(4)))) && labIsOpen(labOfLevel(env.slice(4))))
         loadMission(env.slice(4));
     else
         startFreeBuild();
@@ -3697,8 +3765,10 @@ function render() {
     if (freeBuildActive && currentRoom && !photoBackground)
         drawRoomBackdrop(currentRoom);
     const themed = challenge ?? contract;
-    const lookLab = fair ? FAIR_LOOK[fair.id] ?? "motion-yard" : themed ? (themed.baseLevelId.startsWith("chain.") ? CHAIN_WORKSHOP.id : themed.labId) : currentLabId;
-    const sceneryId = themed ? themed.baseLevelId : activeLevel?.id;
+    const gStage = grandRun?.challenge.stages[grandRun.stage]?.baseLevelId;
+    const gBase = gStage === CAMPUS_SWITCH_ROOM ? "contract.generator-test" : gStage;
+    const lookLab = fair ? FAIR_LOOK[fair.id] ?? "motion-yard" : themed ? (themed.baseLevelId.startsWith("chain.") ? CHAIN_WORKSHOP.id : themed.labId) : gBase ? (gBase.startsWith("robot.") ? "robot-lab" : GRAND_HALL.id) : currentLabId;
+    const sceneryId = themed ? themed.baseLevelId : gBase ?? activeLevel?.id;
     if (labActive && photoBackground)
         renderer.drawScenery(sceneryId);
     else if (labActive) {
