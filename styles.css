@@ -463,8 +463,10 @@ html.high-contrast { --ink:#000; --panel:#fff; --accent:#006b1b; --danger:#a0000
 .story-list button { min-height: 56px; border-radius: 14px; font-weight: 800; }
 
 /* Chain Reaction Workshop (M21): the live chain counter */
-.chain-hud { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); z-index: 5; display: flex; align-items: center; gap: 10px; background: #212529ee; color: #fff; border: 4px solid #ffd43b; border-radius: 18px; padding: 6px 16px; pointer-events: none; }
+.chain-hud { position: absolute; left: 50%; top: 10px; top: var(--under-hud, 10px); transform: translateX(-50%); z-index: 5; display: flex; align-items: center; gap: 10px; background: #212529ee; color: #fff; border: 4px solid #ffd43b; border-radius: 18px; padding: 6px 16px; pointer-events: none; }
 .chain-hud.hidden { display: none; }
+/* M47: in Free Build the idea prompt is in the same spot: the counter goes just under it. */
+.sandbox-prompt:not(.hidden) ~ .chain-hud { top: calc(var(--under-hud, 10px) + 68px); }
 .chain-hud .chain-label { font-weight: 900; color: #ffd43b; letter-spacing: .1em; }
 .chain-hud strong { font-size: 30px; min-width: 1.4em; text-align: center; color: #69db7c; }
 .chain-hud #chain-last { font-weight: 700; max-width: 40vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -495,7 +497,7 @@ html.high-contrast { --ink:#000; --panel:#fff; --accent:#006b1b; --danger:#a0000
 .sandbox-drawer { position: absolute; left: 50%; bottom: 92px; transform: translateX(-50%); z-index: 7; width: min(720px, 92vw); max-height: 52vh; overflow-y: auto; background: #fff; border: 4px solid #203040; border-radius: 18px; padding: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px; }
 .sandbox-drawer.hidden { display: none; } .sandbox-drawer button { min-height: 64px; border-radius: 14px; font-weight: 800; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
 .sandbox-drawer button .ico { font-size: 24px; } .sandbox-drawer button.on { background: #d3f9d8; outline: 3px solid #2f9e44; } .sandbox-drawer h3 { grid-column: 1 / -1; margin: 0; }
-.sandbox-prompt { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); z-index: 6; display: flex; gap: 8px; align-items: center; background: #fff9db; border: 4px solid #203040; border-radius: 16px; padding: 6px 10px; max-width: 70vw; }
+.sandbox-prompt { position: absolute; left: 50%; top: 10px; top: var(--under-hud, 10px); transform: translateX(-50%); z-index: 6; display: flex; gap: 8px; align-items: center; background: #fff9db; border: 4px solid #203040; border-radius: 16px; padding: 6px 10px; max-width: 70vw; }
 .sandbox-prompt.hidden { display: none; } .sandbox-prompt span { font-weight: 800; } .sandbox-prompt button { min-height: 56px; min-width: 56px; border-radius: 12px; font-weight: 900; }
 .toast { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); z-index: 9; background: #212529ee; color: #fff; font-weight: 800; padding: 14px 20px; border-radius: 16px; max-width: 80vw; text-align: center; }
 .toast.hidden { display: none; }

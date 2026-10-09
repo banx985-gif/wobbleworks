@@ -275,6 +275,21 @@ const openingSuccess = document.querySelector("#opening-success");
 const boltAvatar = document.querySelector("#bolt-avatar");
 const inventorName = document.querySelector("#inventor-name");
 const motionHud = document.querySelector("#motion-hud");
+/**
+ * M47: the chain counter and the Free Build idea prompt sit at the top of the playfield. When the lab title bar is
+ * showing they go just under it (--under-hud), instead of hiding behind it where they can't be read or tapped.
+ */
+function keepClearOfHud() {
+    const stage = motionHud.parentElement;
+    if (!stage)
+        return;
+    if (motionHud.offsetParent === null)
+        stage.style.removeProperty("--under-hud");
+    else
+        stage.style.setProperty("--under-hud", `${motionHud.offsetTop + motionHud.offsetHeight + 8}px`);
+}
+if (typeof ResizeObserver === "function")
+    new ResizeObserver(keepClearOfHud).observe(motionHud);
 const motionTitle = document.querySelector("#motion-title");
 const motionObjective = document.querySelector("#motion-objective");
 const motionResult = document.querySelector("#motion-result");

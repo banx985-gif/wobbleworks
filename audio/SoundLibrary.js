@@ -64,17 +64,12 @@ export const HELD_SOUNDS = new Set(["motor-hum", "pipe-flow", "fan", "propeller"
 /** The big moments always play, even when the machine is busy. */
 export const ALWAYS_PLAY = new Set(["success-sting", "discovery-sting", "secret-sting"]);
 /**
- * M46: recordings filed for these ids don't suit their job, so the code-made sound stays (listed in docs/ART_NEEDED.md,
+ * M46/M47: recordings filed for these ids don't suit their job, so the code-made sound stays (listed in docs/ART_NEEDED.md,
  * Batch S, as "recording wanted"). Judged by measuring each file, as nobody could listen to them yet.
  */
 export const RECORDING_UNSUITED = {
-    rotate: "the file is silent",
-    drop: "a long steady shimmer (1.2 s) — too long for every part dropped",
     fan: "a rising swell that ends loudest, not a steady whirr",
-    pump: "a steady high hiss, not a pumping thud",
-    propeller: "a short bright burst, not a whirring propeller",
-    "beam-creak": "a high hiss, not a low creak",
-    "rope-tension": "a high hiss, not a rope pulling tight"
+    propeller: "a short bright burst, not a whirring propeller"
 };
 /**
  * M46: volume trims so every recording sits at about the same loudness as the others and as the code-made sounds
@@ -82,9 +77,9 @@ export const RECORDING_UNSUITED = {
  * the big stings brought down). 1 = as filed.
  */
 export const RECORDING_GAIN = {
-    "balloon-squeak": 1.22, bell: 1.5, "bolt-voice": 1.37, "break-crack": 0.92, "bulb-ping": 0.92, buzzer: 1.14, click: 11, clunk: 1.1,
+    "balloon-squeak": 1.22, "beam-creak": 0.3, bell: 1.5, "bolt-voice": 1.37, "break-crack": 0.92, "bulb-ping": 0.92, buzzer: 1.14, click: 11, clunk: 1.1, drop: 0.82,
     confetti: 7.77, "discovery-sting": 1.28, "electric-buzz": 0.85, "gear-engage": 5.09, "magnet-repel": 4.53, "magnet-thunk": 0.79,
-    "motor-hum": 1.4, pickup: 0.84, "pipe-flow": 0.88, "rocket-fizz": 0.89, "rocket-whoosh": 1.14, "secret-sting": 0.31, snap: 10,
+    "motor-hum": 1.4, pickup: 0.84, "pipe-flow": 0.88, pump: 0.68, "rocket-fizz": 0.89, "rocket-whoosh": 1.14, "rope-tension": 0.95, rotate: 0.58, "secret-sting": 0.31, snap: 10,
     "soft-crash": 0.74, "spring-boing": 1.38, "sprocket-bark": 1.49, "success-sting": 0.61, unsnap: 1.91, "water-splash": 0.63
 };
 /** Seconds a code-made sound lasts (its last layer's end). */
