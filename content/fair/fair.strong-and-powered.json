@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "id": "fair.strong-and-powered",
+  "title": "Strong & Powered",
+  "environmentId": "env.builder-bay",
+  "availablePartIds": [
+    "motion.ball",
+    "motion.cart",
+    "motion.wheel",
+    "motion.axle",
+    "motion.roller",
+    "motion.ramp",
+    "motion.spring",
+    "motion.friction-high",
+    "motion.friction-low",
+    "motion.bounce-pad",
+    "structure.block",
+    "gear.crank",
+    "gear.motor",
+    "gear.small",
+    "gear.medium",
+    "gear.large",
+    "gear.belt-pulley",
+    "gear.belt-pulley-big",
+    "builder.beam-wood",
+    "builder.beam-metal",
+    "builder.brace",
+    "builder.column",
+    "builder.rope",
+    "circuit.battery",
+    "circuit.battery-big",
+    "circuit.wire",
+    "circuit.switch",
+    "circuit.button",
+    "circuit.bulb",
+    "circuit.buzzer",
+    "circuit.motor",
+    "circuit.splitter",
+    "motion.marble",
+    "power.motor",
+    "gear.gear"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "fair-sign",
+      "definitionId": "sandbox.sign",
+      "position": {
+        "x": 8,
+        "y": 0.9
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "text": "🎪 Strong & Powered"
+      }
+    },
+    {
+      "id": "bolt",
+      "definitionId": "silly.bolt",
+      "position": {
+        "x": 3,
+        "y": 7.6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "subject.bolt"
+      ]
+    },
+    {
+      "id": "weight",
+      "definitionId": "sandbox.weight",
+      "position": {
+        "x": 11,
+        "y": 7.9
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "heavy"
+      ]
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "ELAPSED_AT_LEAST",
+      "seconds": 1
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "fair-evidence",
+      "conceptId": "motion.momentum",
+      "eventKind": "PHYSICS_CONTACT",
+      "minimumCount": 1,
+      "truthContractId": "truth.motion.v1"
+    }
+  ],
+  "hints": [
+    "Build anything that fits the fair — there's no wrong answer.",
+    "Press TEST to try it, then 🎪 Enter the fair when you're ready."
+  ],
+  "narrationCues": [
+    "Strong & Powered! Lift Bolt or move the heavy weight — with two kinds of science."
+  ]
+}

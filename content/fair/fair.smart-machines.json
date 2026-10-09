@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 1,
+  "id": "fair.smart-machines",
+  "title": "Smart Machines",
+  "environmentId": "env.robot-lab",
+  "availablePartIds": [
+    "motion.ball",
+    "motion.ramp",
+    "circuit.battery",
+    "circuit.battery-big",
+    "circuit.wire",
+    "circuit.switch",
+    "circuit.button",
+    "circuit.bulb",
+    "circuit.buzzer",
+    "circuit.motor",
+    "circuit.splitter",
+    "magnetic.bar",
+    "magnetic.puck",
+    "magnetic.floater",
+    "magnetic.electromagnet",
+    "magnetic.reed-switch",
+    "chain.bell",
+    "chain.cannon",
+    "chain.confetti"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "fair-sign",
+      "definitionId": "sandbox.sign",
+      "position": {
+        "x": 8,
+        "y": 0.9
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "text": "🎪 Smart Machines"
+      }
+    },
+    {
+      "id": "room-22",
+      "definitionId": "robot.goal",
+      "position": {
+        "x": 12,
+        "y": 4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "sandbox.room"
+      ]
+    },
+    {
+      "id": "room-23",
+      "definitionId": "robot.tile",
+      "position": {
+        "x": 6,
+        "y": 4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "colour": "RED"
+      },
+      "tags": [
+        "sandbox.room"
+      ]
+    },
+    {
+      "id": "room-24",
+      "definitionId": "robot.tile",
+      "position": {
+        "x": 8,
+        "y": 4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "colour": "BLUE"
+      },
+      "tags": [
+        "sandbox.room"
+      ]
+    },
+    {
+      "id": "room-25",
+      "definitionId": "robot.tile",
+      "position": {
+        "x": 10,
+        "y": 4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "colour": "GREEN"
+      },
+      "tags": [
+        "sandbox.room"
+      ]
+    },
+    {
+      "id": "room-26",
+      "definitionId": "robot.wall",
+      "position": {
+        "x": 7,
+        "y": 3
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "sandbox.room"
+      ]
+    },
+    {
+      "id": "room-27",
+      "definitionId": "robot.wall",
+      "position": {
+        "x": 7,
+        "y": 5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "sandbox.room"
+      ]
+    },
+    {
+      "id": "robot",
+      "definitionId": "robot.bot",
+      "position": {
+        "x": 4,
+        "y": 4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "program": "[]"
+      },
+      "tags": [
+        "robot"
+      ]
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "ELAPSED_AT_LEAST",
+      "seconds": 1
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "fair-evidence",
+      "conceptId": "motion.momentum",
+      "eventKind": "PHYSICS_CONTACT",
+      "minimumCount": 1,
+      "truthContractId": "truth.motion.v1"
+    }
+  ],
+  "hints": [
+    "Build anything that fits the fair — there's no wrong answer.",
+    "Press TEST to try it, then 🎪 Enter the fair when you're ready."
+  ],
+  "narrationCues": [
+    "Smart Machines! Build something that notices what's happening — and reacts."
+  ]
+}

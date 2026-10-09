@@ -211,6 +211,8 @@ export function renderHub(root, save, cb) {
     ];
     if (cb.openExperiments)
         stations.push({ id: "experiments", label: "Experiment Lab", x: 52, y: 22, w: 9, h: 18, onTap: cb.openExperiments, art: () => { const img = el("img", "hub-prop"); img.src = "./assets/icons/icon.energy-flask.webp"; img.alt = ""; img.draggable = false; return img; } });
+    if (cb.openFair)
+        stations.push({ id: "fair", label: "Science Fair", x: 2, y: 82, w: 11, h: 17, onTap: cb.openFair, art: () => el("span", "job-board-art", "🎪") });
     if (cb.openJobBoard)
         stations.push({ id: "jobs", label: "Job Board", x: 64, y: 41, w: 10, h: 17, onTap: cb.openJobBoard, ...(openJobs(save).length ? { badge: String(openJobs(save).length) } : {}), art: () => el("span", "job-board-art", "📋") });
     if (cb.openChallenges)
@@ -393,8 +395,28 @@ export function renderTrophies(root, save, cb) {
         row.append(el("span", "", lab.icon), el("strong", "", lab.title), el("span", "star on", "★"), el("span", "", `${got} of ${lab.missions.length * 3}`));
         labs.append(row);
     }
-    root.append(head, labs, badges, storyBook(save, cb));
+    root.append(head, labs, badges, fairBook(save), storyBook(save, cb));
 }
+/** Science Fair history (M28): every accepted entry and the measured awards it earned. Fun awards are never kept. */
+function fairBook(save) {
+    const book = el("section", "story-book fair-book");
+    book.append(el("h2", "", "🎪 Science Fair history"));
+    const entries = [...(activeProfile(save)?.fairs ?? [])].reverse();
+    if (!entries.length) {
+        book.append(el("p", "muted", "No fair entries yet. Fairs open as you restore the campus labs."));
+        return book;
+    }
+    const list = el("ul", "fair-list");
+    for (const e of entries.slice(0, 20)) {
+        const fd = FAIR_TITLES[e.fairId];
+        const li = el("li");
+        li.append(el("strong", "", `${fd ?? "Fair"} · ${new Date(e.savedAtMs).toLocaleDateString(undefined, { day: "numeric", month: "short" })}`), el("span", "", ` — ${e.title}${e.awards.length ? ` · 🏅 ${e.awards.join(", ")}` : ""}`));
+        list.append(li);
+    }
+    book.append(list);
+    return book;
+}
+const FAIR_TITLES = { "fair.motion-makers": "Motion Makers", "fair.strong-and-powered": "Strong & Powered", "fair.water-and-air-show": "Water & Air Show", "fair.smart-machines": "Smart Machines", "fair.anything-goes": "Anything Goes" };
 /** The Campus Story book: the great machine's blueprint as it is found, plus recordings and memories to replay. */
 function storyBook(save, cb) {
     const c = collectedStory(save);

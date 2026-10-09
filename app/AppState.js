@@ -1,19 +1,20 @@
 import { completionRewardIds, grantRewardsTo } from "../progression/Rewards.js";
 import { validateLook } from "../inventor/InventorLook.js";
 /**
- * WobbleWorks root save — schema version 5 (v2 = Milestone 10; v3 adds the inventor maker look; v4 experiments; v5 My Inventions).
+ * WobbleWorks root save — schema version 6 (v2 = Milestone 10; v3 adds the inventor maker look; v4 experiments; v5 My Inventions; v6 Science Fair history).
  *
  * Root fields that are not inside a profile are the *guest* progress made before the
  * first inventor is created (the opening is played before any profile exists).
  * When the first inventor is created, that guest progress moves into the profile.
  * Every later profile owns its own campaign, unlocks, rewards, shelf, settings and assistance.
  */
-export const CURRENT_SAVE_SCHEMA = 5;
+export const CURRENT_SAVE_SCHEMA = 6;
 /** BLUE, PINK and GREEN are the three painted inventors (Aaron's art, 8 Oct). ORANGE/PURPLE remain valid for older saves. */
 export const AVATAR_STYLES = ["ORANGE", "BLUE", "GREEN", "PURPLE", "PINK"];
 export const PAINTED_AVATARS = ["BLUE", "PINK", "GREEN"];
 export const MAX_EXPERIMENTS = 40;
 export const MAX_TRIALS = 12;
+export const MAX_FAIR_ENTRIES = 60;
 export const MAX_INVENTIONS = 40;
 export const MAX_VERSIONS = 25;
 export const INVENTION_NAME_MAX = 40;
@@ -56,7 +57,7 @@ export function createProfile(name, avatarStyle, nowMs = Date.now(), id = newId(
         id, name: sanitizeProfileName(name), avatarStyle: style, createdAtMs: nowMs, lastPlayedAtMs: nowMs,
         openingStep: 1, openingComplete: false, levels: {}, discoveries: [], unlockedParts: [], unlockedTools: [],
         rewards: [], unseenRewards: [], equipped: {}, shelf: [], records: {}, settings: { ...DEFAULT_SETTINGS },
-        assistance: { ...DEFAULT_ASSISTANCE }, location: "OPENING", freeBuildUnlocked: false, restorationSeen: [], visitorsMet: [], experiments: [], inventions: []
+        assistance: { ...DEFAULT_ASSISTANCE }, location: "OPENING", freeBuildUnlocked: false, restorationSeen: [], visitorsMet: [], experiments: [], inventions: [], fairs: []
     };
 }
 // ------------------------------------------------------------------ validation
@@ -133,6 +134,8 @@ export function validateProfile(p) {
         return false;
     if (new Set(p.inventions.map(i => i.id)).size !== p.inventions.length)
         return false;
+    if (!Array.isArray(p.fairs) || p.fairs.length > MAX_FAIR_ENTRIES || !p.fairs.every(validateFairEntry))
+        return false;
     // A shelf item that shows an invention must point at one that exists (and at one of its versions).
     if (!p.shelf.every(s => s.inventionId === undefined ? s.versionN === undefined : isSafeId(s.inventionId) && p.inventions.some(i => i.id === s.inventionId && (s.versionN === undefined || i.versions.some(v => v.n === s.versionN)))))
         return false;
@@ -185,6 +188,11 @@ export function validateInvention(i) {
             return false;
     }
     return true;
+}
+/** A fair entry: safe ids, a short title and award labels written in capitals (measurable award names). */
+export function validateFairEntry(e) {
+    return Boolean(e) && typeof e === "object" && isSafeId(e.id) && isSafeId(e.fairId) && Number.isFinite(e.savedAtMs) && typeof e.title === "string" && e.title.length >= 1 && e.title.length <= 40 &&
+        Array.isArray(e.awards) && e.awards.length <= 10 && e.awards.every(a => typeof a === "string" && /^[A-Z][A-Z !'-]{1,30}$/.test(a)) && (e.inventionId === undefined || isSafeId(e.inventionId));
 }
 /** A saved experiment: safe ids, a real guess (if any) and 1–12 trials of finite measured numbers. */
 export function validateExperiment(e) {

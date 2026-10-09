@@ -182,4 +182,9 @@ export const CONTRACT_BOARD = { id: "contract-board", title: "Job Board", concep
         ["contract.stage-lift", "Stage Lift"], ["contract.beat-machine", "Beat Machine"], ["contract.fountain-fix", "Fountain Fix"], ["contract.ride-starter", "Ride Starter"],
         ["contract.wheel-wobble", "Wheel Wobble"], ["contract.generator-test", "Generator Test"], ["contract.controlled-drop", "Controlled Drop"], ["contract.sensor-rig", "Sensor Rig"]
     ].map(([id, title]) => ({ id: id, title: title, slot: "CHALLENGE", objective: "A job for a campus visitor.", requiredForProgression: false })) };
-export const CREATIVE_MODES = [CHAIN_WORKSHOP, EXPERIMENT_LAB, FREE_BUILD_ROOMS, CHALLENGE_LAB, CONTRACT_BOARD];
+/** Science Fairs (M28): the 5 locked fairs (rules and awards in src/fairs/ScienceFairs.ts). */
+export const SCIENCE_FAIR = { id: "science-fair", title: "Science Fair", concepts: "Show what you've built", colour: "#f783ac", icon: "🎪", missions: [
+        ["fair.motion-makers", "Fair 1 — Motion Makers"], ["fair.strong-and-powered", "Fair 2 — Strong & Powered"], ["fair.water-and-air-show", "Fair 3 — Water & Air Show"],
+        ["fair.smart-machines", "Fair 4 — Smart Machines"], ["fair.anything-goes", "Fair 5 — Anything Goes"]
+    ].map(([id, title]) => ({ id: id, title: title, slot: "CHALLENGE", objective: "A Science Fair.", requiredForProgression: false })) };
+export const CREATIVE_MODES = [CHAIN_WORKSHOP, EXPERIMENT_LAB, FREE_BUILD_ROOMS, CHALLENGE_LAB, CONTRACT_BOARD, SCIENCE_FAIR];

@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "id": "fair.water-and-air-show",
+  "title": "Water & Air Show",
+  "environmentId": "env.water-works",
+  "availablePartIds": [
+    "motion.ball",
+    "motion.ramp",
+    "gear.motor",
+    "circuit.battery",
+    "circuit.battery-big",
+    "circuit.wire",
+    "circuit.switch",
+    "circuit.button",
+    "circuit.bulb",
+    "circuit.buzzer",
+    "circuit.motor",
+    "circuit.splitter",
+    "plumb.pipe",
+    "plumb.pipe-narrow",
+    "plumb.tank",
+    "plumb.valve",
+    "plumb.nozzle",
+    "plumb.pump",
+    "plumb.sprinkler",
+    "plumb.wheel",
+    "plumb.splitter",
+    "flight.fan",
+    "flight.glider",
+    "flight.wing-large",
+    "flight.wing-small",
+    "flight.wing-steep",
+    "flight.tail",
+    "flight.propeller",
+    "flight.power-pack",
+    "flight.parachute",
+    "flight.balloon",
+    "flight.nose-weight",
+    "silly.duck",
+    "chain.bell",
+    "chain.cannon",
+    "chain.confetti",
+    "air.fan"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "fair-sign",
+      "definitionId": "sandbox.sign",
+      "position": {
+        "x": 8,
+        "y": 0.9
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "text": "🎪 Water & Air Show"
+      }
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "ELAPSED_AT_LEAST",
+      "seconds": 1
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "fair-evidence",
+      "conceptId": "motion.momentum",
+      "eventKind": "PHYSICS_CONTACT",
+      "minimumCount": 1,
+      "truthContractId": "truth.motion.v1"
+    }
+  ],
+  "hints": [
+    "Build anything that fits the fair — there's no wrong answer.",
+    "Press TEST to try it, then 🎪 Enter the fair when you're ready."
+  ],
+  "narrationCues": [
+    "The Water & Air Show! Make water or air do something amazing — and finish with a celebration."
+  ]
+}

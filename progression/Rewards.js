@@ -35,6 +35,12 @@ export const REWARDS = [
     { id: "frame.gold", kind: "FRAME", title: "Golden Frame", icon: "🌟", description: "For your finest inventions." },
     { id: "prop.rubber-duck", kind: "PROP", title: "Champion Rubber Duck", icon: "🐤", description: "It has seen things. Mostly bathwater." },
     { id: "sticker.postie-thanks", kind: "STICKER", title: "Special Thanks", icon: "💌", description: "A thank-you from the campus post room." },
+    // Science Fairs (M28): a ribbon for taking part in each fair (every accepted entry earns it — it is not a prize for winning).
+    { id: "sticker.fair-1", kind: "STICKER", title: "Motion Makers Ribbon", icon: "🎗️", description: "You entered Science Fair 1." },
+    { id: "sticker.fair-2", kind: "STICKER", title: "Strong & Powered Ribbon", icon: "🎗️", description: "You entered Science Fair 2." },
+    { id: "sticker.fair-3", kind: "STICKER", title: "Water & Air Show Ribbon", icon: "🎗️", description: "You entered Science Fair 3." },
+    { id: "sticker.fair-4", kind: "STICKER", title: "Smart Machines Ribbon", icon: "🎗️", description: "You entered Science Fair 4." },
+    { id: "sticker.fair-5", kind: "STICKER", title: "Anything Goes Ribbon", icon: "🎗️", description: "You entered Science Fair 5." },
     // Inventor Contracts (M27): one thank-you sticker from each visitor.
     { id: "sticker.visitor-chef", kind: "STICKER", title: "Kitchen Helper", icon: "🍎", description: "Chef Pepper says thank you!" },
     { id: "sticker.visitor-builder", kind: "STICKER", title: "Crew Member", icon: "👷", description: "Builder Brick says thank you!" },
@@ -378,6 +384,12 @@ export const MISSION_REWARDS = Object.freeze({
     "chain.no-repeats": { onComplete: ["sticker.no-repeats", "part.chain.trapdoor"] },
     "chain.long-haul": { onComplete: ["sticker.long-haul"] },
     "chain.duck-finale": { onComplete: ["badge.chain-master"], onAllStars: ["sprocket.party-hat"] },
+    // Science Fairs (M28): a ribbon for an accepted entry.
+    "fair.motion-makers": { onComplete: ["sticker.fair-1"] },
+    "fair.strong-and-powered": { onComplete: ["sticker.fair-2"] },
+    "fair.water-and-air-show": { onComplete: ["sticker.fair-3"] },
+    "fair.smart-machines": { onComplete: ["sticker.fair-4"] },
+    "fair.anything-goes": { onComplete: ["sticker.fair-5"] },
     // Inventor Contracts (M27): the visitor's sticker for either of their jobs.
     "contract.apple-elevator": { onComplete: ["sticker.visitor-chef"] },
     "contract.kitchen-conveyor": { onComplete: ["sticker.visitor-chef"] },

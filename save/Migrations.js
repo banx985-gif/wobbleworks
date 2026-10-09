@@ -1,5 +1,5 @@
 import { completionRewardIds, grantRewardsTo } from "../progression/Rewards.js";
-import { CURRENT_SAVE_SCHEMA, DEFAULT_ASSISTANCE, DEFAULT_SETTINGS, MAX_EXPERIMENTS, MAX_INVENTIONS, OPENING_STARTER_PARTS, PAINTED_AVATARS, isSafeId, sanitizeProfileName, validateExperiment, validateInvention } from "../app/AppState.js";
+import { CURRENT_SAVE_SCHEMA, DEFAULT_ASSISTANCE, DEFAULT_SETTINGS, MAX_EXPERIMENTS, MAX_FAIR_ENTRIES, MAX_INVENTIONS, validateFairEntry, OPENING_STARTER_PARTS, PAINTED_AVATARS, isSafeId, sanitizeProfileName, validateExperiment, validateInvention } from "../app/AppState.js";
 import { cleanInventionName, contentChecksum, contentOf } from "../inventions/Inventions.js";
 import { DEFAULT_LOOK, validateLook } from "../inventor/InventorLook.js";
 function asArray(v) { return Array.isArray(v) ? v : []; }
@@ -31,7 +31,7 @@ const v1ToV2 = (v1) => {
             settings: { ...DEFAULT_SETTINGS }, assistance: { ...DEFAULT_ASSISTANCE },
             location: isOwner && openingComplete ? "HUB" : "OPENING",
             freeBuildUnlocked: isOwner ? v1.freeBuildUnlocked === true || openingComplete : false,
-            restorationSeen: [], visitorsMet: [], experiments: [], inventions: []
+            restorationSeen: [], visitorsMet: [], experiments: [], inventions: [], fairs: []
         };
         // Missions finished before rewards existed still earn their completion rewards (parts, tools, badges…).
         const rewarded = isOwner ? grantRewardsTo(base, completionRewardIds(motionDone)).profile : base;
@@ -139,7 +139,22 @@ const v4ToV5 = (v4) => {
     });
     return { ...v4, schemaVersion: 5, profiles };
 };
-export const SAVE_MIGRATIONS = Object.freeze({ 1: v1ToV2, 2: v2ToV3, 3: v3ToV4, 4: v4ToV5 });
+/**
+ * v5 (M24–M27) → v6: Science Fairs (M28). Every inventor gets an empty fair history. A history that somehow already
+ * exists is kept only if every entry is valid; nothing else changes.
+ */
+const v5ToV6 = (v5) => {
+    const profiles = asArray(v5.profiles).map(raw => {
+        if (!raw || typeof raw !== "object")
+            return raw;
+        const p = { ...raw };
+        const list = asArray(p.fairs);
+        p.fairs = list.length <= MAX_FAIR_ENTRIES && list.every(e => validateFairEntry(e)) ? list : [];
+        return p;
+    });
+    return { ...v5, schemaVersion: 6, profiles };
+};
+export const SAVE_MIGRATIONS = Object.freeze({ 1: v1ToV2, 2: v2ToV3, 3: v3ToV4, 4: v4ToV5, 5: v5ToV6 });
 export function migrateAppSave(input) {
     if (!input || typeof input !== "object" || Array.isArray(input))
         return { ok: false, reason: "NOT_A_SAVE" };

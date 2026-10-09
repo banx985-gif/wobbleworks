@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "id": "fair.motion-makers",
+  "title": "Motion Makers",
+  "environmentId": "env.motion-yard",
+  "availablePartIds": [
+    "motion.ball",
+    "motion.cart",
+    "motion.wheel",
+    "motion.axle",
+    "motion.roller",
+    "motion.ramp",
+    "motion.spring",
+    "motion.friction-high",
+    "motion.friction-low",
+    "motion.bounce-pad",
+    "structure.block",
+    "motion.marble"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "fair-sign",
+      "definitionId": "sandbox.sign",
+      "position": {
+        "x": 8,
+        "y": 0.9
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "text": "🎪 Motion Makers"
+      }
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "ELAPSED_AT_LEAST",
+      "seconds": 1
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "fair-evidence",
+      "conceptId": "motion.momentum",
+      "eventKind": "PHYSICS_CONTACT",
+      "minimumCount": 1,
+      "truthContractId": "truth.motion.v1"
+    }
+  ],
+  "hints": [
+    "Build anything that fits the fair — there's no wrong answer.",
+    "Press TEST to try it, then 🎪 Enter the fair when you're ready."
+  ],
+  "narrationCues": [
+    "Welcome to the Motion Makers fair! Build something that moves in a way you love."
+  ]
+}

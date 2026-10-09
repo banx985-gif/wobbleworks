@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "id": "fair.anything-goes",
+  "title": "Anything Goes",
+  "environmentId": "env.everything-lab",
+  "availablePartIds": [
+    "motion.ball",
+    "motion.cart",
+    "motion.wheel",
+    "motion.axle",
+    "motion.roller",
+    "motion.ramp",
+    "motion.spring",
+    "motion.friction-high",
+    "motion.friction-low",
+    "motion.bounce-pad",
+    "structure.block",
+    "gear.crank",
+    "gear.motor",
+    "gear.small",
+    "gear.medium",
+    "gear.large",
+    "gear.belt-pulley",
+    "gear.belt-pulley-big",
+    "builder.beam-wood",
+    "builder.beam-metal",
+    "builder.brace",
+    "builder.column",
+    "builder.rope",
+    "circuit.battery",
+    "circuit.battery-big",
+    "circuit.wire",
+    "circuit.switch",
+    "circuit.button",
+    "circuit.bulb",
+    "circuit.buzzer",
+    "circuit.motor",
+    "circuit.splitter",
+    "magnetic.bar",
+    "magnetic.puck",
+    "magnetic.floater",
+    "magnetic.electromagnet",
+    "scrap.iron-block",
+    "plumb.pipe",
+    "plumb.pipe-narrow",
+    "plumb.tank",
+    "plumb.valve",
+    "plumb.nozzle",
+    "plumb.pump",
+    "plumb.sprinkler",
+    "plumb.wheel",
+    "plumb.splitter",
+    "flight.fan",
+    "flight.glider",
+    "flight.wing-large",
+    "flight.wing-small",
+    "flight.wing-steep",
+    "flight.tail",
+    "flight.propeller",
+    "flight.power-pack",
+    "flight.parachute",
+    "flight.balloon",
+    "flight.nose-weight",
+    "silly.duck",
+    "motion.marble",
+    "scrap.steel-ball",
+    "scrap.wood-block",
+    "space.booster",
+    "space.fins",
+    "space.nose-cone",
+    "space.landing-legs",
+    "space.wheel",
+    "space.grip-wheel",
+    "space.drive-motor",
+    "space.solar-panel",
+    "space.capsule",
+    "space.cargo-pod",
+    "magnetic.reed-switch",
+    "chain.domino",
+    "chain.bell",
+    "chain.seesaw",
+    "chain.trapdoor",
+    "chain.cannon",
+    "chain.confetti",
+    "chain.counter",
+    "power.motor",
+    "gear.gear",
+    "air.fan"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "fair-sign",
+      "definitionId": "sandbox.sign",
+      "position": {
+        "x": 8,
+        "y": 0.9
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "text": "🎪 Anything Goes"
+      }
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "ELAPSED_AT_LEAST",
+      "seconds": 1
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "fair-evidence",
+      "conceptId": "motion.momentum",
+      "eventKind": "PHYSICS_CONTACT",
+      "minimumCount": 1,
+      "truthContractId": "truth.motion.v1"
+    }
+  ],
+  "hints": [
+    "Build anything that fits the fair — there's no wrong answer.",
+    "Press TEST to try it, then 🎪 Enter the fair when you're ready."
+  ],
+  "narrationCues": [
+    "The Anything Goes fair! Every part you've unlocked — build whatever you dream up."
+  ]
+}

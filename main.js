@@ -30,7 +30,8 @@ import { OpeningDirector, evaluateOpeningSuccess } from "./opening/OpeningDirect
 import { loadMotionYardLevels } from "./motion/MotionContent.js";
 import { MOTION_PERFORMANCE_BUDGET } from "./motion/MotionPerformanceBudget.js";
 import { evaluateMotionMission, MOTION_REAL_WORLD_CARDS } from "./motion/MotionYard.js";
-import { CHAIN_WORKSHOP, CHALLENGE_LAB, CONTRACT_BOARD, EXPERIMENT_LAB, FREE_BUILD_ROOMS, MAIN_LABS } from "./progression/CampaignData.js";
+import { CHAIN_WORKSHOP, CHALLENGE_LAB, CONTRACT_BOARD, EXPERIMENT_LAB, FREE_BUILD_ROOMS, MAIN_LABS, SCIENCE_FAIR } from "./progression/CampaignData.js";
+import { FairRun, crowdCheers, fairById, fairHistory, fairOpen, judgeEntry, scienceFairOpen, withFairEntry } from "./fairs/ScienceFairs.js";
 import { acceptVisitor, contractById, contractOpen, contractsOf, jobBoardOpen, visitorById } from "./contracts/Contracts.js";
 import { ChallengeRun, challengeBest, challengeById, challengeLabOpen, challengeOpen, earnedRatings, formatScore, personalityLabel, playerParts, withChallengeResult } from "./challenge/Challenges.js";
 import { activeModifiers, sandboxTrayParts, capStatus, CAMPAIGN_PART_CAP, MODIFIER_LABELS, placeTemplate, sandboxById, sandboxOpen, SANDBOX_PART_CAP, SPAWN_CATALOGUE, templateById, withModifier } from "./sandbox/Sandboxes.js";
@@ -280,7 +281,7 @@ function readSettingsForm() {
     return { textScale: Number.isFinite(num) ? Math.max(0.9, Math.min(1.4, num)) : 1, reducedMotion: chk("#setting-reduced-motion"), highContrast: chk("#setting-high-contrast"), narration: chk("#setting-narration"), subtitles: chk("#setting-subtitles"), soundEffects: chk("#setting-sfx"), music: chk("#setting-music"), vibration: chk("#setting-vibration") };
 }
 /** The nine campaign labs plus the creative modes that use the same mission menu (the Chain Reaction Workshop). */
-const PLAY_SETS = [...MAIN_LABS, CHAIN_WORKSHOP, EXPERIMENT_LAB, FREE_BUILD_ROOMS, CHALLENGE_LAB, CONTRACT_BOARD];
+const PLAY_SETS = [...MAIN_LABS, CHAIN_WORKSHOP, EXPERIMENT_LAB, FREE_BUILD_ROOMS, CHALLENGE_LAB, CONTRACT_BOARD, SCIENCE_FAIR];
 function labDef(id = currentLabId) { return PLAY_SETS.find(l => l.id === id); }
 function labOfLevel(levelId) { return PLAY_SETS.find(l => l.missions.some(m => m.id === levelId))?.id ?? "motion-yard"; }
 function completedSet() { return new Set(completedLevelIds(appSave)); }
@@ -297,6 +298,9 @@ function evaluateLevel(level, runtime) {
     // Challenge Lab: finishing is decided by the challenge's own scoring (finishChallenge), on an exact tick.
     if (lab === CHALLENGE_LAB.id)
         return { levelId: level.id, success: false, discoveries: [] };
+    // Science Fair: entries are judged by the fair itself (finishFair), never by a level rule.
+    if (lab === SCIENCE_FAIR.id)
+        return { levelId: level.id, success: false, discoveries: [] };
     // Job Board: each job uses its lab room's own rules, checked the same way as every other level.
     if (lab === CONTRACT_BOARD.id)
         return { levelId: level.id, success: runtime ? evaluateLevelOutcome(level, build, runtime).complete : false, discoveries: [] };
@@ -310,7 +314,8 @@ function evaluateLevel(level, runtime) {
 /** Remember this run so the next TEST can show whether a change (like a brace) really helped. */
 function rememberRun() { const runtime = tests.active(); if (runtime && activeLevel)
     lastRuns.set(activeLevel.id, runSummary(build, runtime)); }
-function labIsOpen(labId) { if (labId === CONTRACT_BOARD.id)
+function labIsOpen(labId) { if (labId === SCIENCE_FAIR.id)
+    return labLevels.has(labId) && (scienceFairOpen(appSave) || testingLabs.has(labId)); if (labId === CONTRACT_BOARD.id)
     return labLevels.has(labId) && (jobBoardOpen(appSave) || testingLabs.has(labId)); if (labId === CHALLENGE_LAB.id)
     return labLevels.has(labId) && (challengeLabOpen(appSave) || testingLabs.has(labId)); if (labId === FREE_BUILD_ROOMS.id)
     return labLevels.has(labId) && Boolean(activeProfile(appSave)?.freeBuildUnlocked); if (labId === EXPERIMENT_LAB.id)
@@ -372,7 +377,7 @@ function renderLabMenu() {
     document.querySelector("#lab-lead").textContent = `${lab.concepts}. Build, TEST, watch what happens, then change it.`;
     motionProgressLabel.textContent = `${lab.missions.filter(m => completed.has(m.id)).length} / ${lab.missions.length} ${lab.title} experiences completed`;
     for (const meta of lab.missions) {
-        const unlocked = labMissionUnlocked(lab, meta.id, completed) && (lab.id !== EXPERIMENT_LAB.id || experimentUnlocked(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== FREE_BUILD_ROOMS.id || sandboxOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== CHALLENGE_LAB.id || challengeOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== CONTRACT_BOARD.id || contractOpen(appSave, meta.id) || testingLabs.has(lab.id));
+        const unlocked = labMissionUnlocked(lab, meta.id, completed) && (lab.id !== EXPERIMENT_LAB.id || experimentUnlocked(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== FREE_BUILD_ROOMS.id || sandboxOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== CHALLENGE_LAB.id || challengeOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== CONTRACT_BOARD.id || contractOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== SCIENCE_FAIR.id || fairOpen(appSave, meta.id) || testingLabs.has(lab.id));
         const button = document.createElement("button");
         button.className = `motion-mission${completed.has(meta.id) ? " done" : ""}${!unlocked ? " locked" : ""}${requiredNext === meta.id ? " required" : ""}`;
         button.disabled = !unlocked;
@@ -387,7 +392,13 @@ function renderLabMenu() {
         const ch = lab.id === CHALLENGE_LAB.id ? challengeById(meta.id) : undefined;
         const job = lab.id === CONTRACT_BOARD.id ? contractById(meta.id) : undefined;
         const who = job ? visitorById(job.visitorId) : undefined;
-        if (job && who) {
+        const fd = lab.id === SCIENCE_FAIR.id ? fairById(meta.id) : undefined;
+        if (fd) {
+            const hist = fairHistory(appSave, fd.id);
+            slot.textContent = `${fd.icon} FAIR ${fd.number}`;
+            objective.textContent = unlocked ? `${fd.prompt}${hist.length ? ` · Entered ${hist.length} time${hist.length === 1 ? "" : "s"}` : ""}` : fd.unlock === "ALL" ? "Opens when every lab is restored." : `Opens after the ${fd.unlock.map(l => regionById(l)?.title ?? l).join(" and ")}.`;
+        }
+        else if (job && who) {
             slot.textContent = `${who.icon} ${who.name.toUpperCase()}`;
             objective.textContent = unlocked ? job.goal : activeProfile(appSave)?.visitorsMet.includes(who.id) ? `Opens with the ${regionById(job.labId)?.title ?? "lab"}` : `Meet ${who.name} at the Workshop door`;
         }
@@ -483,6 +494,7 @@ function loadMission(id) {
     startExperiment(labId === EXPERIMENT_LAB.id ? level : undefined);
     setupChallenge(labId === CHALLENGE_LAB.id ? challengeById(level.id) : undefined);
     contract = labId === CONTRACT_BOARD.id ? contractById(level.id) : undefined;
+    setupFair(labId === SCIENCE_FAIR.id ? fairById(level.id) : undefined, level);
     if (contract) {
         const who = visitorById(contract.visitorId);
         motionObjective.textContent = contract.goal;
@@ -817,6 +829,10 @@ function stopToBuild() {
     setFollow(undefined);
     challengeRun = undefined;
     cargoBox.classList.remove("locked");
+    if (fairRun) {
+        fairRun = undefined;
+        resetFairButton();
+    }
     if (activeLevel && labOfLevel(activeLevel.id) === CHAIN_WORKSHOP.id && !resultShown)
         noteChainRun();
     tests.stop();
@@ -863,6 +879,7 @@ async function loadAppState() {
         labLevels.set(FREE_BUILD_ROOMS.id, await loadLabLevels(registry, FREE_BUILD_ROOMS.id, "sandbox"));
         labLevels.set(CHALLENGE_LAB.id, await loadLabLevels(registry, CHALLENGE_LAB.id, "challenge"));
         labLevels.set(CONTRACT_BOARD.id, await loadLabLevels(registry, CONTRACT_BOARD.id, "contract"));
+        labLevels.set(SCIENCE_FAIR.id, await loadLabLevels(registry, SCIENCE_FAIR.id, "fair"));
         appSave = loaded.payload ?? createDefaultAppSave();
         savingBlocked = loaded.futureVersion;
         applySettings();
@@ -953,6 +970,7 @@ function leaveGameplay() {
     lastRecording = undefined;
     setupChallenge(undefined);
     contract = undefined;
+    setupFair(undefined);
     currentRoom = undefined;
     sandboxBar.classList.add("hidden");
     sandboxDrawer.classList.add("hidden");
@@ -1126,6 +1144,7 @@ function renderHubScreen() {
         ...(chainWorkshopOpen(appSave) ? { openChain: () => showLab(CHAIN_WORKSHOP.id) } : {}),
         ...(challengeLabOpen(appSave) ? { openChallenges: () => showLab(CHALLENGE_LAB.id) } : {}),
         ...(jobBoardOpen(appSave) ? { openJobBoard: () => showLab(CONTRACT_BOARD.id) } : {}),
+        ...(scienceFairOpen(appSave) ? { openFair: () => showLab(SCIENCE_FAIR.id) } : {}),
         pokeBolt: () => { const p = activeProfile(appSave); hubQueue.push({ kind: "BOLT", title: p?.openingComplete ? "Fully charged and ready to wobble!" : "Bzzt… still charging…", body: "Tap the Campus Map to pick where to go next." }); showNextHubMoment(); },
         pokeSprocket: () => { sfx(1300, .05); window.setTimeout(() => sfx(1500, .05), 90); hubRoot.querySelector(".station-sprocket")?.classList.add("wiggle"); window.setTimeout(() => hubRoot.querySelector(".station-sprocket")?.classList.remove("wiggle"), 600); },
         meetVisitor: id => {
@@ -3130,6 +3149,73 @@ function finishChallenge() {
     sfx(980, .09);
     buzz(60);
 }
+// ---------------------------------------------------------------- Science Fairs (M28)
+const fairEnter = document.querySelector("#btn-fair-enter");
+const FAIR_LOOK = { "fair.motion-makers": "motion-yard", "fair.strong-and-powered": "builder-bay", "fair.water-and-air-show": "water-works", "fair.smart-machines": "robot-lab", "fair.anything-goes": "everything-lab" };
+/** The fair being built for (if any), and the fair TEST being judged. */
+let fair;
+let fairRun;
+function resetFairButton() { fairEnter.textContent = "🎪 Enter the fair!"; delete fairEnter.dataset.left; fairEnter.disabled = false; }
+function setupFair(def, level) {
+    fair = def;
+    fairRun = undefined;
+    fairEnter.classList.toggle("hidden", !def);
+    resetFairButton();
+    if (!def || !level)
+        return;
+    // The tray shows the fair's parts that this inventor has unlocked.
+    const owned = new Set(sandboxTrayParts(activeProfile(appSave)?.unlockedParts ?? []));
+    updateOpeningTray({ ...level, availablePartIds: level.availablePartIds.filter(id => owned.has(id)) });
+    motionObjective.textContent = `${def.prompt} Entry rule: ${def.rule}`;
+    document.querySelector(".motion-hud .motion-badge").textContent = `${def.icon} FAIR ${def.number}`;
+}
+/** "Enter the fair!": one fair TEST of the build as it is now, then the honest results. */
+fairEnter.addEventListener("click", () => {
+    if (!fair || !activeLevel || !gameplayAllowed() || fairRun)
+        return;
+    if (testMode)
+        stopToBuild();
+    ui.test.click();
+    if (!testMode)
+        return;
+    fairRun = new FairRun(fair, build, new Set([...(activeLevel.staticObjects ?? []), ...activeLevel.starterParts].map(p => p.id)));
+    fairEnter.disabled = true;
+    sfx(880, .08);
+});
+function finishFair() {
+    const def = fair, run = fairRun, rt = tests.active(), level = activeLevel;
+    if (!def || !run || !rt || !level)
+        return;
+    if (!tests.isPaused())
+        tests.togglePause();
+    fairRun = undefined;
+    resetFairButton();
+    const ev = run.evidence(rt);
+    const result = judgeEntry(def, ev, build, rt);
+    if (!result.accepted) {
+        showMotionResult(false, `Almost! For this fair: ${result.missing ?? def.rule} Change it and enter again!`);
+        motionResultTitle.textContent = "ALMOST!";
+        sfx(420, .08);
+        return;
+    }
+    let save = recordMissionSuccess(appSave, level.id, { playerPartCount: ev.partsAdded, discoveries: [] }).save;
+    const entryNo = fairHistory(save, def.id).length + 1;
+    const title = `${def.title} entry ${entryNo}`;
+    const kept = saveNewInvention(save, { name: title, content: contentOf(build.snapshot()), environment: `lab:${def.id}` });
+    if (kept.invention) {
+        save = kept.save;
+        editingInvention = kept.invention.id;
+        void captureThumb(kept.invention.id, 1);
+    }
+    save = withFairEntry(save, def, result, title, Date.now(), kept.invention?.id);
+    void commit(save, true).catch(() => undefined);
+    const awards = result.awards.length ? result.awards.map(a => ` 🏅 ${a.label} — ${a.because}.`).join("") : " (No measured awards this time — try going faster, steadier or with fewer parts!)";
+    const cheers = crowdCheers(appSave).map(c => ` ${c}`).join("");
+    showMotionResult(true, `Entry accepted — you get the ${def.title} ribbon! There's no winner at the WobbleWorks fair, just great ideas.${awards} Just for fun: ${result.fun}!${cheers}`);
+    motionResultTitle.textContent = "🎪 FAIR ENTRY!";
+    sfx(1040, .1);
+    buzz(60);
+}
 function render() {
     maybeCompleteOpeningChallenge();
     maybeCompleteMotionMission();
@@ -3142,7 +3228,7 @@ function render() {
     if (freeBuildActive && currentRoom && !photoBackground)
         drawRoomBackdrop(currentRoom);
     const themed = challenge ?? contract;
-    const lookLab = themed ? (themed.baseLevelId.startsWith("chain.") ? CHAIN_WORKSHOP.id : themed.labId) : currentLabId;
+    const lookLab = fair ? FAIR_LOOK[fair.id] ?? "motion-yard" : themed ? (themed.baseLevelId.startsWith("chain.") ? CHAIN_WORKSHOP.id : themed.labId) : currentLabId;
     const sceneryId = themed ? themed.baseLevelId : activeLevel?.id;
     if (labActive && photoBackground)
         renderer.drawScenery(sceneryId);
@@ -3222,12 +3308,25 @@ function frame(frameNow) {
             recorder?.record(rt);
             if (challengeRun && !challengeRun.done && activeLevel && !tests.isPaused())
                 challengeRun.tick(rt, evaluateLevelOutcome(activeLevel, build, rt).complete);
+            if (fairRun && !tests.isPaused())
+                fairRun.sample(rt);
         }
     } replayer?.step(); }));
     if (replayer?.frame())
         replayNote = "Fast-forwarding…";
     if (challengeRun?.done && testMode && !resultShown)
         finishChallenge();
+    if (fairRun && testMode) {
+        if (fairRun.done)
+            finishFair();
+        else {
+            const left = Math.ceil(fairRun.secondsLeft);
+            if (fairEnter.dataset.left !== String(left)) {
+                fairEnter.dataset.left = String(left);
+                fairEnter.textContent = `🎪 Judging… ${left} s`;
+            }
+        }
+    }
     render();
     requestAnimationFrame(frame);
 }

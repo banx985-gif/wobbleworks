@@ -567,3 +567,7 @@ html.high-contrast { --ink:#000; --panel:#fff; --accent:#006b1b; --danger:#a0000
 /* ---- Inventor Contracts (M27) ---- */
 .job-board-art{display:grid;place-items:center;width:100%;height:100%;font-size:clamp(24px,4vw,52px);line-height:1;filter:drop-shadow(0 3px 0 #0003)}
 #btn-hub-moment-later{min-height:56px}
+
+/* ---- Science Fairs (M28) ---- */
+#btn-fair-enter{min-height:56px;font-weight:900;background:#f783ac}
+.fair-list{margin:6px 0;padding-left:20px;text-align:left}.fair-list li{margin:4px 0}
