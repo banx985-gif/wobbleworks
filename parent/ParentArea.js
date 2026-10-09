@@ -1,17 +1,11 @@
-import { MOTION_PARENT_MAPPINGS } from "../motion/MotionYard.js";
-import { GEAR_PARENT_MAPPINGS } from "../gears/GearGarage.js";
-import { STRUCTURE_PARENT_MAPPINGS } from "../structures/BuilderBay.js";
+import { ABOUT_POINTS, HELP_POINTS, PARENT_CONCEPT_GROUPS, PRIVACY_POINTS, childSummary } from "./ParentSummary.js";
 import { MAIN_LABS } from "../progression/CampaignData.js";
-import { labCleared } from "../progression/LabProgression.js";
 import { INSTALLED_REGION_CONTENT, ownsFullGame } from "../progression/Campus.js";
-import { LAB_MODULES } from "../labs/Labs.js";
 import { formatBytes } from "../save/StorageMonitor.js";
-import { CHAIN_PARENT_MAPPINGS } from "../chain/ChainWorkshop.js";
-import { EXPERIMENT_PARENT_MAPPINGS } from "../experiment/ExperimentLab.js";
 /**
- * Grown-ups area (Milestone 10 slice): gate keypad, per-child concept summary, storage manager,
- * backup export/import and profile removal. Full Parent Dashboard content arrives at M34;
- * real purchase/restore at M37 — until then the full-game switch is a clearly-labelled test tool.
+ * Grown-ups area: gate keypad and the Parent Dashboard (M34) — each inventor's evidence-backed summary
+ * (src/parent/ParentSummary.ts), storage and backups, full-game controls, privacy, help and about.
+ * Real store purchase/restore arrives at M37; until then the buttons explain that, and a clearly-labelled test tool remains.
  */
 function el(tag, className = "", text) {
     const n = document.createElement(tag);
@@ -67,17 +61,61 @@ export function renderParentGate(root, gate, message, onPress, onBack, onDelete 
 function parentIcon(id) { const img = el("img", "parent-icon"); img.src = `./assets/parent/parent.icon.${id}.webp`; img.alt = ""; return img; }
 function heading(icon, text) { const h = el("h2", "parent-h"); h.append(parentIcon(icon), document.createTextNode(text)); return h; }
 function line(icon, text) { const s = el("span", "parent-line"); s.append(parentIcon(icon), el("span", "", text)); return s; }
-/** Every lab's grown-up concept lines, in campaign order. */
-export const PARENT_CONCEPT_GROUPS = [
-    { concept: "Gears & Mechanisms", mappings: GEAR_PARENT_MAPPINGS },
-    { concept: "Structures & Forces", mappings: STRUCTURE_PARENT_MAPPINGS },
-    ...LAB_MODULES.map(m => ({ concept: m.concept, mappings: m.parentMappings })),
-    { concept: "Cause and effect", mappings: CHAIN_PARENT_MAPPINGS },
-    { concept: "Fair tests", mappings: EXPERIMENT_PARENT_MAPPINGS }
-];
-function conceptLines(p, mappings = MOTION_PARENT_MAPPINGS) {
-    const found = new Set(p.discoveries);
-    return mappings.filter(m => found.has(m.discoveryId)).map(m => m.evidence);
+export { PARENT_CONCEPT_GROUPS };
+/** A titled list; an empty list shows a gentle "not yet" line instead (never a judgement). */
+function list(title, lines, empty) {
+    const box = el("div", "parent-block");
+    box.append(el("strong", "", title));
+    if (!lines.length)
+        box.append(el("span", "muted", empty));
+    for (const t of lines)
+        box.append(el("span", "parent-item", t));
+    return box;
+}
+/** One inventor's page: what they explored (from evidence), labs, experiments, coding, making, and things to try at home. */
+function childCard(save, p, cb) {
+    const sum = childSummary(save, p);
+    const card = el("details", "parent-kid");
+    if (save.profiles.length === 1 || p.id === save.activeProfileId)
+        card.open = true;
+    const head = el("summary", "");
+    head.append(el("strong", "", sum.name));
+    if (sum.lastPlayed)
+        head.append(el("span", "muted", ` · last played ${sum.lastPlayed}`));
+    card.append(head);
+    card.append(line("science", "What they explored"));
+    card.append(sum.concepts.length ? (() => { const box = el("div", "parent-block"); for (const g of sum.concepts)
+        box.append(el("span", "parent-item", `${g.concept}: ${g.evidence.join("; ")}`)); return box; })() : el("p", "muted", "Nothing recorded yet. Discoveries appear here when they really happen in a test — finishing a level isn't enough on its own."));
+    card.append(line("explore", "Labs and challenges"), list("", sum.labs.map(l => `${l.title} — ${l.line}`), "No missions finished yet."));
+    card.append(line("science", "Experiments"), list("", sum.experiments, "No experiments saved yet."));
+    card.append(line("progress", "Coding"), list("", sum.programming, "No coding concepts met yet — they come in the Robot Lab."));
+    card.append(line("activity", "Making and sharing"), list("", sum.making, "Nothing saved yet."));
+    if (sum.tryAtHome.length) {
+        const home = el("div", "parent-block");
+        home.append(el("strong", "", "Try at home"));
+        for (const t of sum.tryAtHome)
+            home.append(el("span", "parent-item", `${t.concept}: ${t.ideas[0]}`));
+        card.append(line("family", "Ideas for real-world play"), home);
+    }
+    const del = el("button", "danger small", "Remove inventor…");
+    del.addEventListener("click", () => { if (window.confirm(`Remove ${p.name} and all of their progress from this device? This can't be undone unless you have a backup.`))
+        cb.deleteProfile(p.id); });
+    card.append(del);
+    return card;
+}
+/** A section of plain-language points (privacy, help, about). */
+function infoSection(icon, title, points) {
+    const sec = el("section", "parent-section");
+    const d = el("details", "");
+    const sm = el("summary", "");
+    sm.append(heading(icon, title));
+    d.append(sm);
+    const ul = el("ul", "parent-points");
+    for (const t of points)
+        ul.append(el("li", "", t));
+    d.append(ul);
+    sec.append(d);
+    return sec;
 }
 export function renderParentDashboard(root, save, storage, notice, cb) {
     root.replaceChildren();
@@ -87,24 +125,9 @@ export function renderParentDashboard(root, save, storage, notice, cb) {
     kids.append(heading("family", "Your inventors"));
     if (!save.profiles.length)
         kids.append(el("p", "muted", "No inventor profiles yet."));
-    for (const p of save.profiles) {
-        const done = new Set(Object.entries(p.levels).filter(([, r]) => r.completed).map(([id]) => id));
-        const labs = MAIN_LABS.filter(l => labCleared(l, done)).map(l => l.title);
-        const card = el("div", "parent-kid");
-        const lines = conceptLines(p);
-        card.append(el("strong", "", p.name), line("progress", `Missions finished: ${done.size} · Inventions saved: ${p.shelf.length}`), line("explore", `Labs restored: ${labs.length ? labs.join(", ") : "none yet"}`), line("science", `Force & Motion explored: ${lines.length ? lines.join(", ") : "just getting started"}`));
-        for (const g of PARENT_CONCEPT_GROUPS) {
-            const found = conceptLines(p, g.mappings);
-            if (found.length)
-                card.append(line("science", `${g.concept} explored: ${found.join(", ")}`));
-        }
-        const del = el("button", "danger small", "Remove inventor…");
-        del.addEventListener("click", () => { if (window.confirm(`Remove ${p.name} and all of their progress from this device? This can't be undone unless you have a backup.`))
-            cb.deleteProfile(p.id); });
-        card.append(del);
-        kids.append(card);
-    }
-    kids.append(el("p", "muted", "WobbleWorks describes what your child explored. It never grades or labels ability."));
+    for (const p of save.profiles)
+        kids.append(childCard(save, p, cb));
+    kids.append(el("p", "muted", "WobbleWorks only describes what your child has explored and made. Nothing here marks, compares or labels children."));
     const store = el("section", "parent-section");
     store.append(heading("activity", "Storage & backups"));
     if (storage) {
@@ -130,7 +153,16 @@ export function renderParentDashboard(root, save, storage, notice, cb) {
     const own = el("section", "parent-section");
     own.append(heading("award", "Full game"));
     own.append(el("p", "", ownsFullGame(save.entitlement) ? "The full campus is unlocked on this device." : "Free: the opening, all of the Motion Yard and Empty Workshop Free Build. The full game opens the rest of the campus."));
-    own.append(el("p", "muted", "Buying and restoring the full game arrive in a later development build."));
+    const buyRow = el("div", "parent-row");
+    if (!ownsFullGame(save.entitlement)) {
+        const buy = el("button", "primary", "Unlock the full game…");
+        buy.addEventListener("click", () => cb.purchase("BUY"));
+        buyRow.append(buy);
+    }
+    const restore = el("button", "", "Restore a purchase");
+    restore.addEventListener("click", () => cb.purchase("RESTORE"));
+    buyRow.append(restore);
+    own.append(buyRow, el("p", "muted", "Children never see a shop: the full game can only be unlocked here, in the grown-ups area."));
     const toggle = el("button", "", ownsFullGame(save.entitlement) ? "Test tool: lock full game again" : "Test tool: pretend full game is owned");
     toggle.addEventListener("click", () => cb.setFullGameForTesting(!ownsFullGame(save.entitlement)));
     own.append(toggle);
@@ -144,5 +176,5 @@ export function renderParentDashboard(root, save, storage, notice, cb) {
     }
     const close = el("button", "primary", "Done");
     close.addEventListener("click", cb.close);
-    root.append(kids, store, own, close);
+    root.append(kids, store, own, infoSection("explore", "Privacy", PRIVACY_POINTS), infoSection("progress", "Help for grown-ups", HELP_POINTS), infoSection("award", "About WobbleWorks", ABOUT_POINTS), close);
 }

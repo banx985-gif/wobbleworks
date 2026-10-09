@@ -1433,6 +1433,7 @@ function renderParent() {
             }).catch(() => { parentNotice = IMPORT_MESSAGES.NOT_JSON; renderParent(); });
         },
         deleteProfile: id => { void commit(withDeletedProfile(appSave, id), true).then(async () => { applySettings(); parentNotice = "Inventor removed."; lastStorage = await storageReport(appSave); renderParent(); }); },
+        purchase: kind => { parentNotice = kind === "BUY" ? "Buying the full game will be available in the store version of WobbleWorks. Nothing has been charged." : "Restoring a purchase will be available in the store version of WobbleWorks, on the same store account you bought it with."; renderParent(); },
         setFullGameForTesting: owned => { void commit(withEntitlement(appSave, owned ? "OWNED" : "LOCKED"), true).then(() => renderParent()); },
         openLabForTesting: labId => { if (!activeProfile(appSave)) {
             parentNotice = "Choose an inventor first, then open the lab.";
