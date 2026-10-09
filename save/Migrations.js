@@ -1,5 +1,5 @@
 import { completionRewardIds, grantRewardsTo } from "../progression/Rewards.js";
-import { CURRENT_SAVE_SCHEMA, DEFAULT_ASSISTANCE, DEFAULT_SETTINGS, MAX_EXPERIMENTS, MAX_FAIR_ENTRIES, MAX_INVENTIONS, validateFairEntry, OPENING_STARTER_PARTS, PAINTED_AVATARS, isSafeId, sanitizeProfileName, validateExperiment, validateInvention } from "../app/AppState.js";
+import { CURRENT_SAVE_SCHEMA, DEFAULT_ASSISTANCE, DEFAULT_SETTINGS, MAX_CHALLENGES_ON_DEVICE, MAX_EXPERIMENTS, MAX_FAIR_ENTRIES, validateCustomChallenge, MAX_INVENTIONS, validateFairEntry, OPENING_STARTER_PARTS, PAINTED_AVATARS, isSafeId, sanitizeProfileName, validateExperiment, validateInvention } from "../app/AppState.js";
 import { cleanInventionName, contentChecksum, contentOf } from "../inventions/Inventions.js";
 import { DEFAULT_LOOK, validateLook } from "../inventor/InventorLook.js";
 function asArray(v) { return Array.isArray(v) ? v : []; }
@@ -49,6 +49,7 @@ const v1ToV2 = (v1) => {
         deviceSettings: { ...DEFAULT_SETTINGS },
         freeBuildUnlocked: guestKeepsProgress ? v1.freeBuildUnlocked === true : false,
         myInventionsCount: 0,
+        customChallenges: [],
         openingStep: guestKeepsProgress ? openingStep : 1,
         openingComplete: guestKeepsProgress ? openingComplete : false,
         motionCompletedLevelIds: guestKeepsProgress ? motionDone : [],
@@ -154,7 +155,12 @@ const v5ToV6 = (v5) => {
     });
     return { ...v5, schemaVersion: 6, profiles };
 };
-export const SAVE_MIGRATIONS = Object.freeze({ 1: v1ToV2, 2: v2ToV3, 3: v3ToV4, 4: v4ToV5, 5: v5ToV6 });
+/** v6 (M28–M30) → v7: creator challenges (M31) live on the device. Starts empty; a list that already exists is kept only if every entry is valid. */
+const v6ToV7 = (v6) => {
+    const list = asArray(v6.customChallenges);
+    return { ...v6, schemaVersion: 7, customChallenges: list.length <= MAX_CHALLENGES_ON_DEVICE && list.every(c => validateCustomChallenge(c)) ? list : [] };
+};
+export const SAVE_MIGRATIONS = Object.freeze({ 1: v1ToV2, 2: v2ToV3, 3: v3ToV4, 4: v4ToV5, 5: v5ToV6, 6: v6ToV7 });
 export function migrateAppSave(input) {
     if (!input || typeof input !== "object" || Array.isArray(input))
         return { ok: false, reason: "NOT_A_SAVE" };

@@ -1,20 +1,21 @@
 import { completionRewardIds, grantRewardsTo } from "../progression/Rewards.js";
 import { validateLook } from "../inventor/InventorLook.js";
 /**
- * WobbleWorks root save — schema version 6 (v2 = Milestone 10; v3 adds the inventor maker look; v4 experiments; v5 My Inventions; v6 Science Fair history).
+ * WobbleWorks root save — schema version 6 (v2 = Milestone 10; v3 adds the inventor maker look; v4 experiments; v5 My Inventions; v6 Science Fair history; v7 creator challenges).
  *
  * Root fields that are not inside a profile are the *guest* progress made before the
  * first inventor is created (the opening is played before any profile exists).
  * When the first inventor is created, that guest progress moves into the profile.
  * Every later profile owns its own campaign, unlocks, rewards, shelf, settings and assistance.
  */
-export const CURRENT_SAVE_SCHEMA = 6;
+export const CURRENT_SAVE_SCHEMA = 7;
 /** BLUE, PINK and GREEN are the three painted inventors (Aaron's art, 8 Oct). ORANGE/PURPLE remain valid for older saves. */
 export const AVATAR_STYLES = ["ORANGE", "BLUE", "GREEN", "PURPLE", "PINK"];
 export const PAINTED_AVATARS = ["BLUE", "PINK", "GREEN"];
 export const MAX_EXPERIMENTS = 40;
 export const MAX_TRIALS = 12;
 export const MAX_FAIR_ENTRIES = 60;
+export const MAX_CHALLENGES_ON_DEVICE = 30;
 export const MAX_INVENTIONS = 40;
 export const MAX_VERSIONS = 25;
 export const INVENTION_NAME_MAX = 40;
@@ -38,7 +39,8 @@ export function createDefaultAppSave() {
         openingStep: 1,
         openingComplete: false,
         motionCompletedLevelIds: [],
-        motionDiscoveries: []
+        motionDiscoveries: [],
+        customChallenges: []
     };
 }
 export function sanitizeProfileName(raw) {
@@ -235,7 +237,30 @@ export function validateAppSave(value) {
         return false;
     if (value.lastBuild !== undefined && !isBuild(value.lastBuild))
         return false;
+    if (!Array.isArray(value.customChallenges) || value.customChallenges.length > MAX_CHALLENGES_ON_DEVICE || !value.customChallenges.every(validateCustomChallenge))
+        return false;
+    if (new Set(value.customChallenges.map(c => c.id)).size !== value.customChallenges.length)
+        return false;
     return true;
+}
+/** A creator challenge's shape — strict, because it may come from a backup: safe ids, a short name, sizes inside the sandbox budgets, parts inside the room. */
+export function validateCustomChallenge(c) {
+    if (!c || typeof c !== "object" || !isSafeId(c.id) || !isSafeId(c.creatorProfileId) || !isSafeId(c.roomId) || !Number.isFinite(c.createdAtMs))
+        return false;
+    if (typeof c.name !== "string" || c.name.length < 1 || c.name.length > 40 || typeof c.creatorName !== "string" || c.creatorName.length > PROFILE_NAME_MAX)
+        return false;
+    if (!Array.isArray(c.fixed) || c.fixed.length < 2 || c.fixed.length > 40)
+        return false;
+    if (!c.fixed.every(p => p && isSafeId(p.id) && isSafeId(p.definitionId) && p.position && Number.isFinite(p.position.x) && Number.isFinite(p.position.y) && p.position.x >= -1 && p.position.x <= 17 && p.position.y >= -1 && p.position.y <= 10 && Number.isFinite(p.rotation) && p.parameters && typeof p.parameters === "object" && p.parameters.locked === true && (p.tags === undefined || isStringArray(p.tags, true))))
+        return false;
+    if (!c.fixed.some(p => p.tags?.includes("start")) || c.fixed.filter(p => p.tags?.includes("goal")).length !== 1)
+        return false;
+    if (!isStringArray(c.allowedParts, true) || c.allowedParts.length < 1 || c.allowedParts.length > 40)
+        return false;
+    if (![0, 3, 5, 10].includes(c.partLimit))
+        return false;
+    const pr = c.proof;
+    return Boolean(pr) && typeof pr.roomHash === "string" && typeof pr.buildHash === "string" && isCount(pr.partsUsed) && Number.isFinite(pr.seconds) && pr.seconds >= 0 && (c.partLimit === 0 || pr.partsUsed <= c.partLimit);
 }
 // ------------------------------------------------------------------ profile access
 export function activeProfile(save) {

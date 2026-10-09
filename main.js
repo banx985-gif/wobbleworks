@@ -5,6 +5,8 @@ import { boltArt, boltPoseUrl, renderCampusMap, renderHub, renderLocker, renderP
 import { renderInventions, showInventionDetail, showInventionList } from "./hub/InventionScreens.js";
 import { contentChecksum, contentOf, deleteInvention, duplicateInvention, inventionById, latestVersion, liveThumbKeys, renameInvention, resolveVersion, restoreAsNewVersion, saveNewInvention, saveVersion, shelfItemFor, showOnShelf, suggestedName, takeOffShelf, thumbKey, tidySuggestion, tidyVersions } from "./inventions/Inventions.js";
 import { RunMeter } from "./inventions/RunMeter.js";
+import { CREATOR_PALETTE, PART_LIMITS, VALIDATED_LABEL, START_PARTS, challengeLevel, fixedForChallenge, roomHash, setupMissing, withCustomChallenge, withCustomSolve, withoutCustomChallenge } from "./custom/CustomChallenges.js";
+import { renderCreator, showCreatorList } from "./hub/CreatorScreens.js";
 import { CO_PATTERNS, CoBuildSession, TogetherLaunch, partnerChoices, sessionOwner, togetherName } from "./coop/CoBuild.js";
 import { followPoint, followTargets, ReplayPlayer, ReplayRecorder } from "./replay/ReplaySystem.js";
 import { drawPhotoBackground, PhotoMode, photoStickers, thumbnailFrom } from "./photo/PhotoMode.js";
@@ -377,6 +379,7 @@ function renderLabMenu() {
     const lab = labDef();
     const completed = completedSet();
     const requiredNext = nextRequiredLabMission(lab, completed);
+    document.querySelector("#btn-creator").classList.toggle("hidden", lab.id !== CHALLENGE_LAB.id || !activeProfile(appSave));
     document.querySelector("#lab-badge").textContent = MAIN_LABS.includes(lab) ? `LAB ${MAIN_LABS.indexOf(lab) + 1}` : "WORKSHOP MODE";
     document.querySelector("#lab-badge").style.background = lab.colour;
     document.querySelector("#lab-title").textContent = lab.title;
@@ -773,6 +776,8 @@ function renderShell() {
         renderShelf(shelfRoot, appSave, { open: openShelfInvention, thumb: (id, n) => thumbs.get(thumbKey(id, n)) });
     if (current === "INVENTIONS")
         renderInventionScreen();
+    if (current === "CREATOR")
+        renderCreatorScreen();
     if (current === "GROWN_UPS")
         renderGate("");
     if (current === "PARENT_DASHBOARD")
@@ -820,6 +825,9 @@ function syncOpeningMetrics(save) {
     });
 }
 async function persistCurrentBuild(markFirstTest = false, immediate = false) {
+    // Making or playing a creator challenge never overwrites the room's own Free Build.
+    if (creator || customPlay)
+        return;
     // A sandbox build remembers which room it belongs to, so going back to that room continues it.
     const snapshot = build.snapshot(currentRoom && freeBuildActive ? `sandbox:${currentRoom.id}` : "build.workshop");
     const next = markFirstTest ? withFirstTest(appSave, snapshot) : withBuild(appSave, snapshot);
@@ -990,6 +998,9 @@ function leaveGameplay() {
     contract = undefined;
     setupFair(undefined);
     endCoop(false);
+    creator = undefined;
+    customPlay = undefined;
+    creatorPanel.classList.add("hidden");
     currentRoom = undefined;
     sandboxBar.classList.add("hidden");
     sandboxDrawer.classList.add("hidden");
@@ -1723,6 +1734,15 @@ document.querySelectorAll("[data-shell-action]").forEach(button => button.addEve
         transition("INVENTIONS");
         return;
     }
+    if (action === "creator") {
+        showCreatorList();
+        transition("CREATOR");
+        return;
+    }
+    if (action === "creator-back") {
+        showLab(CHALLENGE_LAB.id);
+        return;
+    }
     if (action === "open-inventions") {
         inventionsReturn = "SHELF";
         showInventionList();
@@ -2060,6 +2080,11 @@ document.querySelectorAll("[data-part]").forEach(button => button.addEventListen
     }
     if (!roomForMore(1))
         return;
+    const limit = creator?.phase === "PROVE" ? creator.partLimit : customPlay?.challenge.partLimit ?? 0;
+    if (limit > 0 && addedParts() >= limit) {
+        toast(`This challenge allows ${limit} part${limit === 1 ? "" : "s"}. Move or remove one to try something else.`);
+        return;
+    }
     if (openingActive)
         openingDirector.noteInteraction(now());
     const id = button.dataset.part;
@@ -3279,6 +3304,7 @@ function finishFair() {
 // ---------------------------------------------------------------- Music Machines: every note the machine plays makes its sound (M29)
 let notesHeard = 0;
 let notesRuntime;
+let creatorFrame = 0;
 function playNotes(runtime) {
     if (!runtime || !runtime.music.active) {
         notesRuntime = runtime;
@@ -3469,6 +3495,196 @@ document.querySelectorAll("[data-hold]").forEach(b => {
         b.addEventListener(ev, () => { b.classList.remove("held"); launch?.press(side, false); });
 });
 document.querySelector("#coop-launch-close").addEventListener("click", () => { launch = undefined; coopLaunch.classList.add("hidden"); });
+// ---------------------------------------------------------------- Build-your-own challenges (M31)
+const creatorPanel = document.querySelector("#creator-panel"), creatorNext = document.querySelector("#creator-next"), creatorBackBtn = document.querySelector("#creator-back");
+/** Making a challenge: SET = placing the room; PROVE = the creator solving it (the only way it can be saved). */
+let creator;
+let customPlay;
+function addedParts() { const skip = creator ? new Set([...creator.roomIds, ...creator.fixedIds]) : customPlay?.seeded ?? new Set(); return build.allParts().filter(p => !skip.has(p.id) && p.parameters.locked !== true).length; }
+function roomLevel(id) { return labLevels.get(FREE_BUILD_ROOMS.id)?.get(id); }
+function renderCreatorScreen() {
+    renderCreator(document.querySelector("#creator-root"), appSave, {
+        play: id => startCustomChallenge(id), remove: id => { void commit(withoutCustomChallenge(appSave, id), true); }, make: id => startCreator(id),
+        rooms: () => FREE_BUILD_ROOMS.missions.filter(m => sandboxOpen(appSave, m.id) && !sandboxById(m.id)?.robotFloor).map(m => ({ id: m.id, title: m.title, icon: sandboxById(m.id)?.icon ?? "🧰" })),
+        roomTitle: id => sandboxById(id)?.title ?? "a room", rerender: renderCreatorScreen
+    });
+}
+function startCreator(roomId) {
+    const room = roomLevel(roomId);
+    if (!room)
+        return;
+    startSandbox(room);
+    sandboxBar.classList.add("hidden");
+    sandboxPrompt.classList.add("hidden");
+    build.replaceAll({ parts: [...(room.staticObjects ?? [])], connections: [] });
+    creator = { phase: "SET", roomId, roomIds: new Set((room.staticObjects ?? []).map(p => p.id)), fixedIds: new Set(), allowed: new Set(["motion.ramp", "motion.spring", "structure.block"]), partLimit: 0 };
+    motionTitle.textContent = "Make a challenge";
+    motionObjective.textContent = "Put down something to start with, one goal zone and some obstacles.";
+    document.querySelector(".motion-badge").textContent = "🛠️ CREATOR";
+    updateOpeningTray({ ...room, availablePartIds: [...CREATOR_PALETTE] });
+    renderCreatorPanel();
+    creatorPanel.classList.remove("hidden");
+}
+function creatorFixed() { return creator ? build.allParts().filter(p => !creator.roomIds.has(p.id)) : []; }
+function renderCreatorPanel() {
+    const c = creator;
+    if (!c)
+        return;
+    const setup = document.querySelector("#creator-setup");
+    const checks = document.querySelector("#creator-checks");
+    checks.replaceChildren();
+    const nameRow = document.querySelector("#creator-name-row");
+    const note = document.querySelector("#creator-note");
+    if (c.phase === "SET") {
+        const fixed = creatorFixed();
+        const tick = (ok, t) => { const li = document.createElement("li"); li.textContent = `${ok ? "✅" : "⬜"} ${t}`; checks.append(li); };
+        tick(fixed.some(p => START_PARTS.includes(p.definitionId)), "Something to start with");
+        tick(fixed.filter(p => p.definitionId === "motion.goal-zone").length === 1, "One goal zone");
+        tick(fixed.some(p => !START_PARTS.includes(p.definitionId) && p.definitionId !== "motion.goal-zone"), "Obstacles (optional)");
+        document.querySelector("#creator-step").textContent = "1. Set it up";
+        setup.classList.remove("hidden");
+        nameRow.classList.add("hidden");
+        const parts = document.querySelector("#creator-parts");
+        parts.replaceChildren();
+        for (const id of sandboxTrayParts(activeProfile(appSave)?.unlockedParts ?? []).filter(id => !CREATOR_PALETTE.includes(id) || id === "motion.ramp" || id === "structure.block")) {
+            const b = document.createElement("button");
+            b.textContent = registry.has(id) ? registry.get(id).displayName : id;
+            b.classList.toggle("on", c.allowed.has(id));
+            b.addEventListener("click", () => { if (c.allowed.has(id))
+                c.allowed.delete(id);
+            else
+                c.allowed.add(id); renderCreatorPanel(); });
+            parts.append(b);
+        }
+        const limits = document.querySelector("#creator-limits");
+        limits.replaceChildren();
+        for (const n of PART_LIMITS) {
+            const b = document.createElement("button");
+            b.textContent = n ? String(n) : "No limit";
+            b.classList.toggle("on", c.partLimit === n);
+            b.addEventListener("click", () => { c.partLimit = n; renderCreatorPanel(); });
+            limits.append(b);
+        }
+        const missing = setupMissing(fixedForChallenge(fixed), [...c.allowed]);
+        note.textContent = missing ?? "Ready! Now prove it can be done.";
+        creatorNext.textContent = "Next: prove it! ▶";
+        creatorNext.disabled = Boolean(missing);
+        creatorBackBtn.textContent = "✕ Stop making";
+    }
+    else {
+        document.querySelector("#creator-step").textContent = c.proof ? "3. Proven! Name it and save" : "2. Prove it: solve it yourself";
+        setup.classList.add("hidden");
+        note.textContent = c.proof ? `✅ You solved it with ${c.proof.partsUsed} part${c.proof.partsUsed === 1 ? "" : "s"} in ${c.proof.seconds.toFixed(1)} s. It will say "${VALIDATED_LABEL}".` : `Get the start object into the goal${c.partLimit ? ` using up to ${c.partLimit} parts` : ""}, then press TEST. Only a challenge you have solved can be saved.`;
+        nameRow.classList.toggle("hidden", !c.proof);
+        creatorNext.textContent = c.proof ? "💾 Save challenge" : "Waiting for your solve…";
+        creatorNext.disabled = !c.proof;
+        creatorBackBtn.textContent = "◀ Back to setting up";
+    }
+}
+creatorNext.addEventListener("click", () => {
+    const c = creator;
+    if (!c)
+        return;
+    if (testMode)
+        stopToBuild();
+    if (c.phase === "SET") {
+        const fixed = fixedForChallenge(creatorFixed());
+        if (setupMissing(fixed, [...c.allowed]))
+            return;
+        const room = roomLevel(c.roomId);
+        c.fixed = fixed;
+        c.fixedIds = new Set(fixed.map(p => p.id));
+        c.phase = "PROVE";
+        delete c.proof;
+        c.level = challengeLevel({ id: "draft", name: "Draft", creatorProfileId: "x", creatorName: "x", createdAtMs: 0, roomId: c.roomId, fixed, allowedParts: [...c.allowed], partLimit: c.partLimit, proof: { roomHash: "", buildHash: "", partsUsed: 0, seconds: 0 } }, room);
+        build.replaceAll({ parts: [...(room.staticObjects ?? []), ...fixed], connections: [] });
+        selectedId = undefined;
+        updateOpeningTray({ ...room, availablePartIds: [...c.allowed] });
+        renderCreatorPanel();
+        toast("Now solve your own challenge!");
+        return;
+    }
+    if (!c.proof || !c.fixed)
+        return;
+    const out = withCustomChallenge(appSave, { name: document.querySelector("#creator-name").value, roomId: c.roomId, fixed: c.fixed, allowedParts: [...c.allowed], partLimit: c.partLimit, proof: c.proof });
+    if (out.reason || !out.challenge) {
+        toast(out.reason === "FULL" ? "This device already has 30 challenges — delete one first." : "That challenge needs to be solved again before it can be saved.");
+        return;
+    }
+    void commit(out.save, true);
+    toast(`Saved "${out.challenge.name}" — ✅ ${VALIDATED_LABEL}!`);
+    sfx(1040, .1);
+    showCreatorList();
+    leaveGameplay();
+    transition("CREATOR");
+});
+creatorBackBtn.addEventListener("click", () => {
+    const c = creator;
+    if (!c)
+        return;
+    if (testMode)
+        stopToBuild();
+    if (c.phase === "SET") {
+        leaveGameplay();
+        showCreatorList();
+        transition("CREATOR");
+        return;
+    }
+    // Back to setting up: the proof no longer counts, and the solving parts are cleared away.
+    const room = roomLevel(c.roomId);
+    const fixed = (c.fixed ?? []).map(p => ({ ...p, parameters: { ...p.parameters, locked: false } }));
+    build.replaceAll({ parts: [...(room.staticObjects ?? []), ...fixed], connections: [] });
+    c.phase = "SET";
+    delete c.proof;
+    c.fixedIds = new Set();
+    updateOpeningTray({ ...room, availablePartIds: [...CREATOR_PALETTE] });
+    renderCreatorPanel();
+});
+/** The creator (or a player) got every start object into the goal. */
+function creatorSolved(tick) {
+    if (!tests.isPaused())
+        tests.togglePause();
+    const used = addedParts();
+    if (creator?.phase === "PROVE" && creator.fixed) {
+        if (creator.partLimit && used > creator.partLimit) {
+            showMotionResult(false, `Solved — but with ${used} parts. Your limit is ${creator.partLimit}. Can you do it with fewer?`);
+            return;
+        }
+        creator.proof = { roomHash: roomHash(creator.fixed), buildHash: build.snapshot("proof").signature, partsUsed: used, seconds: Math.round(tick / 6) / 10 };
+        renderCreatorPanel();
+        showMotionResult(true, "Proven! Your challenge can be done. Give it a name and save it.");
+        motionResultTitle.textContent = "✅ PROVEN!";
+        return;
+    }
+    const cp = customPlay;
+    if (!cp)
+        return;
+    if (cp.challenge.partLimit && used > cp.challenge.partLimit) {
+        showMotionResult(false, `So close — that used ${used} parts, and this challenge allows ${cp.challenge.partLimit}.`);
+        return;
+    }
+    const out = withCustomSolve(appSave, cp.challenge.id, used);
+    void commit(out.save, true);
+    showMotionResult(true, `You solved ${cp.challenge.creatorName}'s challenge with ${used} part${used === 1 ? "" : "s"}!${out.best && !out.first ? " A new best!" : ""} (They did it with ${cp.challenge.proof.partsUsed}.)`);
+    sfx(980, .09);
+}
+function startCustomChallenge(id) {
+    const c = appSave.customChallenges.find(x => x.id === id);
+    const room = c ? roomLevel(c.roomId) : undefined;
+    if (!c || !room)
+        return;
+    startSandbox(room);
+    sandboxBar.classList.add("hidden");
+    sandboxPrompt.classList.add("hidden");
+    const level = challengeLevel(c, room);
+    build.replaceAll({ parts: level.staticObjects ?? [], connections: [] });
+    selectedId = undefined;
+    customPlay = { challenge: c, level, seeded: new Set((level.staticObjects ?? []).map(p => p.id)) };
+    updateOpeningTray({ ...room, availablePartIds: [...c.allowedParts] });
+    motionTitle.textContent = c.name;
+    motionObjective.textContent = `Get it into the goal${c.partLimit ? ` with up to ${c.partLimit} parts` : ""}. Made by ${c.creatorName} · ✅ ${VALIDATED_LABEL}.`;
+    document.querySelector(".motion-badge").textContent = "🛠️ CHALLENGE";
+}
 function render() {
     maybeCompleteOpeningChallenge();
     maybeCompleteMotionMission();
@@ -3515,6 +3731,8 @@ function render() {
         renderer.drawChainEdges(runtime, shown);
     updateChainHud(runtime);
     playNotes(runtime);
+    if (creator?.phase === "SET" && ++creatorFrame % 20 === 0)
+        renderCreatorPanel();
     if (currentRoom && !testMode && ++capFrame % 20 === 0)
         updateSandboxCap();
     if (runtime && runtime.space.zones.length && (forceScanner || runtime.space.zones.length >= 2))
@@ -3573,6 +3791,12 @@ function frame(frameNow) {
         replayNote = "Fast-forwarding…";
     if (challengeRun?.done && testMode && !resultShown)
         finishChallenge();
+    if ((creator?.phase === "PROVE" || customPlay) && testMode && !resultShown) {
+        const rt = tests.active();
+        const lvl = creator?.level ?? customPlay?.level;
+        if (rt && lvl && evaluateLevelOutcome(lvl, build, rt).complete)
+            creatorSolved(rt.tick);
+    }
     if (fairRun && testMode) {
         if (fairRun.done)
             finishFair();

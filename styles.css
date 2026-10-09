@@ -589,3 +589,12 @@ html.high-contrast { --ink:#000; --panel:#fff; --accent:#006b1b; --danger:#a0000
 .coop-rocket{font-size:72px;transition:transform 1.2s ease-in}.coop-launch.launched .coop-rocket{transform:translateY(-60vh)}
 .coop-meter{width:100%;height:20px;border:3px solid #203040;border-radius:12px;overflow:hidden;background:#fff}.coop-meter span{display:block;height:100%;width:0;background:#4dabf7}
 .photo-on .coop-bar,.replaying .coop-bar{display:none!important}
+
+/* ---- Build-your-own challenges (M31) ---- */
+.creator-panel{position:absolute;right:10px;top:186px;z-index:21;display:flex;flex-direction:column;gap:6px;width:min(330px,40%);max-height:calc(100% - 196px);overflow:auto;padding:10px 12px;background:#fffffff2;border:4px solid #203040;border-radius:18px;box-shadow:0 6px 0 #0002}
+.creator-checks{margin:0;padding:0;list-style:none;font-weight:800}.creator-parts{display:flex;flex-wrap:wrap;gap:6px}.creator-parts button,.creator-panel .coop-actions button{min-height:56px;font-weight:800}
+.creator-parts button.on,#creator-limits button.on{background:#ffd43b}
+.creator-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}.creator-card{display:flex;flex-direction:column;gap:6px;padding:12px;background:#fff;border:3px solid #203040;border-radius:16px;text-align:left}
+.creator-badge{align-self:flex-start;background:#d3f9d8;border:2px solid #2b8a3e;border-radius:10px;padding:2px 8px;font-weight:900;font-size:.85rem}
+.creator-room{min-height:72px;font-weight:900}
+.photo-on .creator-panel,.replaying .creator-panel{display:none!important}
