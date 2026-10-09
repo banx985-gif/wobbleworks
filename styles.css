@@ -677,3 +677,51 @@ details.parent-kid > summary { cursor: pointer; font-size: 1.15em; padding: 6px 
 .inv-card.framed{background:center/100% 100% no-repeat;border:0;box-shadow:none;padding:15% 11% 36%}
 .photo-sticker .photo-sticker-pic{display:block;width:84px;height:84px;object-fit:contain}
 .photo-drawer .photo-sticker-btn .photo-sticker-pic{width:44px;height:44px;object-fit:contain}
+/* ---- M49: every screen on small phones (640×360 and 780×360) as well as tablets ---- */
+/* Title: the painted buttons are part of the picture; each tap area now fills the space up to its neighbour (no dead gaps). */
+.hot-play{top:38.4%;height:13%}.hot-inventors{top:51.4%;height:10.4%}.hot-settings{top:61.8%;height:10.4%}.hot-extras{top:72.2%;height:10.4%}
+/* Workshop labels: break only between words ("Workbench", not "Workbe-nch"), and never smaller than about 11.5 px. */
+.station-label{overflow-wrap:normal;word-break:normal;max-width:16cqw;font-size:clamp(.72rem,1.45cqw,.9rem)}
+.hub-station{min-width:var(--touch)}
+/* Touch targets at least 56 px everywhere. */
+.inventor-edit{min-width:56px;min-height:56px;right:-18px;top:-18px}
+.big-btn{min-height:56px}
+#parent-root button{min-height:56px}
+.set-row{min-height:58px}
+@media (max-height:560px){
+  .set-row{min-height:56px}
+  .big-btn,.creator .big-btn.go{min-height:56px}
+  .gate-keys{gap:6px}.gate-keys .key{min-height:56px}
+  .maker-cats{grid-template-columns:1fr}
+  /* Campus map: the map gets almost the whole screen; the back button and the note sit on top of it. */
+  .map-card{position:relative;padding:4px}
+  .map-card .card-head{position:absolute;top:10px;left:12px;z-index:3;display:block}
+  .map-card .card-head h1,.map-card .card-head span{display:none}
+  .campus-map{width:min(100%,calc((100vh - 20px) * 1.786));width:min(100%,calc((100dvh - 20px) * 1.786))}
+  .map-note{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:3;margin:0;padding:2px 12px;border:3px solid var(--ink);border-radius:99px;background:#fffdf5ee;pointer-events:none;min-height:0;white-space:nowrap}
+  .map-name{font-size:clamp(.7rem,1.25cqw,.82rem)}.map-status{font-size:.7rem;padding:0 4px}
+  .map-node{width:10.5cqw;min-width:58px;padding:.3cqw .3cqw;border-width:3px}.map-pic{width:clamp(24px,4cqw,44px);height:clamp(24px,4cqw,44px)}.map-count{top:-10px;right:-8px;font-size:.7rem;padding:0 5px}
+  .motion-result{bottom:8px;padding:8px 12px;gap:6px}.motion-result strong{font-size:1.2rem}
+}
+/* M49: phones held sideways (360–430 px tall): one slim bottom row (tray, then the controls with TEST first), the Menu
+   button floats top-right, and the mission panel is one line with icon-only tools. Everything stays at least 56 px. */
+@media (orientation:landscape) and (max-height:430px){
+  #app{grid-template-columns:minmax(0,1fr) auto;grid-template-rows:minmax(0,1fr) auto;grid-template-areas:"stage stage" "tray controls"}
+  #app>.stage{grid-area:stage}#app>.tray{grid-area:tray}#app>.controls{grid-area:controls}
+  #app>.topbar{position:absolute;top:max(6px,env(safe-area-inset-top));right:max(6px,env(safe-area-inset-right));z-index:30;padding:0;border:0;background:none;overflow:visible}
+  .topbar>strong,.topbar>.mode{display:none}
+  #btn-menu{min-width:56px;min-height:56px;padding:0;font-size:0}#btn-menu::before{content:"☰";font-size:28px;line-height:1}
+  .tray,.controls{padding:4px 6px;gap:6px;border-top:3px solid var(--ink)}
+  .controls{max-width:58vw;justify-content:flex-start;border-left:3px solid var(--ink)}
+  .controls #btn-test{order:-3}.controls #btn-stop{order:-2}.controls #btn-pause{order:-1}
+  .controls .ctl-art{min-width:84px}.controls .ctl-art img{height:50px}
+  .tray button{min-width:56px;min-height:56px;padding:2px 4px;font-size:0}.tray .part-icon{width:42px;height:42px}.tray button>*{font-size:28px}
+  .motion-hud{left:max(6px,env(safe-area-inset-left));right:calc(max(6px,env(safe-area-inset-right)) + 64px);top:6px;padding:3px 6px 3px 10px;gap:6px;border-width:3px;border-radius:16px;grid-template-columns:minmax(0,1fr) auto}
+  .motion-badge{display:none}
+  .motion-copy strong{font-size:.95rem;line-height:1.1}.motion-copy span{font-size:.8rem;line-height:1.2;font-weight:760}
+  .motion-tools{gap:4px}.motion-tools button{min-width:56px;min-height:56px;padding:0 6px;font-size:0}
+  .motion-tools button>span{font-size:24px}
+  #btn-fair-enter{font-size:.85rem!important;padding:0 8px}#btn-together::before{content:"👫";font-size:24px}#btn-force-scanner::before{content:"🔍";font-size:24px}
+}
+/* M49: inventor-maker category names wrap instead of being cut off ("Ready Looks"). */
+.maker-cat{white-space:normal;text-overflow:clip;line-height:1.1}

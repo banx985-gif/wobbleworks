@@ -84,8 +84,12 @@ export const FAIR_CARDS = {
 export const EXPERIMENT_CARD = "card.compare-flasks";
 export const EXPERIMENT_CARDS = { "exp.which-pipe-fills-faster": "card.tile.water-clean-vs-dirty" };
 export const CREATURE_CARD = "card.creature-pack";
+/** M52: Job Board tiles whose job matches a spare nature card (a vegetable garden, a solar panel, water to pump). */
+export const CONTRACT_CARDS = { "contract.water-the-rows": "card.wavy.sprout", "contract.panel-deployment": "card.tab.sun", "contract.pump-to-the-roof": "card.tab.water-drop", "contract.fountain-fix": "card.tab.water-drop" };
 export function missionCard(labId, missionId) {
     var _a;
+    if (labId === "contract-board")
+        return CONTRACT_CARDS[missionId];
     if (labId === "science-fair")
         return FAIR_CARDS[missionId];
     if (labId === "experiment-lab")

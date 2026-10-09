@@ -1,6 +1,8 @@
 import { createBuildSnapshot } from "../core/BuildSnapshot.js";
 import { deepClone } from "../core/clone.js";
 export class BuildSystem {
+    /** Goes up on every change to the build (the screen redraws when it moves, M50). */
+    get changeCount() { return this.revision; }
     constructor(seed) {
         var _a, _b;
         Object.defineProperty(this, "parts", {

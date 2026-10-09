@@ -4,7 +4,12 @@ export const BACK_BUTTON_SELECTOR = '.back-btn, .big-btn.back, [data-shell-actio
  * What the Android back button does on each screen. It never quits in the middle of building: in the Workshop it opens
  * Pause, in Pause it carries on building, and elsewhere it goes back a screen. Only the title screen leaves the app.
  */
-export function backStep(screen, hasBackButton) {
+export function backStep(screen, hasBackButton, overlay) {
+    // M51: a story or a Workshop message on top is closed first, never skipped past to the title unseen.
+    if (overlay === "STORY")
+        return "SKIP_STORY";
+    if (overlay === "MESSAGE" && screen === "HUB")
+        return "CLOSE_MESSAGE";
     if (screen === "WORKSHOP")
         return "PAUSE";
     if (screen === "PAUSE")

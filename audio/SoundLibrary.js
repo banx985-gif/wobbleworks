@@ -53,6 +53,10 @@ export const EVENT_SOUNDS = {
 };
 /** Map a runtime event to its sound id (undefined = silent). */
 export function eventSound(kind) { const s = EVENT_SOUNDS[kind]; return s ? s : undefined; }
+/** M52: balloons squeak when a finger picks one up or lets it go (in the game they never pop, so this is their only squeeze). */
+export const BALLOON_PARTS = new Set(["flight.balloon", "sandbox.balloon"]);
+/** The sound for picking up or dropping a part: the usual pickup/drop, or the squeak for a balloon. */
+export function handlingSound(partId, action) { return partId && BALLOON_PARTS.has(partId) ? "balloon-squeak" : action; }
 /** A sound can't repeat faster than this (seconds), so a chain of 50 dominoes ticks rather than roars. */
 export const MIN_REPEAT_SECONDS = 0.06;
 /** At most this many sound effects at once; a busy machine drops extra sounds rather than piling them up. */

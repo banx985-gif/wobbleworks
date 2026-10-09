@@ -119,7 +119,7 @@ export const DISCOVERIES = [
     { id: "space.trajectory", kind: "CONCEPT", title: "Trajectories", line: "Lean the launch and the rocket curves over and comes down far away.", art: "icon.rocket-3", truthContractId: "truth.space.v1" },
     { id: "space.no-air", kind: "CONCEPT", title: "No air, no parachute", line: "A parachute needs air to push on — and the Moon hasn't got any.", art: "sandbox.moon", truthContractId: "truth.space.v1" },
     { id: "space.landing", kind: "CONCEPT", title: "Soft landing", line: "Springy legs squashed and soaked up the speed.", art: "icon.rocket-2", truthContractId: "truth.space.v1" },
-    { id: "space.solar", kind: "CONCEPT", title: "Solar power", line: "A panel facing the sun made electricity.", art: "icon.planet", truthContractId: "truth.space.v1" },
+    { id: "space.solar", kind: "CONCEPT", title: "Solar power", line: "A panel facing the sun made electricity.", art: "card.tab.sun", truthContractId: "truth.space.v1" },
     { id: "space.planet-pull", kind: "CONCEPT", title: "A planet's pull", line: "The planet's pull bent the path into a curve.", art: "icon.planet", truthContractId: "truth.space.v1" },
     { id: "space.robot-arm", kind: "CONCEPT", title: "Space robots", line: "A programmed robot arm fitted the module.", art: "robot.arm", truthContractId: "truth.space.v1" },
     { id: "combo.space-stages", kind: "COMBINATION", title: "Stage by stage", line: "One stage finished and started the next one.", art: "icon.launch", truthContractId: "truth.space.v1" },

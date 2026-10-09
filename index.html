@@ -19,6 +19,7 @@
   <link rel="modulepreload" href="./app/NativeApp.js" />
   <link rel="modulepreload" href="./app/ParentGate.js" />
   <link rel="modulepreload" href="./app/Polyfills.js" />
+  <link rel="modulepreload" href="./app/TapGuard.js" />
   <link rel="modulepreload" href="./audio/SoundLibrary.js" />
   <link rel="modulepreload" href="./build/BuildSystem.js" />
   <link rel="modulepreload" href="./chain/ChainHints.js" />
@@ -33,10 +34,8 @@
   <link rel="modulepreload" href="./core/AudioManager.js" />
   <link rel="modulepreload" href="./core/BuildSnapshot.js" />
   <link rel="modulepreload" href="./core/FixedClock.js" />
-  <link rel="modulepreload" href="./core/GoalEvidence.js" />
   <link rel="modulepreload" href="./core/OutcomeEvaluator.js" />
   <link rel="modulepreload" href="./core/PerformanceMonitor.js" />
-  <link rel="modulepreload" href="./core/SceneManager.js" />
   <link rel="modulepreload" href="./core/SimulationPipeline.js" />
   <link rel="modulepreload" href="./core/Telemetry.js" />
   <link rel="modulepreload" href="./core/TestSystem.js" />
@@ -113,6 +112,7 @@
   <link rel="modulepreload" href="./render/ChainRenderer.js" />
   <link rel="modulepreload" href="./render/ConnectionMarks.js" />
   <link rel="modulepreload" href="./render/CreatureRenderer.js" />
+  <link rel="modulepreload" href="./render/DrawQuality.js" />
   <link rel="modulepreload" href="./render/ExperimentRenderer.js" />
   <link rel="modulepreload" href="./render/FlightRenderer.js" />
   <link rel="modulepreload" href="./render/GearRenderer.js" />
@@ -310,11 +310,11 @@
       <div class="title-stage">
         <img class="title-art" src="./assets/brand/brand.pause.webp" alt="" />
         <h1 class="visually-hidden">Paused. Your invention is safe.</h1>
-        <button class="title-hot" style="left:37%;top:34.4%;width:26%;height:9.8%" data-shell-action="resume" aria-label="Resume"></button>
-        <button class="title-hot" style="left:37%;top:45.7%;width:26%;height:8.2%" data-shell-action="return-workshop" aria-label="Main menu: back to the workshop"></button>
-        <button class="title-hot" style="left:37%;top:55%;width:26%;height:8.5%" data-shell-action="settings-from-pause" aria-label="Settings"></button>
-        <button class="title-hot" style="left:37%;top:64.5%;width:26%;height:8.4%" data-shell-action="info" data-info="help" aria-label="How to play"></button>
-        <button class="title-hot" style="left:37%;top:74%;width:26%;height:8.8%" data-shell-action="save-quit" aria-label="Exit game: save and quit"></button>
+        <button class="title-hot" style="left:37%;top:34%;width:26%;height:11%" data-shell-action="resume" aria-label="Resume"></button>
+        <button class="title-hot" style="left:37%;top:45%;width:26%;height:9.6%" data-shell-action="return-workshop" aria-label="Main menu: back to the workshop"></button>
+        <button class="title-hot" style="left:37%;top:54.6%;width:26%;height:9.6%" data-shell-action="settings-from-pause" aria-label="Settings"></button>
+        <button class="title-hot" style="left:37%;top:64.2%;width:26%;height:9.6%" data-shell-action="info" data-info="help" aria-label="How to play"></button>
+        <button class="title-hot" style="left:37%;top:73.8%;width:26%;height:9.8%" data-shell-action="save-quit" aria-label="Exit game: save and quit"></button>
       </div>
     </article>
     <article class="shell-card hidden" data-screen="LOADING_FAILURE"><h1>Workshop couldn’t load</h1><p id="loading-error">Your save has not been changed.</p><p id="loading-tech" class="tech-line"></p><button data-shell-action="retry-load" class="primary">Retry</button></article>

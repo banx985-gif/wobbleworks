@@ -46,6 +46,26 @@ export class CanvasRenderer {
             writable: true,
             value: () => undefined
         });
+        /** M50: canvas pixels per screen point (lowered on a slow device by DrawQuality); 0 = the screen's own. */
+        Object.defineProperty(this, "pixelRatio", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        /** The canvas size on screen, kept from the last resize so drawing never has to ask the page for its layout. */
+        Object.defineProperty(this, "cssWidth", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 1
+        });
+        Object.defineProperty(this, "cssHeight", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 1
+        });
         const ctx = canvas.getContext("2d");
         if (!ctx)
             throw new Error("Canvas 2D unavailable");
@@ -53,11 +73,13 @@ export class CanvasRenderer {
         this.ctx = ctx;
         this.resize();
     }
-    resize() { const ratio = Math.min(2, devicePixelRatio || 1); const rect = this.canvas.getBoundingClientRect(); this.canvas.width = Math.max(1, Math.floor(rect.width * ratio)); this.canvas.height = Math.max(1, Math.floor(rect.height * ratio)); this.viewport.resize(rect.width, rect.height); this.ctx.setTransform(ratio, 0, 0, ratio, 0, 0); }
+    resize() { const ratio = this.pixelRatio || Math.min(2, devicePixelRatio || 1); const rect = this.canvas.getBoundingClientRect(); this.cssWidth = rect.width; this.cssHeight = rect.height; this.canvas.width = Math.max(1, Math.floor(rect.width * ratio)); this.canvas.height = Math.max(1, Math.floor(rect.height * ratio)); this.viewport.resize(rect.width, rect.height); this.ctx.setTransform(ratio, 0, 0, ratio, 0, 0); }
+    /** Draw sharper or softer (drawing only). */
+    setPixelRatio(ratio) { if (ratio === this.pixelRatio)
+        return; this.pixelRatio = ratio; this.resize(); }
     begin(camera) {
         const c = this.ctx;
-        const rect = this.canvas.getBoundingClientRect();
-        c.clearRect(0, 0, rect.width, rect.height);
+        c.clearRect(0, 0, this.cssWidth, this.cssHeight);
         c.save();
         c.translate(this.viewport.offsetX, this.viewport.offsetY);
         c.scale(this.viewport.scale, this.viewport.scale);

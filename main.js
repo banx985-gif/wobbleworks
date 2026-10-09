@@ -3,6 +3,7 @@ import "./app/Polyfills.js";
 import { AppShellController } from "./app/AppShellController.js";
 import { activeProfile, completedLevelIds, createDefaultAppSave, currentAssistance, currentLastBuild, currentOpening, currentSettings, mostRecentProfile, titleVisibility, validateAppSave, withActiveProfile, withAssistance, withBuild, withCreatedProfile, withDeletedProfile, withEntitlement, withFirstTest, withLocation, withOpeningMetrics, withOpeningProgress, withEditedProfile, withSettings, DEFAULT_SETTINGS, DEFAULT_ASSISTANCE, withoutActiveProfile, MAX_PROFILES, PAINTED_AVATARS } from "./app/AppState.js";
 import { ParentGate } from "./app/ParentGate.js";
+import { TapGuard } from "./app/TapGuard.js";
 import { boltArt, boltPoseUrl, renderCampusMap, renderHub, renderLocker, renderProfileSelect, renderShelf, renderTrophies, sprocketArt } from "./hub/HubScreens.js";
 import { renderInventions, showInventionDetail, showInventionList } from "./hub/InventionScreens.js";
 import { contentChecksum, contentOf, deleteInvention, duplicateInvention, inventionById, latestVersion, liveThumbKeys, renameInvention, resolveVersion, restoreAsNewVersion, saveNewInvention, saveVersion, shelfItemFor, showOnShelf, suggestedName, takeOffShelf, thumbKey, tidySuggestion, tidyVersions } from "./inventions/Inventions.js";
@@ -70,6 +71,7 @@ import { CanvasRenderer } from "./render/CanvasRenderer.js";
 import { PROGRAM_PICTURES, SPAWN_PICTURES, trayPictureArt } from "./render/PartPictures.js";
 import { MAKE_YOUR_OWN_ICON, REWARD_PICTURES, WHY_CARD_PICTURE, EXPERIMENT_CARD, missionCard, picturePath, rewardIcon } from "./render/RewardPictures.js";
 import { CameraController } from "./render/CameraController.js";
+import { DrawQuality } from "./render/DrawQuality.js";
 import { AutosaveScheduler, IndexedDbStore, SaveManager, ThumbnailCache } from "./save/SaveManager.js";
 import { EditorOverlay } from "./tooling/EditorOverlay.js";
 import { AssetManager } from "./core/AssetManager.js";
@@ -85,7 +87,7 @@ import { pictureUrl, renderLook } from "./inventor/LookView.js";
 import { AVATAR_PORTRAITS } from "./hub/HubScreens.js";
 import { rewardById as rewardInfo } from "./progression/Rewards.js";
 import { startLocalisation } from "./i18n/Localise.js";
-import { eventSound, mixLevels } from "./audio/SoundLibrary.js";
+import { BALLOON_PARTS, eventSound, handlingSound, mixLevels } from "./audio/SoundLibrary.js";
 import { OwnershipController } from "./entitlement/Ownership.js";
 import { pickAdapter } from "./entitlement/StoreAdapters.js";
 import { BACK_BUTTON_SELECTOR, backStep, hookNativeApp, keepsScreenAwake } from "./app/NativeApp.js";
@@ -125,11 +127,13 @@ renderer.setArt(id => assets.getImage(id));
 /** Build tray pictures come from the one part-art map (render/PartPictures.ts); parts without one keep their tray icon. */
 function applyTrayPictures() {
     document.querySelectorAll("[data-part]").forEach(button => {
-        var _a;
         const art = trayPictureArt(button.dataset.part);
         if (!art)
             return;
-        const url = (_a = artManifest[art]) !== null && _a !== void 0 ? _a : `./assets/${/^(duck|toy|char)./.test(art) ? "char" : "parts"}/${art}.webp`;
+        // M48: only once the art list says where the picture is (guessing the folder asked for files that don't exist).
+        const url = artManifest[art];
+        if (!url)
+            return;
         const old = button.querySelector(".part-icon, .emoji-icon, .gear-icon, .beam-icon");
         if (old instanceof HTMLImageElement && old.getAttribute("src") === url)
             return;
@@ -577,6 +581,7 @@ function showLab(labId = currentLabId) {
     if (!labIsOpen(labId))
         labId = "motion-yard";
     currentLabId = labId;
+    hideSandboxUi();
     stopToBuild();
     openingActive = false;
     labActive = false;
@@ -633,6 +638,7 @@ function loadMission(id) {
         return;
     }
     currentLabId = labId;
+    hideSandboxUi();
     stopToBuild();
     openingActive = false;
     freeBuildActive = false;
@@ -1059,7 +1065,17 @@ function androidBack() {
     const screen = shell.current();
     const card = shellElement.querySelector(`[data-screen="${screen}"]`);
     const button = [...((_a = card === null || card === void 0 ? void 0 : card.querySelectorAll(BACK_BUTTON_SELECTOR)) !== null && _a !== void 0 ? _a : [])].find(b => b.offsetParent !== null && !b.disabled);
-    const step = backStep(screen, Boolean(button));
+    const overlay = storyPlaying ? "STORY" : !hubMoment.classList.contains("hidden") ? "MESSAGE" : undefined;
+    const step = backStep(screen, Boolean(button), overlay);
+    if (step === "SKIP_STORY") {
+        document.querySelector("#btn-story-skip").click();
+        return;
+    }
+    if (step === "CLOSE_MESSAGE") {
+        const later = document.querySelector("#btn-hub-moment-later");
+        (later.classList.contains("hidden") ? document.querySelector("#btn-hub-moment") : later).click();
+        return;
+    }
     if (step === "PAUSE")
         openPause();
     else if (step === "RESUME")
@@ -1543,9 +1559,14 @@ function showNextHubMoment() {
     }
     sfx(next.kind === "REWARD" ? 1040 : 760, .08);
 }
-document.querySelector("#btn-hub-moment-later").addEventListener("click", () => { hubQueue.shift(); renderHubScreen(); });
+/** M51: a double tap on OK closes one message, not the next one too (it may be a reward the child hasn't seen). */
+const momentTaps = new TapGuard(450);
+document.querySelector("#btn-hub-moment-later").addEventListener("click", () => { if (!momentTaps.accept(now()))
+    return; hubQueue.shift(); renderHubScreen(); });
 document.querySelector("#btn-hub-moment").addEventListener("click", () => {
     var _a;
+    if (!momentTaps.accept(now()))
+        return;
     const done = hubQueue.shift();
     (_a = done === null || done === void 0 ? void 0 : done.onDone) === null || _a === void 0 ? void 0 : _a.call(done);
     renderHubScreen();
@@ -1920,6 +1941,8 @@ function offerAdaptiveHelp() {
 function askForHint() {
     if (!hintTracker || !activeLevel || testMode)
         return;
+    if (resultShown)
+        keepBuilding(); // M49: a clue means back to building, so the result card mustn't hide it
     const tier = hintTracker.next();
     observer.noteHint();
     const view = hintView(activeLevel.id, activeLevel, tier);
@@ -2486,9 +2509,11 @@ function renderMaker() {
         grid.append(b);
     }
 }
-document.querySelector("#btn-create-inventor").addEventListener("click", async () => {
-    if (shell.isInputLocked(now()))
-        return;
+/** M51: Create / Save Changes acts once, however fast it is tapped (a double tap made two inventors). */
+const inventorTaps = new TapGuard(600);
+document.querySelector("#btn-create-inventor").addEventListener("click", () => { if (!shell.isInputLocked(now()))
+    void inventorTaps.run(now(), saveInventorForm); });
+async function saveInventorForm() {
     if (editingProfileId) {
         const id = editingProfileId;
         editingProfileId = undefined;
@@ -2514,7 +2539,7 @@ document.querySelector("#btn-create-inventor").addEventListener("click", async (
     } // a new inventor plays their own opening
     openingDirector.setStep(4);
     loadOpeningStep(4);
-});
+}
 document.querySelector("#btn-replay-line").addEventListener("click", () => speakCurrentLine(true));
 document.querySelector("#btn-skip-line").addEventListener("click", () => {
     if ("speechSynthesis" in window)
@@ -2608,7 +2633,7 @@ document.querySelectorAll("[data-part]").forEach(button => button.addEventListen
     const id = button.dataset.part;
     const surfacePart = ["motion.friction-high", "motion.friction-low", "motion.bounce-pad"].includes(id);
     const placed = build.add(id, { x: 8 + Math.random() * 1.5 - 0.75, y: surfacePart ? 8.32 : 3 });
-    audio.play("pickup");
+    audio.play(handlingSound(id, "pickup"));
     // Part Picker: the pick is made — over to the other player to place it.
     if ((coop === null || coop === void 0 ? void 0 : coop.pattern) === "PICK") {
         coop.pick(id);
@@ -2724,7 +2749,8 @@ window.addEventListener("wobbleworks:preview-level", (event) => {
     telemetry.inc("testPresses");
 });
 window.addEventListener("keydown", event => {
-    if (event.key === "F8") {
+    // F8 (screen tour) and F2 (level tools) are test tools: never in the store build (M48).
+    if (event.key === "F8" && !RELEASE_BUILD) {
         event.preventDefault();
         shell.nextSmokeScreen(now());
         renderShell();
@@ -2735,7 +2761,7 @@ window.addEventListener("keydown", event => {
         openPause();
         return;
     }
-    if (event.key === "F2" && gameplayAllowed()) {
+    if (event.key === "F2" && gameplayAllowed() && !RELEASE_BUILD) {
         event.preventDefault();
         editor.toggle();
     }
@@ -2946,7 +2972,7 @@ input.on((event, sample) => {
             snapToVessel(droppedId);
             snapGear(droppedId);
             const settledAt = (_h = build.getPart(droppedId)) === null || _h === void 0 ? void 0 : _h.position;
-            audio.play(placedAt && settledAt && (placedAt.x !== settledAt.x || placedAt.y !== settledAt.y) ? "snap" : "drop");
+            audio.play(placedAt && settledAt && (placedAt.x !== settledAt.x || placedAt.y !== settledAt.y) ? "snap" : handlingSound(dropped === null || dropped === void 0 ? void 0 : dropped.definitionId, "drop"));
             snapBeam(droppedId);
             autoSnapOpeningWheel(droppedId);
         }
@@ -3209,6 +3235,8 @@ function startSandbox(level) {
     updateSandboxCap();
     enterWorkshop();
 }
+/** M49: a lab or mission never keeps Free Build's bar, drawer or idea prompt on screen. */
+function hideSandboxUi() { currentRoom = undefined; sandboxBar.classList.add("hidden"); sandboxDrawer.classList.add("hidden"); sandboxPrompt.classList.add("hidden"); }
 function showPrompt() { if (!currentRoom || promptsHidden) {
     sandboxPrompt.classList.add("hidden");
     return;
@@ -3220,6 +3248,7 @@ function openDrawer(kind) {
         return;
     if (!sandboxDrawer.classList.contains("hidden") && sandboxDrawer.dataset.kind === kind) {
         sandboxDrawer.classList.add("hidden");
+        showPrompt();
         return;
     }
     sandboxDrawer.dataset.kind = kind;
@@ -3244,7 +3273,10 @@ function openDrawer(kind) {
         const list = room.robotFloor ? SPAWN_CATALOGUE.filter(s => s.definitionId === "robot.bot") : SPAWN_CATALOGUE.filter(s => s.definitionId !== "robot.bot");
         for (const s of list)
             btn(s.icon, s.type, () => { if (!roomForMore(1))
-                return; const placed = build.add(s.definitionId, { x: 6 + Math.random() * 4, y: s.definitionId === "motion.goal-zone" ? 8 : 2 }); selectedId = placed.id; sfx(620, .04); updateSandboxCap(); }, false, SPAWN_PICTURES[s.definitionId]);
+                return; const placed = build.add(s.definitionId, { x: 6 + Math.random() * 4, y: s.definitionId === "motion.goal-zone" ? 8 : 2 }); selectedId = placed.id; if (BALLOON_PARTS.has(s.definitionId))
+                audio.play("balloon-squeak");
+            else
+                sfx(620, .04); updateSandboxCap(); }, false, SPAWN_PICTURES[s.definitionId]);
     }
     if (kind === "starters") {
         head("Starter machines");
@@ -3274,6 +3306,7 @@ function openDrawer(kind) {
         }
     }
     sandboxDrawer.classList.remove("hidden");
+    sandboxPrompt.classList.add("hidden"); // M49: the drawer would cover the idea prompt's buttons
 }
 document.querySelectorAll("[data-sb]").forEach(b => b.addEventListener("click", () => openDrawer(b.dataset.sb)));
 // ---------------------------------------------------------------- Chain Reaction Workshop (M21)
@@ -4257,7 +4290,7 @@ function render() {
     renderer.begin(camera);
     const photoBackground = photo.isOpen() && photo.background !== "room";
     // Calm Motion stills the decorative backdrops (bubbles, flags, turning wall gears). Gameplay is never changed.
-    const decoTime = currentSettings(appSave).reducedMotion ? 0 : now() / 1000;
+    const decoTime = currentSettings(appSave).reducedMotion ? 0 : animSeconds; // M50: holds still while the screen is calm
     if (photoBackground)
         drawPhotoBackground(renderer.ctx, photo.background, decoTime);
     if (freeBuildActive && currentRoom && !photoBackground)
@@ -4284,7 +4317,7 @@ function render() {
     const states = runtime === null || runtime === void 0 ? void 0 : runtime.physics.states();
     const parts = build.allParts().map(p => p.id === (dragStart === null || dragStart === void 0 ? void 0 : dragStart.id) && dragPreview ? { ...p, position: dragPreview } : p);
     const shown = beamEndDrag ? parts.map(p => p.id === beamEndDrag.id ? beamFromEnds(p, beamEndDrag.fixed, beamEndDrag.moving) : p) : parts;
-    renderer.drawParts(shown, registry, states, selectedId, runtime === null || runtime === void 0 ? void 0 : runtime.gears, now() / 1000, runtime === null || runtime === void 0 ? void 0 : runtime.structures, forceScanner, runtime);
+    renderer.drawParts(shown, registry, states, selectedId, runtime === null || runtime === void 0 ? void 0 : runtime.gears, animSeconds, runtime === null || runtime === void 0 ? void 0 : runtime.structures, forceScanner, runtime);
     if (!runtime && shown.some(p => circuitBehaviour(registry.get(p.definitionId))))
         renderer.drawCircuitTerminals(analyzeCircuit(shown, id => registry.has(id) ? registry.get(id) : undefined));
     if (runtime && forceScanner && runtime.circuits.layout.elements.length)
@@ -4381,11 +4414,41 @@ function frame(frameNow) {
         }
     }
     // M44: the playfield is only drawn while it can be seen. Behind the menus a cheap tablet keeps its time for the menus.
-    if (playfieldVisible())
-        render();
+    // M50: and while nothing moves and nobody touches the screen, about once a second (saves battery; the picture is the same).
+    if (shell.current() !== drawnScreen) {
+        drawnScreen = shell.current();
+        lastActivityAt = frameNow;
+    }
+    if (playfieldVisible()) {
+        const busy = playfieldBusy(frameNow);
+        if (busy)
+            animSeconds = frameNow / 1000;
+        if (busy || frameNow - lastDrawAt >= CALM_DRAW_MS) {
+            render();
+            lastDrawAt = frameNow;
+            drawnRevision = build.changeCount;
+            const sharper = drawQuality.frame(frameNow, busy);
+            if (sharper !== undefined)
+                renderer.setPixelRatio(sharper);
+        }
+    }
+    else
+        drawQuality.frame(frameNow, false);
     requestAnimationFrame(frame);
 }
-const resizeObserver = new ResizeObserver(() => renderer.resize());
+/** M50: calm-screen drawing. Anything that changes the picture counts as busy; physics and success rules are untouched. */
+const CALM_AFTER_MS = 2500, CALM_DRAW_MS = 1000;
+/** M50: draws the playfield less sharply while a device can't keep up, and sharper again when it can (drawing only). */
+const drawQuality = new DrawQuality(window.devicePixelRatio || 1);
+let lastActivityAt = 0, lastDrawAt = 0, drawnRevision = -1, animSeconds = 0;
+let drawnScreen;
+for (const type of ["pointerdown", "pointermove", "pointerup", "keydown", "wheel"])
+    window.addEventListener(type, () => { lastActivityAt = performance.now(); }, { capture: true, passive: true });
+function playfieldBusy(t) {
+    return testMode || Boolean(replayer) || Boolean(dragStart || panStart || beamEndDrag) || currentHint.ghosts.length > 0 || photo.isOpen() || following !== undefined
+        || build.changeCount !== drawnRevision || t - lastActivityAt < CALM_AFTER_MS;
+}
+const resizeObserver = new ResizeObserver(() => { renderer.resize(); lastActivityAt = performance.now(); });
 resizeObserver.observe(canvas);
 clock.reset(performance.now());
 requestAnimationFrame(frame);
