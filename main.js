@@ -11,7 +11,7 @@ import { CO_PATTERNS, CoBuildSession, TogetherLaunch, partnerChoices, sessionOwn
 import { followPoint, followTargets, ReplayPlayer, ReplayRecorder } from "./replay/ReplaySystem.js";
 import { drawPhotoBackground, PhotoMode, photoStickers, thumbnailFrom } from "./photo/PhotoMode.js";
 import { renderParentDashboard, renderParentGate } from "./parent/ParentArea.js";
-import { OWNERSHIP_CHILD_COPY, regionById, routeToRegion } from "./progression/Campus.js";
+import { OWNERSHIP_CHILD_COPY, ownsFullGame, regionById, routeToRegion } from "./progression/Campus.js";
 import { addToShelf, equipCosmetic, markRestorationSeen, markRewardsSeen, meetVisitor, recordMissionSuccess } from "./progression/ProgressionManager.js";
 import { pendingRestorationMoments } from "./progression/Restoration.js";
 import { CREDITS, creditsPending, markStorySeen, pendingEntryScene, pendingStoryScenes } from "./story/CampusStory.js";
@@ -165,6 +165,12 @@ const lastRuns = new Map();
 let beamEndDrag;
 /** Labs a grown-up opened with the test tool this session (progress gate skipped, nothing saved). */
 const testingLabs = new Set();
+/** A store/release build (tools/build.mjs --release): no test tools, ownership only from a verified proof (M40). */
+const RELEASE_BUILD = document.querySelector('meta[name="wobbleworks-build"]')?.getAttribute("content") === "release";
+if (RELEASE_BUILD) {
+    document.querySelector("#btn-tools")?.classList.add("hidden");
+    document.querySelector("#debug")?.classList.add("hidden");
+}
 let labActive = false;
 let activeLevel;
 let forceScanner = false;
@@ -847,11 +853,21 @@ const INFO_TEXT = {
     terms: { title: "Terms of Use", body: ["The full terms of use are added before the game is released."] },
     help: { title: "Help", body: ["Drag parts from the tray, then press TEST to see what happens. STOP puts everything back.", "Stuck? Change one thing and TEST again: every test teaches something.", "Grown-ups: backups, storage and inventor removal are in Grown-ups."] }
 };
+let legalPages = {};
+void fetch("./content/legal/legal.json").then(r => r.ok ? r.json() : {}).then(j => { legalPages = j; }).catch(() => undefined);
 function showInfo(key) {
-    const info = INFO_TEXT[key] ?? INFO_TEXT.help;
-    document.querySelector("#info-title").textContent = info.title;
     const body = document.querySelector("#info-body");
-    body.replaceChildren(...info.body.map(t => { const p = document.createElement("p"); p.textContent = t; return p; }));
+    const legal = legalPages[key];
+    if (legal) {
+        document.querySelector("#info-title").textContent = legal.title;
+        body.replaceChildren(...legal.blocks.filter(b => !/^DRAFT for legal review/.test(b.text)).map(b => { const n = document.createElement(b.kind === "h" ? "h3" : b.kind === "p" ? "p" : "li"); n.textContent = b.text; if (b.kind === "sub")
+            n.className = "info-sub"; return n; }));
+    }
+    else {
+        const info = INFO_TEXT[key] ?? INFO_TEXT.help;
+        document.querySelector("#info-title").textContent = info.title;
+        body.replaceChildren(...info.body.map(t => { const p = document.createElement("p"); p.textContent = t; return p; }));
+    }
     transition("INFO");
 }
 function renderTitle() {
@@ -1071,6 +1087,9 @@ async function loadAppState() {
         const owned = await ownership.load(appSave.entitlement);
         if (owned.source === "PROOF" && owned.state !== appSave.entitlement)
             appSave = withEntitlement(appSave, owned.state);
+        // A release build never trusts a saved "owned" without a verified proof (that state could only come from a test tool).
+        else if (RELEASE_BUILD && owned.source === "SAVE" && ownsFullGame(appSave.entitlement))
+            appSave = withEntitlement(appSave, "LOCKED");
         savingBlocked = loaded.futureVersion;
         applySettings();
         const lastBuild = currentLastBuild(appSave);
@@ -1541,8 +1560,11 @@ function renderParent() {
         purchase: kind => { void (kind === "BUY" ? ownership.buy() : ownership.restore()).then(async (r) => { parentNotice = r.message; if (r.status.source === "PROOF")
             await commit(withEntitlement(appSave, r.status.state), true); renderParent(); }); },
         ownershipLine: () => ownershipLine(ownership.current(), appSave.entitlement),
-        setFullGameForTesting: owned => { void commit(withEntitlement(appSave, owned ? "OWNED" : "LOCKED"), true).then(() => renderParent()); },
-        openLabForTesting: labId => { if (!activeProfile(appSave)) {
+        testTools: !RELEASE_BUILD,
+        setFullGameForTesting: owned => { if (RELEASE_BUILD)
+            return; void commit(withEntitlement(appSave, owned ? "OWNED" : "LOCKED"), true).then(() => renderParent()); },
+        openLabForTesting: labId => { if (RELEASE_BUILD)
+            return; if (!activeProfile(appSave)) {
             parentNotice = "Choose an inventor first, then open the lab.";
             renderParent();
             return;
@@ -2377,7 +2399,7 @@ document.querySelector("#btn-zoom-in").addEventListener("click", () => { if (gam
     camera.setZoom(camera.zoom * 1.2); });
 document.querySelector("#btn-zoom-out").addEventListener("click", () => { if (gameplayAllowed())
     camera.setZoom(camera.zoom / 1.2); });
-ui.tools.addEventListener("click", () => { if (gameplayAllowed())
+ui.tools.addEventListener("click", () => { if (gameplayAllowed() && !RELEASE_BUILD)
     editor.toggle(); });
 window.addEventListener("wobbleworks:preview-level", (event) => {
     if (!gameplayAllowed())

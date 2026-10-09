@@ -165,10 +165,12 @@ export function renderParentDashboard(root, save, storage, notice, cb) {
     restore.addEventListener("click", () => cb.purchase("RESTORE"));
     buyRow.append(restore);
     own.append(buyRow, el("p", "muted", "Children never see a shop: the full game can only be unlocked here, in the grown-ups area."));
-    const toggle = el("button", "", ownsFullGame(save.entitlement) ? "Test tool: lock full game again" : "Test tool: pretend full game is owned");
-    toggle.addEventListener("click", () => cb.setFullGameForTesting(!ownsFullGame(save.entitlement)));
-    own.append(toggle);
-    if (ownsFullGame(save.entitlement) && cb.openLabForTesting) {
+    if (cb.testTools !== false) {
+        const toggle = el("button", "", ownsFullGame(save.entitlement) ? "Test tool: lock full game again" : "Test tool: pretend full game is owned");
+        toggle.addEventListener("click", () => cb.setFullGameForTesting(!ownsFullGame(save.entitlement)));
+        own.append(toggle);
+    }
+    if (cb.testTools !== false && ownsFullGame(save.entitlement) && cb.openLabForTesting) {
         for (const { id: labId, title } of MAIN_LABS.filter(l => l.id !== "motion-yard" && INSTALLED_REGION_CONTENT.has(l.id))) {
             const peek = el("button", "", `Test tool: open the ${title} now`);
             peek.addEventListener("click", () => cb.openLabForTesting(labId));

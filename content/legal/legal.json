@@ -1,0 +1,261 @@
+{
+  "privacy": {
+    "title": "Privacy Policy",
+    "blocks": [
+      {
+        "kind": "p",
+        "text": "DRAFT for legal review before release. Items in [square brackets] must be filled in by Banx Games."
+      },
+      {
+        "kind": "p",
+        "text": "WobbleWorks is a building and science game for children, made by Banx Games. We built it so that it collects nothing about children. This policy explains what that means in practice."
+      },
+      {
+        "kind": "h",
+        "text": "What WobbleWorks keeps, and where"
+      },
+      {
+        "kind": "li",
+        "text": "Everything children make and do — inventor names and looks, progress, inventions, experiments, photos and settings — is saved only on the device the game is played on."
+      },
+      {
+        "kind": "li",
+        "text": "There are no accounts for children and no sign-in. An inventor name can be anything; we suggest a first name or a nickname."
+      },
+      {
+        "kind": "li",
+        "text": "WobbleWorks does not upload, sell or share any of it. We cannot see it."
+      },
+      {
+        "kind": "h",
+        "text": "What WobbleWorks never does"
+      },
+      {
+        "kind": "li",
+        "text": "No advertising, no ad tracking and no behavioural profiling."
+      },
+      {
+        "kind": "li",
+        "text": "No analytics or tracking of how children play."
+      },
+      {
+        "kind": "li",
+        "text": "No chat, no messages and no contact with other players."
+      },
+      {
+        "kind": "li",
+        "text": "No location, camera or microphone access. Photo Mode pictures are made inside the game and saved only where a grown-up chooses."
+      },
+      {
+        "kind": "h",
+        "text": "Things that go over the internet"
+      },
+      {
+        "kind": "li",
+        "text": "The game downloads its own pictures, sounds and levels. Once installed it works offline."
+      },
+      {
+        "kind": "li",
+        "text": "Spoken narration uses the device's own text-to-speech voices. Some browsers and devices use an online voice service for this; it receives only Bolt's lines, never anything a child typed. Narration can be turned off in Settings."
+      },
+      {
+        "kind": "li",
+        "text": "Buying or restoring the full game happens behind a grown-up gate:"
+      },
+      {
+        "kind": "sub",
+        "text": "in an app: through the App Store or Google Play, under their privacy terms"
+      },
+      {
+        "kind": "sub",
+        "text": "on the web: through the WobbleWorks parent account service, which uses a grown-up's email address only to send a sign-in code and to remember the purchase. No information about children is sent."
+      },
+      {
+        "kind": "h",
+        "text": "Backups"
+      },
+      {
+        "kind": "p",
+        "text": "A grown-up can export a backup file and import it again, for example on a new device. The file stays wherever the grown-up saves it. It never contains purchase details."
+      },
+      {
+        "kind": "h",
+        "text": "Children's privacy"
+      },
+      {
+        "kind": "p",
+        "text": "WobbleWorks is designed to meet children's privacy rules such as COPPA (United States), the UK Age Appropriate Design Code and the GDPR, by collecting no personal information from children. If you believe information about a child has reached us anyway, contact us and we will delete it."
+      },
+      {
+        "kind": "h",
+        "text": "Grown-ups' rights"
+      },
+      {
+        "kind": "p",
+        "text": "If you used the web parent account service, you can ask us to see or delete the email address and purchase record we hold. Contact us at [contact email]."
+      },
+      {
+        "kind": "h",
+        "text": "Changes"
+      },
+      {
+        "kind": "p",
+        "text": "If this policy changes, the new version will be in the game and on [website] with its date."
+      },
+      {
+        "kind": "h",
+        "text": "Contact"
+      },
+      {
+        "kind": "p",
+        "text": "Banx Games — [contact email] — [postal address]"
+      },
+      {
+        "kind": "p",
+        "text": "Last updated: [date of release]"
+      }
+    ]
+  },
+  "terms": {
+    "title": "Terms of Use",
+    "blocks": [
+      {
+        "kind": "p",
+        "text": "DRAFT for legal review before release. Items in [square brackets] must be filled in by Banx Games."
+      },
+      {
+        "kind": "p",
+        "text": "These terms are between you (the grown-up responsible for the player) and Banx Games."
+      },
+      {
+        "kind": "h",
+        "text": "Using WobbleWorks"
+      },
+      {
+        "kind": "li",
+        "text": "WobbleWorks is for personal, family and classroom use."
+      },
+      {
+        "kind": "li",
+        "text": "You may install it on the devices you use, as allowed by the App Store, Google Play or the website you got it from."
+      },
+      {
+        "kind": "li",
+        "text": "Please don't copy, resell or reverse-engineer the game, its art or its sounds."
+      },
+      {
+        "kind": "h",
+        "text": "The free game and the full game"
+      },
+      {
+        "kind": "li",
+        "text": "The free game includes the opening, the whole Motion Yard and the Empty Workshop in Free Build."
+      },
+      {
+        "kind": "li",
+        "text": "The full game is a one-time purchase. There are no subscriptions, no ads and no in-game currency."
+      },
+      {
+        "kind": "li",
+        "text": "Purchases made in an app store follow that store's rules for refunds. Web purchases follow our refund policy: [refund policy]."
+      },
+      {
+        "kind": "li",
+        "text": "If the full game is refunded, it locks again on your devices. Your children's progress and inventions are never deleted."
+      },
+      {
+        "kind": "h",
+        "text": "What children make"
+      },
+      {
+        "kind": "p",
+        "text": "Inventions, photos and challenges made in WobbleWorks belong to the family that made them. They stay on your device unless you choose to export them."
+      },
+      {
+        "kind": "h",
+        "text": "Science, simplified"
+      },
+      {
+        "kind": "p",
+        "text": "WobbleWorks simplifies real science so children can play with it. Each lab follows a written \"truth contract\" so the game never teaches something false. It is still a game, not a safety or engineering guide. Real-world activities suggested to grown-ups should be done with adult supervision."
+      },
+      {
+        "kind": "h",
+        "text": "Our responsibility"
+      },
+      {
+        "kind": "p",
+        "text": "We work hard to make the game reliable and to keep saves safe (it keeps backup copies automatically, and grown-ups can export backups). To the extent the law allows, the game is provided \"as is\", and Banx Games is not responsible for losses beyond the price paid. Nothing in these terms limits rights you have under consumer law."
+      },
+      {
+        "kind": "h",
+        "text": "Changes and contact"
+      },
+      {
+        "kind": "p",
+        "text": "We may update these terms; the current version is always in the game. Questions: [contact email]."
+      },
+      {
+        "kind": "p",
+        "text": "Last updated: [date of release]"
+      }
+    ]
+  },
+  "credits": {
+    "title": "Credits and Licences",
+    "blocks": [
+      {
+        "kind": "h",
+        "text": "WobbleWorks"
+      },
+      {
+        "kind": "p",
+        "text": "Made with love by Banx Games."
+      },
+      {
+        "kind": "li",
+        "text": "Game design, art direction and production: Banx Games"
+      },
+      {
+        "kind": "li",
+        "text": "Characters: Bolt, Sprocket and Professor Wobble"
+      },
+      {
+        "kind": "h",
+        "text": "Software"
+      },
+      {
+        "kind": "li",
+        "text": "WobbleWorks is written in TypeScript. TypeScript is used only to build the game; it is not shipped inside it."
+      },
+      {
+        "kind": "li",
+        "text": "The physics, sound, music and drawing are WobbleWorks' own code. The game contains no third-party code libraries, fonts, sounds or tracking software."
+      },
+      {
+        "kind": "li",
+        "text": "Text uses the fonts already on the device."
+      },
+      {
+        "kind": "h",
+        "text": "Licences"
+      },
+      {
+        "kind": "li",
+        "text": "No third-party licences apply to the shipped game, because nothing from a third party is bundled."
+      },
+      {
+        "kind": "li",
+        "text": "If recorded sounds, music or fonts from outside are added later, list them here with their licences before release."
+      },
+      {
+        "kind": "h",
+        "text": "Thank you"
+      },
+      {
+        "kind": "p",
+        "text": "To every family who tested WobbleWorks, and to every young inventor who pressed TEST just to see what would happen."
+      }
+    ]
+  }
+}

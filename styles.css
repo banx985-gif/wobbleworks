@@ -636,3 +636,6 @@ details.parent-kid > summary { cursor: pointer; font-size: 1.15em; padding: 6px 
 @keyframes confetti-pop { 0% { transform: translate(0,0) rotate(0); opacity: 1; } 70% { opacity: 1; } 100% { transform: translate(var(--dx), calc(var(--dy) + 120px)) rotate(400deg); opacity: 0; } }
 .reduced-motion .result-confetti { display: none; }
 @media (prefers-reduced-motion: reduce) { .result-confetti { display: none; } }
+
+/* M40 legal pages */
+.info-body{max-height:60vh;overflow:auto}.info-body h3{margin:14px 0 4px}.info-body li{margin:3px 0 3px 18px}.info-body li.info-sub{margin-left:38px}
