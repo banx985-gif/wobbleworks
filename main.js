@@ -82,6 +82,8 @@ import { AVATAR_PORTRAITS } from "./hub/HubScreens.js";
 import { rewardById as rewardInfo } from "./progression/Rewards.js";
 import { startLocalisation } from "./i18n/Localise.js";
 import { eventSound, mixLevels } from "./audio/SoundLibrary.js";
+import { OwnershipController } from "./entitlement/Ownership.js";
+import { pickAdapter } from "./entitlement/StoreAdapters.js";
 const canvas = document.querySelector("#game");
 if (!canvas)
     throw new Error("Missing #game canvas");
@@ -100,6 +102,8 @@ const shell = new AppShellController();
 /** One local database: the save (through SaveManager) and the My Inventions picture cache share it. */
 const appStore = new IndexedDbStore("wobbleworks-app", 1);
 const thumbs = new ThumbnailCache(appStore);
+/** Full-game ownership (M37): its signed proof lives next to — never inside — the child save. */
+const ownership = new OwnershipController(appStore, pickAdapter(window, q => window.prompt(q)));
 const saveManager = new SaveManager(appStore, validateAppSave, {
     migrate: raw => { const r = migrateAppSave(raw); return r.ok ? { payload: r.save, migrated: r.migrated } : r.reason === "FUTURE_VERSION" ? { futureVersion: true } : undefined; }
 });
@@ -1061,6 +1065,10 @@ async function loadAppState() {
         labLevels.set(PROTOTYPE_LAB.id, await loadLabLevels(registry, PROTOTYPE_LAB.id, "prototype"));
         labLevels.set(GRAND_HALL.id, await loadLevelFiles(registry, GRAND_STAGE_LEVEL_IDS, "grand", GRAND_HALL.title));
         appSave = loaded.payload ?? createDefaultAppSave();
+        // A verified ownership proof decides the full game; without one the save's own state stands (test builds).
+        const owned = await ownership.load(appSave.entitlement);
+        if (owned.source === "PROOF" && owned.state !== appSave.entitlement)
+            appSave = withEntitlement(appSave, owned.state);
         savingBlocked = loaded.futureVersion;
         applySettings();
         const lastBuild = currentLastBuild(appSave);
@@ -1446,6 +1454,18 @@ function returnToModeMenu() {
     enterWorkshop();
 }
 // ---- grown-ups
+/** Plain words for the grown-ups about how the full game is unlocked on this device. */
+function ownershipLine(s, saved) {
+    if (s.proofProblem)
+        return "A purchase record on this device couldn't be checked. Tap \"Restore a purchase\" to fix it — progress is never affected.";
+    if (s.source === "PROOF" && s.state === "OWNED")
+        return "Bought — confirmed with the store.";
+    if (s.source === "PROOF" && s.state === "OFFLINE_GRACE")
+        return "Bought — confirmed on this device. It keeps working offline.";
+    if (s.source === "PROOF" && s.state === "LOCKED")
+        return "The store says this purchase was refunded, so the full game is locked again.";
+    return saved === "OWNED" ? "Opened with the test tool (test builds only)." : "Not bought on this device.";
+}
 function renderGate(message) {
     renderParentGate(gateRoot, parentGate, message, digit => {
         const result = parentGate.press(digit, now());
@@ -1516,7 +1536,9 @@ function renderParent() {
             }).catch(() => { parentNotice = IMPORT_MESSAGES.NOT_JSON; renderParent(); });
         },
         deleteProfile: id => { void commit(withDeletedProfile(appSave, id), true).then(async () => { applySettings(); parentNotice = "Inventor removed."; lastStorage = await storageReport(appSave); renderParent(); }); },
-        purchase: kind => { parentNotice = kind === "BUY" ? "Buying the full game will be available in the store version of WobbleWorks. Nothing has been charged." : "Restoring a purchase will be available in the store version of WobbleWorks, on the same store account you bought it with."; renderParent(); },
+        purchase: kind => { void (kind === "BUY" ? ownership.buy() : ownership.restore()).then(async (r) => { parentNotice = r.message; if (r.status.source === "PROOF")
+            await commit(withEntitlement(appSave, r.status.state), true); renderParent(); }); },
+        ownershipLine: () => ownershipLine(ownership.current(), appSave.entitlement),
         setFullGameForTesting: owned => { void commit(withEntitlement(appSave, owned ? "OWNED" : "LOCKED"), true).then(() => renderParent()); },
         openLabForTesting: labId => { if (!activeProfile(appSave)) {
             parentNotice = "Choose an inventor first, then open the lab.";

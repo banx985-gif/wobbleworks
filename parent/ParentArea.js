@@ -153,6 +153,8 @@ export function renderParentDashboard(root, save, storage, notice, cb) {
     const own = el("section", "parent-section");
     own.append(heading("award", "Full game"));
     own.append(el("p", "", ownsFullGame(save.entitlement) ? "The full campus is unlocked on this device." : "Free: the opening, all of the Motion Yard and Empty Workshop Free Build. The full game opens the rest of the campus."));
+    if (cb.ownershipLine)
+        own.append(el("p", "parent-ownership", cb.ownershipLine()));
     const buyRow = el("div", "parent-row");
     if (!ownsFullGame(save.entitlement)) {
         const buy = el("button", "primary", "Unlock the full game…");
