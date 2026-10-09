@@ -1076,7 +1076,7 @@ function updateMusic() { var _a; const place = musicPlace(); if (!place || !((_a
 } audio.playMusic(place); }
 /** At most this long per frame on simulation steps (M38): a busy room slows down gently instead of freezing. */
 const STEP_BUDGET_MS = 12;
-/** Machines make their sounds as things happen in a TEST (each family at most every MIN_REPEAT_SECONDS). */
+/** Machines make their sounds as things happen in a TEST (each family at most every MIN_REPEAT_SECONDS, and only so many at once). */
 let soundRuntime;
 let soundsHeard = 0;
 function playEventSounds(runtime) {
@@ -1376,7 +1376,8 @@ async function loadAppState() {
         advanceBootNotice();
         // Now, quietly: every lab's levels (all at once) and the art list for the tray.
         void loadArtList();
-        void loadAllLabs().catch(() => undefined);
+        // M46: then the recorded sounds (small, about 450 KB), so they never slow the title or the labs.
+        void loadAllLabs().catch(() => undefined).then(() => loadArtList()).then(() => audio.preloadRecordings());
     }
     catch (error) {
         showStartupFailure(`Your save has not been changed. ${error instanceof Error ? error.message : ""}`.trim(), technicalLine(error));

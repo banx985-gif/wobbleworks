@@ -54,7 +54,48 @@ export const EVENT_SOUNDS = {
 /** Map a runtime event to its sound id (undefined = silent). */
 export function eventSound(kind) { const s = EVENT_SOUNDS[kind]; return s ? s : undefined; }
 /** A sound can't repeat faster than this (seconds), so a chain of 50 dominoes ticks rather than roars. */
-export const MIN_REPEAT_SECONDS = 0.07;
+export const MIN_REPEAT_SECONDS = 0.06;
+/** At most this many sound effects at once; a busy machine drops extra sounds rather than piling them up. */
+export const MAX_VOICES = 8;
+/** At most this many copies of one sound at once (clicks, snaps, gears…). */
+export const MAX_SAME_SOUND = 3;
+/** Long-running sounds: only one copy at a time — a second fan doesn't start another whirr over the first. */
+export const HELD_SOUNDS = new Set(["motor-hum", "pipe-flow", "fan", "propeller", "pump", "rocket-fizz", "rocket-whoosh", "electric-buzz"]);
+/** The big moments always play, even when the machine is busy. */
+export const ALWAYS_PLAY = new Set(["success-sting", "discovery-sting", "secret-sting"]);
+/**
+ * M46: recordings filed for these ids don't suit their job, so the code-made sound stays (listed in docs/ART_NEEDED.md,
+ * Batch S, as "recording wanted"). Judged by measuring each file, as nobody could listen to them yet.
+ */
+export const RECORDING_UNSUITED = {
+    rotate: "the file is silent",
+    drop: "a long steady shimmer (1.2 s) — too long for every part dropped",
+    fan: "a rising swell that ends loudest, not a steady whirr",
+    pump: "a steady high hiss, not a pumping thud",
+    propeller: "a short bright burst, not a whirring propeller",
+    "beam-creak": "a high hiss, not a low creak",
+    "rope-tension": "a high hiss, not a rope pulling tight"
+};
+/**
+ * M46: volume trims so every recording sits at about the same loudness as the others and as the code-made sounds
+ * (measured on the loudest tenth of a second of each file; the quiet click, snap, confetti and gears are lifted,
+ * the big stings brought down). 1 = as filed.
+ */
+export const RECORDING_GAIN = {
+    "balloon-squeak": 1.22, bell: 1.5, "bolt-voice": 1.37, "break-crack": 0.92, "bulb-ping": 0.92, buzzer: 1.14, click: 11, clunk: 1.1,
+    confetti: 7.77, "discovery-sting": 1.28, "electric-buzz": 0.85, "gear-engage": 5.09, "magnet-repel": 4.53, "magnet-thunk": 0.79,
+    "motor-hum": 1.4, pickup: 0.84, "pipe-flow": 0.88, "rocket-fizz": 0.89, "rocket-whoosh": 1.14, "secret-sting": 0.31, snap: 10,
+    "soft-crash": 0.74, "spring-boing": 1.38, "sprocket-bark": 1.49, "success-sting": 0.61, unsnap: 1.91, "water-splash": 0.63
+};
+/** Seconds a code-made sound lasts (its last layer's end). */
+export function recipeSeconds(id) { var _a, _b; return Math.max(0, ...((_b = (_a = SOUND_FAMILIES[id]) === null || _a === void 0 ? void 0 : _a.layers) !== null && _b !== void 0 ? _b : []).map(l => { var _a; return ((_a = l.delay) !== null && _a !== void 0 ? _a : 0) + l.dur; })); }
+/** Whether one more copy of a sound may start, given what is playing now (ids of the sounds still sounding). */
+export function voiceAllowed(id, playing) {
+    const same = playing.filter(p => p === id).length;
+    if (same >= (HELD_SOUNDS.has(id) ? 1 : MAX_SAME_SOUND))
+        return false;
+    return ALWAYS_PLAY.has(id) || playing.length < MAX_VOICES;
+}
 const MAJOR = [0, 2, 4, 5, 7, 9, 11], PENTA = [0, 2, 4, 7, 9], MIXO = [0, 2, 4, 5, 7, 9, 10], DORIAN = [0, 2, 3, 5, 7, 9, 10], LYDIAN = [0, 2, 4, 6, 7, 9, 11];
 /** Each place has its own sound (§68): playful and clever, never nursery-like. */
 export const MUSIC_THEMES = {

@@ -1,9 +1,11 @@
-import { MIN_REPEAT_SECONDS, MUSIC_DUCK, SOUND_FAMILIES, musicFor, stepHz } from "../audio/SoundLibrary.js";
+import { MIN_REPEAT_SECONDS, MUSIC_DUCK, RECORDING_GAIN, RECORDING_UNSUITED, SOUND_FAMILIES, musicFor, recipeSeconds, voiceAllowed, stepHz } from "../audio/SoundLibrary.js";
 /**
  * Game audio (M36). Two independent channels — sound effects and music — each with its own volume (Bolt's voice is
  * the browser's speech, with its own volume set where it is spoken). Sounds play from a recording when one is filed
  * (assets/audio/<id>.*, listed in the asset manifest as "audio.<id>"), otherwise they are synthesised from the
- * library recipe. Music for each place is generated live from its theme. Everything pauses when the game is hidden.
+ * library recipe. Recordings are fetched once the title is up (preloadRecordings) and unpacked as soon as sound is
+ * allowed, so the first tap already plays the recording. Music for each place is generated live from its theme.
+ * Everything pauses when the game is hidden.
  */
 export class AudioManager {
     constructor(makeContext = () => new AudioContext()) {
@@ -61,6 +63,20 @@ export class AudioManager {
             writable: true,
             value: new Map()
         });
+        /** Recordings fetched but not yet unpacked (that needs the audio device, which waits for the first touch). */
+        Object.defineProperty(this, "fetched", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        /** Sounds still sounding: id and when it ends (audio-clock seconds). */
+        Object.defineProperty(this, "playing", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
         Object.defineProperty(this, "lastPlayed", {
             enumerable: true,
             configurable: true,
@@ -72,6 +88,12 @@ export class AudioManager {
             configurable: true,
             writable: true,
             value: undefined
+        });
+        Object.defineProperty(this, "preloading", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
         });
     }
     /** Volumes for the two channels (0 = silent … 1 = full). Each slider only changes its own channel. */
@@ -90,9 +112,42 @@ export class AudioManager {
         (_a = this.sfxBus) === null || _a === void 0 ? void 0 : _a.gain.setTargetAtTime(0.35 * this.levels.sfx, t, 0.02);
         (_b = this.musicBus) === null || _b === void 0 ? void 0 : _b.gain.setTargetAtTime(0.18 * this.levels.music * (this.ducked ? MUSIC_DUCK : 1), t, 0.08);
     }
-    /** Recordings that have arrived: sound id → url. */
+    /** Recordings that have arrived: sound id → url. Ones that don't suit their job are left out (the code-made sound stays). */
     setRecordings(urls) { for (const [id, url] of Object.entries(urls))
-        this.urls.set(id, url); }
+        if (!(id in RECORDING_UNSUITED) && id in SOUND_FAMILIES)
+            this.urls.set(id, url); }
+    /** Fetch every recording, a few at a time (call once the title is showing, never before). */
+    preloadRecordings() { var _a; return (_a = this.preloading) !== null && _a !== void 0 ? _a : (this.preloading = this.fetchAll().finally(() => { this.preloading = undefined; })); }
+    async fetchAll() {
+        const todo = [...this.urls.entries()].filter(([id]) => !this.buffers.has(id) && !this.fetched.has(id));
+        for (let i = 0; i < todo.length; i += 4)
+            await Promise.allSettled(todo.slice(i, i + 4).map(async ([id, url]) => {
+                try {
+                    const r = await fetch(url);
+                    if (r.ok) {
+                        this.fetched.set(id, await r.arrayBuffer());
+                        if (this.context)
+                            await this.decode(id);
+                    }
+                }
+                catch { /* keep the synthesised sound */ }
+            }));
+    }
+    /** Which sounds will play from their recording right now. */
+    recordedIds() { return [...this.buffers.keys()].sort(); }
+    async decode(id) {
+        const c = this.context, bytes = this.fetched.get(id);
+        if (!c || !bytes || this.buffers.has(id))
+            return;
+        this.fetched.delete(id);
+        try {
+            this.buffers.set(id, await c.decodeAudioData(bytes));
+            this.urls.delete(id);
+        }
+        catch {
+            this.urls.delete(id); /* unreadable: keep the synthesised sound */
+        }
+    }
     async unlock() {
         if (!this.context) {
             this.context = this.makeContext();
@@ -101,6 +156,7 @@ export class AudioManager {
             this.musicBus = this.context.createGain();
             this.musicBus.connect(this.context.destination);
             this.applyGains();
+            void Promise.allSettled([...this.fetched.keys()].map(id => this.decode(id)));
         }
         if (this.context.state === "suspended")
             await this.context.resume();
@@ -113,47 +169,45 @@ export class AudioManager {
     isRunning() { var _a; return ((_a = this.context) === null || _a === void 0 ? void 0 : _a.state) === "running"; }
     /** A short tone (kept for small UI blips). */
     beep(frequency = 440, duration = 0.05) { this.layer({ wave: "sine", freq: frequency, dur: duration, gain: 0.8 }, this.sfxBus); }
-    /** Play a sound family by id. Repeats closer than MIN_REPEAT_SECONDS are skipped. Returns whether it played. */
+    /**
+     * Play a sound family by id: its recording when one is ready, else the code-made sound. Repeats closer than
+     * MIN_REPEAT_SECONDS are skipped, and so is anything over the at-once limits (voiceAllowed). Returns whether it played.
+     */
     play(id, gainScale = 1) {
-        var _a;
+        var _a, _b;
         const c = this.context;
         if (!c || !this.sfxBus || this.levels.sfx <= 0)
             return false;
-        const last = (_a = this.lastPlayed.get(id)) !== null && _a !== void 0 ? _a : -1;
-        if (last >= 0 && c.currentTime - last < MIN_REPEAT_SECONDS)
+        const recipe = SOUND_FAMILIES[id], buffer = this.buffers.get(id);
+        if (!recipe && !buffer)
             return false;
-        this.lastPlayed.set(id, c.currentTime);
-        const buffer = this.buffers.get(id);
+        const now = c.currentTime;
+        const last = (_a = this.lastPlayed.get(id)) !== null && _a !== void 0 ? _a : -1;
+        if (last >= 0 && now - last < MIN_REPEAT_SECONDS)
+            return false;
+        this.playing = this.playing.filter(p => p.end > now);
+        if (!voiceAllowed(id, this.playing.map(p => p.id)))
+            return false;
+        this.lastPlayed.set(id, now);
         if (buffer) {
             const src = c.createBufferSource();
             src.buffer = buffer;
             const g = c.createGain();
-            g.gain.value = gainScale;
+            g.gain.value = gainScale * ((_b = RECORDING_GAIN[id]) !== null && _b !== void 0 ? _b : 1);
             src.connect(g).connect(this.sfxBus);
             src.start();
+            this.playing.push({ id, end: now + buffer.duration });
             return true;
         }
-        const url = this.urls.get(id);
-        if (url)
-            void this.load(id, url);
-        const recipe = SOUND_FAMILIES[id];
-        if (!recipe)
-            return false;
+        // Not unpacked yet (or never fetched): get it ready for next time.
+        if (this.fetched.has(id))
+            void this.decode(id);
+        else if (this.urls.has(id))
+            void this.preloadRecordings();
         for (const l of recipe.layers)
             this.layer({ ...l, gain: l.gain * gainScale }, this.sfxBus);
+        this.playing.push({ id, end: now + recipeSeconds(id) });
         return true;
-    }
-    async load(id, url) {
-        const c = this.context;
-        if (!c || this.buffers.has(id))
-            return;
-        this.urls.delete(id);
-        try {
-            const r = await fetch(url);
-            if (r.ok)
-                this.buffers.set(id, await c.decodeAudioData(await r.arrayBuffer()));
-        }
-        catch { /* keep the synthesised sound */ }
     }
     noiseBuffer() {
         const c = this.context;
