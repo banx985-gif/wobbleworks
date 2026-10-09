@@ -10,6 +10,7 @@ const INK = "#203040";
 export function isCircuitPart(def) { return Boolean(circuitBehaviour(def) || wireBehaviour(def)); }
 /** Draws a circuit part. Returns true when fully drawn; false for the electric motor so its gear shaft is drawn on top. */
 export function drawCircuitPart(c, part, def, selected, ctx) {
+    var _a, _b, _c, _d, _e, _f;
     const wire = wireBehaviour(def);
     if (wire) {
         drawWire(c, part, def, selected, ctx);
@@ -31,12 +32,12 @@ export function drawCircuitPart(c, part, def, selected, ctx) {
         c.shadowColor = "#ffd43b";
         c.shadowBlur = 22;
     }
-    const load = st?.load(part.id);
-    const level = load?.level ?? 0;
+    const load = st === null || st === void 0 ? void 0 : st.load(part.id);
+    const level = (_a = load === null || load === void 0 ? void 0 : load.level) !== null && _a !== void 0 ? _a : 0;
     const generator = def.id === "circuit.generator";
     const painted = () => drawPartPicture(c, ctx.art, def.id);
     if (generator) {
-        const power = st?.source(part.id)?.power ?? 0;
+        const power = (_c = (_b = st === null || st === void 0 ? void 0 : st.source(part.id)) === null || _b === void 0 ? void 0 : _b.power) !== null && _c !== void 0 ? _c : 0;
         if (painted())
             drawPowerBadge(c, power > 0.05, 30, -30);
         else
@@ -46,12 +47,14 @@ export function drawCircuitPart(c, part, def, selected, ctx) {
         drawChargeBar(c, part, def, st);
     else if (b.role === "BATTERY")
         drawBattery(c, part, def, st);
+    else if (b.role === "SWITCH" && def.id === "music.timer" && painted())
+        drawTimerLabel(c, st ? st.isClosed(part.id) : false, Number((_d = part.parameters.every) !== null && _d !== void 0 ? _d : 1));
     else if (b.role === "SWITCH" && def.id === "music.timer")
-        drawTimer(c, st ? st.isClosed(part.id) : false, Number(part.parameters.every ?? 1));
+        drawTimer(c, st ? st.isClosed(part.id) : false, Number((_e = part.parameters.every) !== null && _e !== void 0 ? _e : 1));
     else if (b.role === "SWITCH")
         drawSwitch(c, st ? st.isClosed(part.id) : part.parameters.closed === true, ctx.art);
     else if (b.role === "BUTTON")
-        drawButton(c, st?.isClosed(part.id) ?? false, ctx.art, part);
+        drawButton(c, (_f = st === null || st === void 0 ? void 0 : st.isClosed(part.id)) !== null && _f !== void 0 ? _f : false, ctx.art, part);
     else if (b.role === "JUNCTION") {
         c.fillStyle = "#fab005";
         c.beginPath();
@@ -67,10 +70,23 @@ export function drawCircuitPart(c, part, def, selected, ctx) {
         if (!drawBulbPicture(c, level, ctx))
             drawBulb(c, level);
     }
-    else if (b.load === "BUZZER")
-        drawBuzzer(c, level, ctx.time);
-    else if (b.load === "HORN")
-        drawHorn(c, level, ctx.time);
+    else if (b.load === "BUZZER") {
+        const shake = level >= 0.15 ? Math.sin(ctx.time * 60) * 2 : 0;
+        c.save();
+        c.translate(shake, 0);
+        const ok = painted();
+        c.restore();
+        if (ok)
+            drawSoundLines(c, level, ctx.time, 30, "BZZZ!");
+        else
+            drawBuzzer(c, level, ctx.time);
+    }
+    else if (b.load === "HORN") {
+        if (painted())
+            drawSoundLines(c, level, ctx.time, 38);
+        else
+            drawHorn(c, level, ctx.time);
+    }
     else if (b.load === "MOTOR") {
         if (painted())
             drawPowerBadge(c, level >= 0.15, 26, -26);
@@ -114,6 +130,42 @@ function drawHorn(c, level, time) {
         c.strokeStyle = INK;
         c.lineWidth = 4;
     }
+}
+/** Sound lines (and a word) beside a painted buzzer or horn while it has power. */
+function drawSoundLines(c, level, time, at, word) {
+    if (level < 0.15)
+        return;
+    c.save();
+    c.strokeStyle = "#e8590c";
+    c.lineWidth = 4;
+    for (let k = 1; k <= 3; k++) {
+        c.beginPath();
+        c.arc(at, -2, 8 * k + (time * 30) % 8, -0.7, 0.7);
+        c.stroke();
+    }
+    if (word) {
+        c.fillStyle = "#e8590c";
+        c.font = "900 16px system-ui";
+        c.textAlign = "center";
+        c.fillText(word, 0, -42);
+    }
+    c.restore();
+}
+/** The painted timer: how often it clicks, and a green ring at the moment it closes. */
+function drawTimerLabel(c, closed, every) {
+    if (closed) {
+        c.save();
+        c.strokeStyle = "#40c057";
+        c.lineWidth = 5;
+        c.beginPath();
+        c.arc(0, -2, 30, 0, Math.PI * 2);
+        c.stroke();
+        c.restore();
+    }
+    c.fillStyle = INK;
+    c.font = "800 12px system-ui";
+    c.textAlign = "center";
+    c.fillText(`${every}s`, 0, 40);
 }
 /** Timer switch (M29): a little clock whose hand ticks round; it closes for a moment each time round. */
 function drawTimer(c, closed, every) {
@@ -175,10 +227,11 @@ function drawGenerator(c, power) {
 }
 /** Painted battery or power station: a charge bar (or the station's overload light) under the picture, and its terminals. */
 function drawChargeBar(c, part, def, st) {
+    var _a;
     const b = circuitBehaviour(def);
-    const s = st?.source(part.id);
+    const s = st === null || st === void 0 ? void 0 : st.source(part.id);
     if (part.definitionId === "circuit.power-station") {
-        c.fillStyle = s?.tripped ? "#e03131" : "#69db7c";
+        c.fillStyle = (s === null || s === void 0 ? void 0 : s.tripped) ? "#e03131" : "#69db7c";
         c.beginPath();
         c.roundRect(-58, 22, 116, 22, 6);
         c.fill();
@@ -186,7 +239,7 @@ function drawChargeBar(c, part, def, st) {
         c.fillStyle = "#fff";
         c.font = "900 13px system-ui";
         c.textAlign = "center";
-        c.fillText(s?.tripped ? "OVERLOAD — OFF" : `max ${Number(part.parameters.maxPower ?? 0)}`, 0, 38);
+        c.fillText((s === null || s === void 0 ? void 0 : s.tripped) ? "OVERLOAD — OFF" : `max ${Number((_a = part.parameters.maxPower) !== null && _a !== void 0 ? _a : 0)}`, 0, 38);
         terminalStubs(c, b.terminals);
         return;
     }
@@ -244,6 +297,7 @@ function drawBulbPicture(c, level, ctx) {
     return ok;
 }
 function drawBattery(c, part, def, st) {
+    var _a;
     const b = circuitBehaviour(def);
     const half = Math.abs(b.terminals[0].x) * 100;
     const big = part.definitionId !== "circuit.battery";
@@ -258,15 +312,15 @@ function drawBattery(c, part, def, st) {
         c.font = "900 34px system-ui";
         c.textAlign = "center";
         c.fillText("⚡", 0, -14);
-        const s = st?.source(part.id);
-        c.fillStyle = s?.tripped ? "#e03131" : "#69db7c";
+        const s = st === null || st === void 0 ? void 0 : st.source(part.id);
+        c.fillStyle = (s === null || s === void 0 ? void 0 : s.tripped) ? "#e03131" : "#69db7c";
         c.beginPath();
         c.roundRect(-half + 14, 14, half * 2 - 28, 22, 6);
         c.fill();
         c.stroke();
         c.fillStyle = "#fff";
         c.font = "900 13px system-ui";
-        c.fillText(s?.tripped ? "OVERLOAD — OFF" : `max ${Number(part.parameters.maxPower ?? 0)}`, 0, 30);
+        c.fillText((s === null || s === void 0 ? void 0 : s.tripped) ? "OVERLOAD — OFF" : `max ${Number((_a = part.parameters.maxPower) !== null && _a !== void 0 ? _a : 0)}`, 0, 30);
         terminalStubs(c, b.terminals);
         return;
     }
@@ -282,7 +336,7 @@ function drawBattery(c, part, def, st) {
     c.fill();
     c.stroke();
     // Charge bar (battery drain indicator).
-    const s = st?.source(part.id);
+    const s = st === null || st === void 0 ? void 0 : st.source(part.id);
     const frac = s ? s.charge / s.capacity : 1;
     c.fillStyle = "#fff";
     c.fillRect(-half + 18, -h / 2 + 8, half * 2 - 44, 8);
@@ -442,9 +496,10 @@ function drawMotorBody(c, level) {
     c.fillText("MOTOR", 0, 30);
 }
 function drawDevice(c, part, level, time) {
+    var _a, _b;
     const on = level >= 0.15;
-    const label = String(part.parameters.label ?? "MACHINE");
-    const icon = String(part.parameters.icon ?? "⚙️");
+    const label = String((_a = part.parameters.label) !== null && _a !== void 0 ? _a : "MACHINE");
+    const icon = String((_b = part.parameters.icon) !== null && _b !== void 0 ? _b : "⚙️");
     c.fillStyle = on ? "#d3f9d8" : "#dee2e6";
     c.beginPath();
     c.roundRect(-46, -50, 92, 92, 12);
@@ -474,12 +529,13 @@ function drawDevice(c, part, level, time) {
 }
 /** A wire: a soft cable between its two ends. With current, glowing pulses travel along it (faster for more current). */
 function drawWire(c, part, def, selected, ctx) {
+    var _a, _b;
     const e = wireEnds(part, def);
     const x1 = e.x1 * 100, y1 = e.y1 * 100, x2 = e.x2 * 100, y2 = e.y2 * 100;
     const sag = Math.min(30, e.length * 8);
     const mx = (x1 + x2) / 2, my = (y1 + y2) / 2 + sag;
     const broken = part.parameters.broken === true;
-    const i = ctx.circuits?.current(part.id) ?? 0;
+    const i = (_b = (_a = ctx.circuits) === null || _a === void 0 ? void 0 : _a.current(part.id)) !== null && _b !== void 0 ? _b : 0;
     c.save();
     c.lineCap = "round";
     c.strokeStyle = selected ? "#ffd43b" : INK;
@@ -544,14 +600,15 @@ function drawWire(c, part, def, selected, ctx) {
 }
 /** BUILD mode: terminal dots. Green = joined to something, yellow = nothing plugged in yet. */
 export function drawCircuitTerminals(c, layout) {
+    var _a, _b;
     c.save();
     const counts = new Map();
     for (const t of layout.terminals)
-        counts.set(t.node, (counts.get(t.node) ?? 0) + 1);
+        counts.set(t.node, ((_a = counts.get(t.node)) !== null && _a !== void 0 ? _a : 0) + 1);
     for (const t of layout.terminals) {
         if (t.isWire)
             continue;
-        const joined = (counts.get(t.node) ?? 0) >= 2;
+        const joined = ((_b = counts.get(t.node)) !== null && _b !== void 0 ? _b : 0) >= 2;
         drawConnectionMark(c, t.x * 100, t.y * 100, joined, 9);
     }
     c.restore();
@@ -564,7 +621,7 @@ export function drawCircuitScanner(c, parts, registry, circuits) {
     for (const p of parts) {
         const def = registry(p.definitionId);
         const b = circuitBehaviour(def);
-        if (b?.role !== "LOAD")
+        if ((b === null || b === void 0 ? void 0 : b.role) !== "LOAD")
             continue;
         const l = circuits.load(p.id);
         if (!l || l.on)

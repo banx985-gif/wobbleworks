@@ -1,3 +1,5 @@
+var _a, _b, _c, _d;
+import "./app/Polyfills.js";
 import { AppShellController } from "./app/AppShellController.js";
 import { activeProfile, completedLevelIds, createDefaultAppSave, currentAssistance, currentLastBuild, currentOpening, currentSettings, mostRecentProfile, titleVisibility, validateAppSave, withActiveProfile, withAssistance, withBuild, withCreatedProfile, withDeletedProfile, withEntitlement, withFirstTest, withLocation, withOpeningMetrics, withOpeningProgress, withEditedProfile, withSettings, DEFAULT_SETTINGS, DEFAULT_ASSISTANCE, withoutActiveProfile, MAX_PROFILES, PAINTED_AVATARS } from "./app/AppState.js";
 import { ParentGate } from "./app/ParentGate.js";
@@ -65,7 +67,7 @@ import { isRobot } from "./robots/RobotSystem.js";
 import { attachKind, spaceSnap, vesselBehaviour } from "./space/SpaceSystem.js";
 import { InputManager } from "./input/InputManager.js";
 import { CanvasRenderer } from "./render/CanvasRenderer.js";
-import { trayPictureArt } from "./render/PartPictures.js";
+import { PROGRAM_PICTURES, SPAWN_PICTURES, trayPictureArt } from "./render/PartPictures.js";
 import { CameraController } from "./render/CameraController.js";
 import { AutosaveScheduler, IndexedDbStore, SaveManager, ThumbnailCache } from "./save/SaveManager.js";
 import { EditorOverlay } from "./tooling/EditorOverlay.js";
@@ -122,10 +124,11 @@ renderer.setArt(id => assets.getImage(id));
 /** Build tray pictures come from the one part-art map (render/PartPictures.ts); parts without one keep their tray icon. */
 function applyTrayPictures() {
     document.querySelectorAll("[data-part]").forEach(button => {
+        var _a;
         const art = trayPictureArt(button.dataset.part);
         if (!art)
             return;
-        const url = artManifest[art] ?? `./assets/${/^(duck|toy|char)./.test(art) ? "char" : "parts"}/${art}.webp`;
+        const url = (_a = artManifest[art]) !== null && _a !== void 0 ? _a : `./assets/${/^(duck|toy|char)./.test(art) ? "char" : "parts"}/${art}.webp`;
         const old = button.querySelector(".part-icon, .emoji-icon, .gear-icon, .beam-icon");
         if (old instanceof HTMLImageElement && old.getAttribute("src") === url)
             return;
@@ -140,21 +143,40 @@ function applyTrayPictures() {
     });
 }
 applyTrayPictures();
-/** Loads the painted art listed in assets/manifest.json. Anything missing keeps its code-drawn stand-in. */
-async function loadArt() {
-    try {
-        const response = await fetch("./assets/manifest.json");
-        if (response.ok)
-            artManifest = await response.json();
-    }
-    catch {
-        return;
-    }
-    applyTrayPictures();
-    // Recorded sounds arrive the same way as art: "audio.<id>" in the manifest replaces that synthesised sound.
-    audio.setRecordings(Object.fromEntries(Object.entries(artManifest).filter(([id]) => id.startsWith("audio.")).map(([id, url]) => [id.slice(6), url])));
-    const wanted = Object.keys(artManifest).filter(id => /^(motion|structure|air|level|fx|ui\.hint|duck|toy|char\.bolt|gear|power|water|robot|icon|magnet|flight|space)\./.test(id));
-    await Promise.allSettled(wanted.map(id => assets.loadImage(id, artManifest[id])));
+/** A painted picture's file, once the art list has arrived (menus fall back to their emoji until then). */
+function artUrl(art) { return art ? artManifest[art] : undefined; }
+/** Reads the art list (assets/manifest.json) only: a small file, so the tray buttons and recorded sounds know their files. */
+let manifestLoad;
+function loadArtList() {
+    manifestLoad !== null && manifestLoad !== void 0 ? manifestLoad : (manifestLoad = (async () => {
+        try {
+            const response = await fetch("./assets/manifest.json");
+            if (response.ok)
+                artManifest = await response.json();
+        }
+        catch {
+            return;
+        }
+        applyTrayPictures();
+        // Recorded sounds arrive the same way as art: "audio.<id>" in the manifest replaces that synthesised sound.
+        audio.setRecordings(Object.fromEntries(Object.entries(artManifest).filter(([id]) => id.startsWith("audio.")).map(([id, url]) => [id.slice(6), url])));
+    })());
+    return manifestLoad;
+}
+/**
+ * M44: the painted playfield pictures load when a playfield first opens (the opening, a lab, Free Build), never before
+ * the title screen, so a cheap tablet isn't busy unpacking hundreds of pictures while it starts. Until a picture
+ * arrives its part keeps the code-drawn shape, exactly as when a picture is missing.
+ */
+let pictureLoad;
+function loadPlayfieldPictures() {
+    pictureLoad !== null && pictureLoad !== void 0 ? pictureLoad : (pictureLoad = loadArtList().then(async () => {
+        const wanted = Object.keys(artManifest).filter(id => /^(motion|structure|air|level|fx|ui\.hint|duck|toy|char\.bolt|gear|power|water|robot|icon|magnet|flight|space|logic|sound|launch|target)\./.test(id));
+        // A few at a time: a slow device stays responsive while they arrive.
+        for (let i = 0; i < wanted.length; i += 8)
+            await Promise.allSettled(wanted.slice(i, i + 8).map(id => assets.loadImage(id, artManifest[id])));
+    }));
+    return pictureLoad;
 }
 let appSave = createDefaultAppSave();
 let selectedId;
@@ -192,10 +214,10 @@ let beamEndDrag;
 /** Labs a grown-up opened with the test tool this session (progress gate skipped, nothing saved). */
 const testingLabs = new Set();
 /** A store/release build (tools/build.mjs --release): no test tools, ownership only from a verified proof (M40). */
-const RELEASE_BUILD = document.querySelector('meta[name="wobbleworks-build"]')?.getAttribute("content") === "release";
+const RELEASE_BUILD = ((_a = document.querySelector('meta[name="wobbleworks-build"]')) === null || _a === void 0 ? void 0 : _a.getAttribute("content")) === "release";
 if (RELEASE_BUILD) {
-    document.querySelector("#btn-tools")?.classList.add("hidden");
-    document.querySelector("#debug")?.classList.add("hidden");
+    (_b = document.querySelector("#btn-tools")) === null || _b === void 0 ? void 0 : _b.classList.add("hidden");
+    (_c = document.querySelector("#debug")) === null || _c === void 0 ? void 0 : _c.classList.add("hidden");
 }
 let labActive = false;
 let activeLevel;
@@ -277,13 +299,13 @@ const ui = {
     debug: document.querySelector("#debug"), mode: document.querySelector("#mode-label")
 };
 /** Parts you stretch by their ends: Builder Bay beams and Power Lab wires. */
-function beamEndpoints(part, def) { return structureBeamEndpoints(part, def) ?? wireEnds(part, def) ?? pipeEnds(part, def); }
+function beamEndpoints(part, def) { var _a, _b; return (_b = (_a = structureBeamEndpoints(part, def)) !== null && _a !== void 0 ? _a : wireEnds(part, def)) !== null && _b !== void 0 ? _b : pipeEnds(part, def); }
 function isWirePart(id) { const p = build.getPart(id); return p !== undefined && registry.get(p.definitionId).behaviours.some(b => b.kind === "WIRE"); }
 function isPipePart(id) { const p = build.getPart(id); return p !== undefined && registry.get(p.definitionId).behaviours.some(b => b.kind === "PIPE"); }
 function delay(ms) { return new Promise(resolve => window.setTimeout(resolve, ms)); }
 function now() { return performance.now(); }
 function gameplayAllowed() { return shell.canUseGameplay(now()); }
-function isPortraitBuildLayout() { return window.matchMedia?.("(orientation: portrait) and (max-width: 900px)").matches ?? false; }
+function isPortraitBuildLayout() { var _a, _b; return (_b = (_a = window.matchMedia) === null || _a === void 0 ? void 0 : _a.call(window, "(orientation: portrait) and (max-width: 900px)").matches) !== null && _b !== void 0 ? _b : false; }
 function openingStepFromSave() {
     const step = currentOpening(appSave).step;
     return (step >= 1 && step <= 6 ? step : 1);
@@ -294,7 +316,7 @@ function commit(next, immediate = false) {
     autosave.request(appSave);
     return immediate ? autosave.flush() : Promise.resolve();
 }
-function buzz(ms = 25) { if ((currentSettings(appSave).vibration ?? true) && "vibrate" in navigator)
+function buzz(ms = 25) { var _a; if (((_a = currentSettings(appSave).vibration) !== null && _a !== void 0 ? _a : true) && "vibrate" in navigator)
     try {
         navigator.vibrate(ms);
     }
@@ -311,6 +333,7 @@ function applySettings(settings = currentSettings(appSave)) {
     updateMusic();
 }
 function syncSettingsForm() {
+    var _a, _b;
     const s = currentSettings(appSave);
     const a = currentAssistance(appSave);
     const p = activeProfile(appSave);
@@ -320,8 +343,8 @@ function syncSettingsForm() {
     document.querySelector("#setting-narration").checked = s.narration;
     document.querySelector("#setting-subtitles").checked = s.subtitles;
     document.querySelector("#setting-sfx").checked = s.soundEffects;
-    document.querySelector("#setting-music").checked = s.music ?? true;
-    document.querySelector("#setting-vibration").checked = s.vibration ?? true;
+    document.querySelector("#setting-music").checked = (_a = s.music) !== null && _a !== void 0 ? _a : true;
+    document.querySelector("#setting-vibration").checked = (_b = s.vibration) !== null && _b !== void 0 ? _b : true;
     document.querySelector("#setting-sfx-volume").value = String(s.sfxVolume);
     document.querySelector("#setting-music-volume").value = String(s.musicVolume);
     document.querySelector("#setting-voice-volume").value = String(s.voiceVolume);
@@ -342,8 +365,8 @@ function readSettingsForm() {
 /** The nine campaign labs plus the creative modes that use the same mission menu (the Chain Reaction Workshop). */
 const PLAY_SETS = [...MAIN_LABS, CHAIN_WORKSHOP, EXPERIMENT_LAB, FREE_BUILD_ROOMS, CHALLENGE_LAB, CONTRACT_BOARD, SCIENCE_FAIR, CREATURE_MUSIC, GRAND_HALL, PROTOTYPE_LAB];
 function labDef(id = currentLabId) { return PLAY_SETS.find(l => l.id === id); }
-function labOfLevel(levelId) { if (levelId.startsWith("grand."))
-    return GRAND_HALL.id; return PLAY_SETS.find(l => l.missions.some(m => m.id === levelId))?.id ?? "motion-yard"; }
+function labOfLevel(levelId) { var _a, _b; if (levelId.startsWith("grand."))
+    return GRAND_HALL.id; return (_b = (_a = PLAY_SETS.find(l => l.missions.some(m => m.id === levelId))) === null || _a === void 0 ? void 0 : _a.id) !== null && _b !== void 0 ? _b : "motion-yard"; }
 function completedSet() { return new Set(completedLevelIds(appSave)); }
 function missionMeta(levelId) { return PLAY_SETS.flatMap(l => l.missions).find(m => m.id === levelId); }
 /** The lab's own evaluator: same success rules as the level file, plus that lab's evidence-backed discoveries. */
@@ -381,16 +404,16 @@ function evaluateLevel(level, runtime) {
 /** Remember this run so the next TEST can show whether a change (like a brace) really helped. */
 function rememberRun() { const runtime = tests.active(); if (runtime && activeLevel)
     lastRuns.set(activeLevel.id, runSummary(build, runtime)); }
-function labIsOpen(labId) { if (labId === PROTOTYPE_LAB.id)
-    return labLevels.has(labId) && (prototypeLabOpen(appSave) || testingLabs.has(labId)); if (labId === GRAND_HALL.id)
-    return labLevels.has(labId) && (grandHallOpen(appSave) || testingLabs.has(labId)); if (labId === CREATURE_MUSIC.id)
-    return labLevels.has(labId) && (creatureMusicOpen(appSave) || testingLabs.has(labId)); if (labId === SCIENCE_FAIR.id)
-    return labLevels.has(labId) && (scienceFairOpen(appSave) || testingLabs.has(labId)); if (labId === CONTRACT_BOARD.id)
-    return labLevels.has(labId) && (jobBoardOpen(appSave) || testingLabs.has(labId)); if (labId === CHALLENGE_LAB.id)
-    return labLevels.has(labId) && (challengeLabOpen(appSave) || testingLabs.has(labId)); if (labId === FREE_BUILD_ROOMS.id)
-    return labLevels.has(labId) && Boolean(activeProfile(appSave)?.freeBuildUnlocked); if (labId === EXPERIMENT_LAB.id)
-    return labLevels.has(labId) && (experimentLabOpen(appSave) || testingLabs.has(labId)); if (labId === CHAIN_WORKSHOP.id)
-    return labLevels.has(labId) && (chainWorkshopOpen(appSave) || testingLabs.has(labId)); return labLevels.has(labId) && (routeToRegion(appSave, labId).kind === "ENTER" || testingLabs.has(labId)); }
+function labIsOpen(labId) { var _a; if (labId === PROTOTYPE_LAB.id)
+    return LAB_IDS.has(labId) && (prototypeLabOpen(appSave) || testingLabs.has(labId)); if (labId === GRAND_HALL.id)
+    return LAB_IDS.has(labId) && (grandHallOpen(appSave) || testingLabs.has(labId)); if (labId === CREATURE_MUSIC.id)
+    return LAB_IDS.has(labId) && (creatureMusicOpen(appSave) || testingLabs.has(labId)); if (labId === SCIENCE_FAIR.id)
+    return LAB_IDS.has(labId) && (scienceFairOpen(appSave) || testingLabs.has(labId)); if (labId === CONTRACT_BOARD.id)
+    return LAB_IDS.has(labId) && (jobBoardOpen(appSave) || testingLabs.has(labId)); if (labId === CHALLENGE_LAB.id)
+    return LAB_IDS.has(labId) && (challengeLabOpen(appSave) || testingLabs.has(labId)); if (labId === FREE_BUILD_ROOMS.id)
+    return LAB_IDS.has(labId) && Boolean((_a = activeProfile(appSave)) === null || _a === void 0 ? void 0 : _a.freeBuildUnlocked); if (labId === EXPERIMENT_LAB.id)
+    return LAB_IDS.has(labId) && (experimentLabOpen(appSave) || testingLabs.has(labId)); if (labId === CHAIN_WORKSHOP.id)
+    return LAB_IDS.has(labId) && (chainWorkshopOpen(appSave) || testingLabs.has(labId)); return LAB_IDS.has(labId) && (routeToRegion(appSave, labId).kind === "ENTER" || testingLabs.has(labId)); }
 function updateOpeningTray(level) {
     const allowed = level ? new Set(level.availablePartIds) : undefined;
     document.querySelectorAll("[data-part]").forEach(button => {
@@ -417,9 +440,10 @@ function speakCurrentLine(force = false) {
 }
 /** Put a painted Bolt pose (wearing the equipped costume) into a slot on screen. */
 function showBolt(slot, pose) {
+    var _a;
     const el = document.querySelector(slot);
     if (el)
-        el.replaceChildren(boltArt(activeProfile(appSave)?.equipped.bolt, pose));
+        el.replaceChildren(boltArt((_a = activeProfile(appSave)) === null || _a === void 0 ? void 0 : _a.equipped.bolt, pose));
 }
 function presentBolt(line, reaction = false, pose = reaction ? "cheer" : "point") {
     showBolt("#bolt-avatar", pose);
@@ -442,6 +466,7 @@ function renderOpeningHud() {
     openingPrompt.textContent = meta.prompt;
 }
 function renderLabMenu() {
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v;
     motionMissionGrid.replaceChildren();
     const lab = labDef();
     const completed = completedSet();
@@ -472,39 +497,41 @@ function renderLabMenu() {
         const cmLab = lab.id === CREATURE_MUSIC.id ? CREATURE_MUSIC_LABS[meta.id] : undefined;
         const gc = lab.id === GRAND_HALL.id ? grandChallengeById(meta.id) : undefined;
         if (lab.id === PROTOTYPE_LAB.id)
-            objective.textContent = unlocked ? labLevels.get(PROTOTYPE_LAB.id)?.get(meta.id)?.narrationCues?.[0] ?? meta.objective : "Finish the one before to open this.";
+            objective.textContent = unlocked ? (_d = (_c = (_b = (_a = labLevels.get(PROTOTYPE_LAB.id)) === null || _a === void 0 ? void 0 : _a.get(meta.id)) === null || _b === void 0 ? void 0 : _b.narrationCues) === null || _c === void 0 ? void 0 : _c[0]) !== null && _d !== void 0 ? _d : meta.objective : "Finish the one before to open this.";
         else if (gc) {
             slot.textContent = `${gc.icon} CHALLENGE ${lab.missions.indexOf(meta) + 1}`;
             const at = grandStage(appSave, gc.id);
             objective.textContent = unlocked ? `${gc.story} · ${gc.stages.length} stages${at > 0 ? ` · on stage ${at + 1}` : ""}` : "Finish the other 11 challenges to start the great machine.";
         }
         else if (cmLab && !unlocked)
-            objective.textContent = `Opens with the ${regionById(cmLab)?.title ?? "lab"}`;
+            objective.textContent = `Opens with the ${(_f = (_e = regionById(cmLab)) === null || _e === void 0 ? void 0 : _e.title) !== null && _f !== void 0 ? _f : "lab"}`;
         else if (cmLab)
-            objective.textContent = labLevels.get(CREATURE_MUSIC.id)?.get(meta.id)?.narrationCues?.[0] ?? meta.objective;
+            objective.textContent = (_k = (_j = (_h = (_g = labLevels.get(CREATURE_MUSIC.id)) === null || _g === void 0 ? void 0 : _g.get(meta.id)) === null || _h === void 0 ? void 0 : _h.narrationCues) === null || _j === void 0 ? void 0 : _j[0]) !== null && _k !== void 0 ? _k : meta.objective;
         else if (fd) {
             const hist = fairHistory(appSave, fd.id);
             slot.textContent = `${fd.icon} FAIR ${fd.number}`;
-            objective.textContent = unlocked ? `${fd.prompt}${hist.length ? ` · Entered ${hist.length} time${hist.length === 1 ? "" : "s"}` : ""}` : fd.unlock === "ALL" ? "Opens when the Great WobbleWorks Machine runs." : `Opens after the ${fd.unlock.map(l => regionById(l)?.title ?? l).join(" and ")}.`;
+            objective.textContent = unlocked ? `${fd.prompt}${hist.length ? ` · Entered ${hist.length} time${hist.length === 1 ? "" : "s"}` : ""}` : fd.unlock === "ALL" ? "Opens when the Great WobbleWorks Machine runs." : `Opens after the ${fd.unlock.map(l => { var _a, _b; return (_b = (_a = regionById(l)) === null || _a === void 0 ? void 0 : _a.title) !== null && _b !== void 0 ? _b : l; }).join(" and ")}.`;
         }
         else if (job && who) {
             slot.textContent = `${who.icon} ${who.name.toUpperCase()}`;
-            objective.textContent = unlocked ? job.goal : activeProfile(appSave)?.visitorsMet.includes(who.id) ? `Opens with the ${regionById(job.labId)?.title ?? "lab"}` : `Meet ${who.name} at the Workshop door`;
+            objective.textContent = unlocked ? job.goal : ((_l = activeProfile(appSave)) === null || _l === void 0 ? void 0 : _l.visitorsMet.includes(who.id)) ? `Opens with the ${(_o = (_m = regionById(job.labId)) === null || _m === void 0 ? void 0 : _m.title) !== null && _o !== void 0 ? _o : "lab"}` : `Meet ${who.name} at the Workshop door`;
         }
         else if (ch) {
             const best = challengeBest(appSave, ch.id);
-            objective.textContent = unlocked ? `${ch.icon} ${ch.goal}${best ? ` · Best: ${formatScore(ch, best.value)}` : ""}` : `Opens with the ${regionById(ch.labId)?.title ?? "lab"}`;
+            objective.textContent = unlocked ? `${ch.icon} ${ch.goal}${best ? ` · Best: ${formatScore(ch, best.value)}` : ""}` : `Opens with the ${(_q = (_p = regionById(ch.labId)) === null || _p === void 0 ? void 0 : _p.title) !== null && _q !== void 0 ? _q : "lab"}`;
         }
         else if (room)
-            objective.textContent = unlocked ? `${room.icon} ${room.prompts[0]}` : room.free ? "Finish the opening first." : room.needs === "ALL" ? "Opens when the Great WobbleWorks Machine runs." : `Opens with the ${regionById(room.needs ?? "")?.title ?? "lab"}`;
+            objective.textContent = unlocked ? `${room.icon} ${room.prompts[0]}` : room.free ? "Finish the opening first." : room.needs === "ALL" ? "Opens when the Great WobbleWorks Machine runs." : `Opens with the ${(_t = (_s = regionById((_r = room.needs) !== null && _r !== void 0 ? _r : "")) === null || _s === void 0 ? void 0 : _s.title) !== null && _t !== void 0 ? _t : "lab"}`;
         else
-            objective.textContent = tpl ? (unlocked ? `${tpl.question} ${savedExperiments(appSave, meta.id).length ? `· ${savedExperiments(appSave, meta.id).length} saved` : ""}` : `Opens with the ${regionById(tpl.labId)?.title ?? "lab"}`) : meta.objective;
+            objective.textContent = tpl ? (unlocked ? `${tpl.question} ${savedExperiments(appSave, meta.id).length ? `· ${savedExperiments(appSave, meta.id).length} saved` : ""}` : `Opens with the ${(_v = (_u = regionById(tpl.labId)) === null || _u === void 0 ? void 0 : _u.title) !== null && _v !== void 0 ? _v : "lab"}`) : meta.objective;
         button.append(slot, title, objective);
         button.addEventListener("click", () => loadMission(meta.id));
         motionMissionGrid.append(button);
     }
 }
 function showLab(labId = currentLabId) {
+    if (afterLabs(() => showLab(labId)))
+        return;
     if (!labIsOpen(labId))
         labId = "motion-yard";
     currentLabId = labId;
@@ -529,17 +556,21 @@ function showLab(labId = currentLabId) {
         playStory([entry]);
 }
 function loadMission(id) {
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
+    if (afterLabs(() => loadMission(id)))
+        return;
+    void loadPlayfieldPictures();
     const labId = labOfLevel(id);
     const lab = labDef(labId);
     if (labId === FREE_BUILD_ROOMS.id) {
-        const level = labLevels.get(labId)?.get(id);
+        const level = (_a = labLevels.get(labId)) === null || _a === void 0 ? void 0 : _a.get(id);
         if (level && (sandboxOpen(appSave, id) || testingLabs.has(labId)))
             startSandbox(level);
         return;
     }
     // Grand Hall: a challenge id plays the stage this inventor is on; a stage id plays that stage.
     const gChallenge = labId === GRAND_HALL.id ? grandChallengeById(id) : undefined;
-    const grand = labId === GRAND_HALL.id ? grandStageOf(id) ?? (gChallenge ? { challenge: gChallenge, stage: grandStage(appSave, gChallenge.id) } : undefined) : undefined;
+    const grand = labId === GRAND_HALL.id ? (_b = grandStageOf(id)) !== null && _b !== void 0 ? _b : (gChallenge ? { challenge: gChallenge, stage: grandStage(appSave, gChallenge.id) } : undefined) : undefined;
     if (labId === GRAND_HALL.id && (!grand || !(grandChallengeOpen(appSave, grand.challenge.id, completedSet()) || testingLabs.has(labId))))
         return;
     if (!grand && !labMissionUnlocked(lab, id, completedSet()))
@@ -553,7 +584,7 @@ function loadMission(id) {
     invSave.classList.add("hidden");
     endReplay();
     lastRecording = undefined;
-    const level = labLevels.get(labId)?.get(grand ? grandStageLevelId(grand.challenge.id, grand.stage) : id);
+    const level = (_c = labLevels.get(labId)) === null || _c === void 0 ? void 0 : _c.get(grand ? grandStageLevelId(grand.challenge.id, grand.stage) : id);
     if (!level) {
         loadingError.textContent = `${lab.title} content is missing: ${id}.`;
         transition("LOADING_FAILURE", true);
@@ -565,7 +596,7 @@ function loadMission(id) {
     freeBuildActive = false;
     openingHud.classList.add("hidden");
     openingSuccess.classList.add("hidden");
-    build.replaceAll({ parts: [...(level.staticObjects ?? []), ...level.starterParts], connections: level.starterConnections });
+    build.replaceAll({ parts: [...((_d = level.staticObjects) !== null && _d !== void 0 ? _d : []), ...level.starterParts], connections: level.starterConnections });
     selectedId = undefined;
     dragStart = undefined;
     dragPreview = undefined;
@@ -577,15 +608,15 @@ function loadMission(id) {
     forceScanner = false;
     motionResult.classList.add("hidden");
     const meta = missionMeta(id);
-    motionTitle.textContent = meta?.title ?? level.title;
-    motionObjective.textContent = level.narrationCues?.[0] ?? meta?.objective ?? level.title;
+    motionTitle.textContent = (_e = meta === null || meta === void 0 ? void 0 : meta.title) !== null && _e !== void 0 ? _e : level.title;
+    motionObjective.textContent = (_h = (_g = (_f = level.narrationCues) === null || _f === void 0 ? void 0 : _f[0]) !== null && _g !== void 0 ? _g : meta === null || meta === void 0 ? void 0 : meta.objective) !== null && _h !== void 0 ? _h : level.title;
     motionHud.classList.remove("hidden");
     forceScannerButton.classList.remove("hidden", "force-on");
     forceScannerButton.setAttribute("aria-pressed", "false");
     document.querySelector(".motion-hud .motion-badge").textContent = lab.title.toUpperCase();
     const gBase = grand ? grand.challenge.stages[grand.stage].baseLevelId : undefined;
     const scanLab = gBase ? (gBase === CAMPUS_SWITCH_ROOM ? "power-lab" : labOfLevel(gBase)) : labId;
-    forceScannerButton.textContent = labModule(scanLab)?.scannerName ?? (scanLab === "gear-garage" ? "Spin Scanner" : scanLab === "builder-bay" ? "Stress Scanner" : "Force Scanner");
+    forceScannerButton.textContent = (_k = (_j = labModule(scanLab)) === null || _j === void 0 ? void 0 : _j.scannerName) !== null && _k !== void 0 ? _k : (scanLab === "gear-garage" ? "Spin Scanner" : scanLab === "builder-bay" ? "Stress Scanner" : "Force Scanner");
     updateOpeningTray(level);
     resetGuidance(level.id);
     enterWorkshop();
@@ -594,7 +625,7 @@ function loadMission(id) {
     contract = labId === CONTRACT_BOARD.id ? contractById(level.id) : undefined;
     setupFair(labId === SCIENCE_FAIR.id ? fairById(level.id) : undefined, level);
     if (labId === CREATURE_MUSIC.id || labId === PROTOTYPE_LAB.id)
-        motionObjective.textContent = level.narrationCues?.[0] ?? motionObjective.textContent;
+        motionObjective.textContent = (_m = (_l = level.narrationCues) === null || _l === void 0 ? void 0 : _l[0]) !== null && _m !== void 0 ? _m : motionObjective.textContent;
     grandRun = grand;
     nextStageButton.classList.add("hidden");
     if (grand) {
@@ -611,12 +642,13 @@ function loadMission(id) {
     sayGoal();
 }
 /** Say the mission's goal out loud (Bolt's voice), so a child who can't read yet can still start. */
-function sayGoal(force = false) { const goal = motionObjective.textContent ?? ""; if (!goal)
+function sayGoal(force = false) { var _a; const goal = (_a = motionObjective.textContent) !== null && _a !== void 0 ? _a : ""; if (!goal)
     return; currentNarration = goal; speakCurrentLine(force); }
 document.querySelector("#btn-say-again").addEventListener("click", () => sayGoal(true));
 /** Success feels good (M36): a quick confetti burst over the result card. Calm Motion shows none; it never delays anything. */
 function celebrate(success) {
-    motionResult.querySelector(".result-confetti")?.remove();
+    var _a;
+    (_a = motionResult.querySelector(".result-confetti")) === null || _a === void 0 ? void 0 : _a.remove();
     if (!success || currentSettings(appSave).reducedMotion)
         return;
     const burst = document.createElement("div");
@@ -654,7 +686,7 @@ function showMotionResult(success, body, stars = [], newStars = [], rewards = []
     whyButton.classList.toggle("hidden", success || !lastWhy);
     keepBuildingButton.classList.toggle("hidden", success && !challenge);
     watchReplayButton.classList.toggle("hidden", !recorder || recorder.length < 30);
-    watchReplayButton.textContent = !success && recorder?.markers.length ? "🎬 See where it went wrong" : "🎬 Watch replay";
+    watchReplayButton.textContent = !success && (recorder === null || recorder === void 0 ? void 0 : recorder.markers.length) ? "🎬 See where it went wrong" : "🎬 Watch replay";
     celebrate(success);
     if (success) {
         const labels = { solve: "Solved", efficient: "Tiny machine", advanced: "Wild invention" };
@@ -678,10 +710,12 @@ function showMotionResult(success, body, stars = [], newStars = [], rewards = []
     }
 }
 function playerPartCount(level) {
-    const seeded = new Set([...(level.staticObjects ?? []), ...level.starterParts].map(p => p.id));
+    var _a;
+    const seeded = new Set([...((_a = level.staticObjects) !== null && _a !== void 0 ? _a : []), ...level.starterParts].map(p => p.id));
     return build.allParts().filter(p => !seeded.has(p.id)).length;
 }
 function maybeCompleteMotionMission() {
+    var _a, _b, _c;
     if (!labActive || !activeLevel || !testMode || resultShown)
         return;
     const runtime = tests.active();
@@ -697,13 +731,13 @@ function maybeCompleteMotionMission() {
     const evidence = { playerPartCount: playerPartCount(activeLevel), discoveries: result.discoveries };
     const g = grandRun;
     const gDone = g ? completeGrandStage(appSave, g.challenge.id, g.stage, evidence) : undefined;
-    if (g && gDone?.next !== undefined) {
+    if (g && (gDone === null || gDone === void 0 ? void 0 : gDone.next) !== undefined) {
         grandStageDone(g, gDone.save);
         return;
     }
-    const outcome = gDone?.outcome ?? recordMissionSuccess(appSave, activeLevel.id, evidence);
+    const outcome = (_a = gDone === null || gDone === void 0 ? void 0 : gDone.outcome) !== null && _a !== void 0 ? _a : recordMissionSuccess(appSave, activeLevel.id, evidence);
     lastMissionLevelId = activeLevel.id;
-    resultReturnsToHub = outcome.labCleared !== undefined || g?.challenge.id === FINAL_CHALLENGE_ID;
+    resultReturnsToHub = outcome.labCleared !== undefined || (g === null || g === void 0 ? void 0 : g.challenge.id) === FINAL_CHALLENGE_ID;
     // Help used only tunes how often help is offered later; stars and rewards above never see it.
     void commit(withSolveHistory(outcome.save, observer.hintsUsed(), observer.failedTests()), true).catch(() => undefined);
     setHint(undefined);
@@ -717,7 +751,7 @@ function maybeCompleteMotionMission() {
         visitorReactions.push({ kind: "VISITOR", title: `${helped.icon} ${helped.name} pops by:`, body: `“${helped.thanks} Thanks for doing ${contract.title}!”` });
     rememberRun();
     const discovered = card ? ` ${card.title}: ${card.example}` : result.discoveries.length ? ` You discovered ${result.discoveries[0].replace("motion.", "").replaceAll("-", " ")}.` : "";
-    const cleared = outcome.labCleared ? ` The ${regionById(outcome.labCleared)?.title ?? "lab"} is restored!` : "";
+    const cleared = outcome.labCleared ? ` The ${(_c = (_b = regionById(outcome.labCleared)) === null || _b === void 0 ? void 0 : _b.title) !== null && _c !== void 0 ? _c : "lab"} is restored!` : "";
     if (g) {
         showMotionResult(true, g.challenge.id === FINAL_CHALLENGE_ID ? "THE GREAT WOBBLEWORKS MACHINE IS RUNNING! Every system, all at once. Let's go and see the campus wake up!" : `${g.challenge.title}: all ${g.challenge.stages.length} stages done! A Grand Hall champion.`, outcome.stars, outcome.newStars, outcome.newRewards);
         resultStars.querySelectorAll(".result-star:not(.on)").forEach(s => s.remove());
@@ -732,7 +766,7 @@ function maybeCompleteMotionMission() {
 /** A Grand Hall stage (not the last) is done: remember the next stage and offer it. */
 function grandStageDone(g, saved) {
     const next = g.stage + 1;
-    lastMissionLevelId = activeLevel?.id;
+    lastMissionLevelId = activeLevel === null || activeLevel === void 0 ? void 0 : activeLevel.id;
     void commit(saved, true).catch(() => undefined);
     setHint(undefined);
     hideBoltTip();
@@ -748,6 +782,7 @@ async function saveOpeningProgress(step, complete = false) {
     await commit(syncOpeningMetrics(withOpeningProgress(appSave, step, complete)), complete);
 }
 function loadOpeningStep(step) {
+    var _a;
     stopToBuild();
     const meta = openingDirector.currentStep() === step ? openingDirector.current() : (() => { openingDirector.setStep(step); return openingDirector.current(); })();
     const level = openingLevels.get(meta.levelId);
@@ -756,7 +791,7 @@ function loadOpeningStep(step) {
         transition("LOADING_FAILURE", true);
         return;
     }
-    build.replaceAll({ parts: [...(level.staticObjects ?? []), ...level.starterParts], connections: level.starterConnections });
+    build.replaceAll({ parts: [...((_a = level.staticObjects) !== null && _a !== void 0 ? _a : []), ...level.starterParts], connections: level.starterConnections });
     selectedId = undefined;
     dragStart = undefined;
     dragPreview = undefined;
@@ -779,6 +814,7 @@ function loadOpeningStep(step) {
     enterWorkshop();
 }
 function startOpening(step = openingStepFromSave()) {
+    void loadPlayfieldPictures();
     openingDirector = new OpeningDirector(step);
     openingDirector.startSession(now());
     loadOpeningStep(step);
@@ -798,7 +834,7 @@ function autoSnapOpeningWheel(id) {
         return;
     const connectedWheels = build.allConnections().filter(c => c.fromPartId === cart.id || c.toPartId === cart.id)
         .map(c => c.fromPartId === cart.id ? c.toPartId : c.fromPartId)
-        .map(wheelId => build.getPart(wheelId)).filter(p => p?.definitionId === "motion.wheel");
+        .map(wheelId => build.getPart(wheelId)).filter(p => (p === null || p === void 0 ? void 0 : p.definitionId) === "motion.wheel");
     const side = connectedWheels.length > 0 ? 1 : -1;
     build.move(id, { x: cart.position.x + side * 0.42, y: Math.min(8.05, cart.position.y + 0.38) }); // placement help only: physics + win rules unchanged
     const alreadyConnected = build.allConnections().some(c => (c.fromPartId === cart.id && c.toPartId === id) || (c.toPartId === cart.id && c.fromPartId === id));
@@ -847,11 +883,12 @@ function maybeCompleteOpeningChallenge() {
 }
 function chooseProfile(id) { void commit(withActiveProfile(appSave, id), true); applySettings(); resumeActiveProfile(); }
 function openInventorForm(editId) {
+    var _a, _b;
     editingProfileId = editId;
     const p = editId ? appSave.profiles.find(x => x.id === editId) : undefined;
     creatingExtraProfile = !editId;
-    inventorName.value = p?.name ?? "Inventor";
-    resetMaker(p ? p.look ?? (PAINTED_AVATARS.includes(p.avatarStyle) ? null : { ...DEFAULT_LOOK }) : { ...DEFAULT_LOOK }, p && PAINTED_AVATARS.includes(p.avatarStyle) ? p.avatarStyle : "BLUE");
+    inventorName.value = (_a = p === null || p === void 0 ? void 0 : p.name) !== null && _a !== void 0 ? _a : "Inventor";
+    resetMaker(p ? (_b = p.look) !== null && _b !== void 0 ? _b : (PAINTED_AVATARS.includes(p.avatarStyle) ? null : { ...DEFAULT_LOOK }) : { ...DEFAULT_LOOK }, p && PAINTED_AVATARS.includes(p.avatarStyle) ? p.avatarStyle : "BLUE");
     document.querySelector("#inventor-form-title").textContent = p ? `EDIT ${p.name.toUpperCase()}` : "CREATE YOUR INVENTOR";
     document.querySelector("#btn-create-inventor").textContent = p ? "✔ SAVE CHANGES" : "✔ CREATE INVENTOR";
     document.querySelector("#inventor-form-lead").textContent = p ? "Change your nickname or your look." : "Bolt wants to remember who helped.";
@@ -859,8 +896,9 @@ function openInventorForm(editId) {
     transition("CREATE_INVENTOR");
 }
 function renderProfiles() {
+    var _a;
     if (!appSave.profiles.some(p => p.id === profileSelectedId))
-        profileSelectedId = mostRecentProfile(appSave)?.id;
+        profileSelectedId = (_a = mostRecentProfile(appSave)) === null || _a === void 0 ? void 0 : _a.id;
     renderProfileSelect(profileList, appSave, profileSelectedId, {
         select: id => { profileSelectedId = id; sfx(700, .03); renderProfiles(); },
         play: id => chooseProfile(id),
@@ -882,6 +920,7 @@ const INFO_TEXT = {
 let legalPages = {};
 void fetch("./content/legal/legal.json").then(r => r.ok ? r.json() : {}).then(j => { legalPages = j; }).catch(() => undefined);
 function showInfo(key) {
+    var _a;
     const body = document.querySelector("#info-body");
     const legal = legalPages[key];
     if (legal) {
@@ -890,7 +929,7 @@ function showInfo(key) {
             n.className = "info-sub"; return n; }));
     }
     else {
-        const info = INFO_TEXT[key] ?? INFO_TEXT.help;
+        const info = (_a = INFO_TEXT[key]) !== null && _a !== void 0 ? _a : INFO_TEXT.help;
         document.querySelector("#info-title").textContent = info.title;
         body.replaceChildren(...info.body.map(t => { const p = document.createElement("p"); p.textContent = t; return p; }));
     }
@@ -906,6 +945,7 @@ function renderExtras() {
     document.querySelector("#extras-note").textContent = v.freeBuild ? "" : "Free Build opens after the first few challenges.";
 }
 function renderShell() {
+    var _a, _b, _c;
     const current = shell.current();
     const inWorkshop = current === "WORKSHOP";
     appElement.setAttribute("aria-hidden", String(!inWorkshop));
@@ -928,7 +968,7 @@ function renderShell() {
         renderLockerScreen();
     if (current === "TROPHIES") {
         renderTrophies(trophyRoot, appSave, { replayStory: s => playStory([s], () => undefined, false) });
-        void commit(markRewardsSeen(appSave, (activeProfile(appSave)?.unseenRewards ?? []).filter(id => id.startsWith("badge.") || id.startsWith("sticker."))));
+        void commit(markRewardsSeen(appSave, ((_b = (_a = activeProfile(appSave)) === null || _a === void 0 ? void 0 : _a.unseenRewards) !== null && _b !== void 0 ? _b : []).filter(id => id.startsWith("badge.") || id.startsWith("sticker."))));
     }
     if (current === "SHELF")
         renderShelf(shelfRoot, appSave, { open: openShelfInvention, thumb: (id, n) => thumbs.get(thumbKey(id, n)) });
@@ -948,7 +988,7 @@ function renderShell() {
         renderMaker();
     const activeCard = shellElement.querySelector(`[data-screen="${current}"]`);
     if (activeCard && !inWorkshop) {
-        const focusTarget = activeCard.querySelector("button,input") ?? activeCard;
+        const focusTarget = (_c = activeCard.querySelector("button,input")) !== null && _c !== void 0 ? _c : activeCard;
         if (focusTarget === activeCard)
             activeCard.tabIndex = -1;
         window.setTimeout(() => focusTarget.focus(), 0);
@@ -957,10 +997,15 @@ function renderShell() {
     window.setTimeout(() => transitionShield.classList.remove("active"), 190);
 }
 function transition(next, force = false) {
+    var _a;
     const moved = shell.transition(next, now(), force);
     if (moved) {
         renderShell();
         updateMusic();
+    }
+    if (moved && next === "TITLE") {
+        const flags = window;
+        (_a = flags.__wobbleTitleAt) !== null && _a !== void 0 ? _a : (flags.__wobbleTitleAt = Math.round(performance.now()));
     }
     if (moved)
         nativeApp.setAwake(keepsScreenAwake(shell.current()));
@@ -968,9 +1013,10 @@ function transition(next, force = false) {
 }
 /** The Android back button: Pause in the Workshop, back a screen elsewhere, never quitting mid-build (NativeApp.ts). */
 function androidBack() {
+    var _a;
     const screen = shell.current();
     const card = shellElement.querySelector(`[data-screen="${screen}"]`);
-    const button = [...(card?.querySelectorAll(BACK_BUTTON_SELECTOR) ?? [])].find(b => b.offsetParent !== null && !b.disabled);
+    const button = [...((_a = card === null || card === void 0 ? void 0 : card.querySelectorAll(BACK_BUTTON_SELECTOR)) !== null && _a !== void 0 ? _a : [])].find(b => b.offsetParent !== null && !b.disabled);
     const step = backStep(screen, Boolean(button));
     if (step === "PAUSE")
         openPause();
@@ -985,18 +1031,19 @@ function androidBack() {
 }
 /** Each place has its own music (M36): the title, the Workshop and map, and every lab and mode. Paused screens are quiet. */
 function musicPlace() {
+    var _a;
     const s = shell.current();
     if (s === "PAUSE" || s === "LOADING" || s === "LOADING_FAILURE" || s === "ROTATE_DEVICE")
         return undefined;
     if (s === "SETTINGS" || s === "GROWN_UPS" || s === "PARENT_DASHBOARD" || s === "INFO")
-        return audio.currentMusic() ?? "title";
+        return (_a = audio.currentMusic()) !== null && _a !== void 0 ? _a : "title";
     if (s === "SPLASH" || s === "TITLE" || s === "PROFILE_SELECT" || s === "CREATE_INVENTOR" || s === "EXTRAS")
         return "title";
     if (s === "MOTION_YARD" || s === "WORKSHOP")
         return openingActive ? "workshop" : freeBuildActive ? "workshop" : currentLabId;
     return "hub";
 }
-function updateMusic() { const place = musicPlace(); if (!place || !(currentSettings(appSave).music ?? true)) {
+function updateMusic() { var _a; const place = musicPlace(); if (!place || !((_a = currentSettings(appSave).music) !== null && _a !== void 0 ? _a : true)) {
     audio.stopMusic();
     return;
 } audio.playMusic(place); }
@@ -1107,34 +1154,150 @@ function advanceBootNotice() {
     else
         transition("TITLE", true);
 }
-async function loadAppState() {
+// ------------------------------------------------------------------ M44: start-up that is quick on a cheap tablet
+/** What start-up is doing now (shown on the loading screen, and named if it gets stuck). */
+let bootStepName = "starting";
+/** How long each start-up step took, in milliseconds (read by the speed check, and printed for testers). */
+const bootTimes = [];
+let bootStepAt = 0;
+let booting = true;
+let bootWatchdog;
+const BOOT_STEPS = ["starting", "save", "language", "opening levels", "Google Play", "storage"];
+const bootBar = document.querySelector("#boot-bar"), bootDetail = document.querySelector("#loading-detail");
+const bootStuck = document.querySelector("#boot-stuck"), bootStuckStep = document.querySelector("#boot-stuck-step");
+const loadingTech = document.querySelector("#loading-tech");
+const BOOT_WORDS = { starting: "Opening the workshop doors…", save: "Finding your inventions…", language: "Getting the words ready…", "opening levels": "Setting out the first parts…", "Google Play": "Checking the full game…", storage: "Checking there's room to save…", labs: "Opening the labs…", ready: "Ready!" };
+/** Marks the start of a start-up step: times the last one, moves the progress bar and says what's happening. */
+function bootStep(step) {
+    var _a;
+    const t = performance.now();
+    if (bootStepAt)
+        bootTimes.push({ step: bootStepName, ms: Math.round(t - bootStepAt) });
+    bootStepName = step;
+    bootStepAt = t;
+    const at = BOOT_STEPS.indexOf(step);
+    if (bootBar)
+        bootBar.style.width = `${step === "ready" ? 100 : Math.round(((at < 0 ? BOOT_STEPS.length - 1 : at) + 1) / (BOOT_STEPS.length + 1) * 100)}%`;
+    if (bootDetail)
+        bootDetail.textContent = (_a = BOOT_WORDS[step]) !== null && _a !== void 0 ? _a : "Loading…";
+    if (bootStuckStep)
+        bootStuckStep.textContent = `Stuck on: ${step}`;
+    window.__wobbleBoot = { step, times: bootTimes.slice() };
+}
+/** Anything that might hang gets a time limit: after it, start-up carries on with the fallback. */
+function withTimeLimit(work, ms, fallback) {
+    return new Promise(resolve => { const timer = window.setTimeout(() => resolve(fallback), ms); work.then(v => { window.clearTimeout(timer); resolve(v); }, () => { window.clearTimeout(timer); resolve(fallback); }); });
+}
+/** Plain-words failure screen, plus a small grey line with the technical message that Aaron can photograph. */
+function showStartupFailure(plain, technical) {
+    loadingError.textContent = plain;
+    if (loadingTech)
+        loadingTech.textContent = technical;
+    if (bootWatchdog !== undefined)
+        window.clearTimeout(bootWatchdog);
+    transition("LOADING_FAILURE", true);
+}
+function technicalLine(error) {
+    var _a;
+    const e = error;
+    const msg = e && typeof e.message === "string" ? e.message : String(error);
+    const where = e && typeof e.stack === "string" ? ((_a = e.stack.split("\n").find(l => /\.js:\d+/.test(l))) !== null && _a !== void 0 ? _a : "").trim().replace(/^at\s+/, "").replace(/^.*\/(?=[^/]+\.js)/, "") : "";
+    return `${msg}${where ? ` (${where})` : ""} · step: ${bootStepName} · ${navigator.userAgent.replace(/^Mozilla\/5\.0 /, "")}`.slice(0, 400);
+}
+/** After a script error, Retry starts the page again from scratch (the page script reads this flag). */
+function markCrashed() { var _a; const flags = window; flags.__wobble = { ...((_a = flags.__wobble) !== null && _a !== void 0 ? _a : {}), failed: true }; }
+const STARTUP_FAILED = "Something went wrong while the workshop was starting. Your save has not been changed. Press Retry. If it keeps happening, take a photo of this screen.";
+// Any script error or rejected promise while starting goes on screen instead of leaving the loading picture up.
+window.addEventListener("error", event => { var _a; if (booting && !(event.target instanceof HTMLImageElement))
+    markCrashed(), showStartupFailure(STARTUP_FAILED, technicalLine((_a = event.error) !== null && _a !== void 0 ? _a : event.message)); });
+window.addEventListener("unhandledrejection", event => { if (booting)
+    markCrashed(), showStartupFailure(STARTUP_FAILED, technicalLine(event.reason)); });
+/** Where each lab's level files live. They load after the title shows (or when a lab is opened first), all at once. */
+const LAB_LOADERS = [
+    ["motion-yard", () => loadMotionYardLevels(registry)],
+    ["gear-garage", () => loadGearGarageLevels(registry)],
+    ["builder-bay", () => loadBuilderBayLevels(registry)],
+    ...LAB_MODULES.map(m => [m.labId, () => loadLabLevels(registry, m.labId, m.folder)]),
+    [CHAIN_WORKSHOP.id, () => loadLabLevels(registry, CHAIN_WORKSHOP.id, "chain")],
+    [EXPERIMENT_LAB.id, () => loadLabLevels(registry, EXPERIMENT_LAB.id, "experiment")],
+    [FREE_BUILD_ROOMS.id, () => loadLabLevels(registry, FREE_BUILD_ROOMS.id, "sandbox")],
+    [CHALLENGE_LAB.id, () => loadLabLevels(registry, CHALLENGE_LAB.id, "challenge")],
+    [CONTRACT_BOARD.id, () => loadLabLevels(registry, CONTRACT_BOARD.id, "contract")],
+    [SCIENCE_FAIR.id, () => loadLabLevels(registry, SCIENCE_FAIR.id, "fair")],
+    [CREATURE_MUSIC.id, () => loadLabLevels(registry, CREATURE_MUSIC.id, "creature")],
+    [PROTOTYPE_LAB.id, () => loadLabLevels(registry, PROTOTYPE_LAB.id, "prototype")],
+    [GRAND_HALL.id, () => loadLevelFiles(registry, GRAND_STAGE_LEVEL_IDS, "grand", GRAND_HALL.title)]
+];
+/** The lab ids that have level files (whether or not they have arrived yet). */
+const LAB_IDS = new Set(LAB_LOADERS.map(([id]) => id));
+let labsLoading;
+let labsReady = false;
+function loadAllLabs() {
+    labsLoading !== null && labsLoading !== void 0 ? labsLoading : (labsLoading = (async () => {
+        const t = performance.now();
+        const sets = await Promise.all(LAB_LOADERS.map(([, load]) => load()));
+        LAB_LOADERS.forEach(([id], i) => labLevels.set(id, sets[i]));
+        labsReady = true;
+        window.__wobbleLabsMs = Math.round(performance.now() - t);
+    })().catch(error => { labsLoading = undefined; throw error; }));
+    return labsLoading;
+}
+/**
+ * Runs `next` once every lab's levels are in. Usually they are (they load quietly after the title shows); if a child
+ * is quicker, the loading picture shows "Opening the labs…" for a moment. Returns true when it had to wait.
+ */
+function afterLabs(next) {
+    if (labsReady)
+        return false;
     transition("LOADING", true);
+    bootStep("labs");
+    void loadAllLabs().then(next, error => showStartupFailure("The labs couldn't be opened. Your save has not been changed. Press Retry.", technicalLine(error)));
+    return true;
+}
+async function loadAppState() {
+    var _a, _b, _c;
+    transition("LOADING", true);
+    booting = true;
+    bootTimes.length = 0;
+    bootStepAt = 0;
+    bootStuck === null || bootStuck === void 0 ? void 0 : bootStuck.classList.add("hidden");
+    if (loadingTech)
+        loadingTech.textContent = "";
+    if (bootWatchdog !== undefined)
+        window.clearTimeout(bootWatchdog);
+    // After 20 seconds: say which step it's on, and offer Retry.
+    bootWatchdog = window.setTimeout(() => { if (booting && shell.current() === "LOADING")
+        bootStuck === null || bootStuck === void 0 ? void 0 : bootStuck.classList.remove("hidden"); }, 20000);
     try {
-        await startLocalisation(document.body);
+        // Only what the title screen needs: the save, the words, the opening's few levels. Labs follow after the title.
+        bootStep("save");
+        const opening = loadOpeningLevels(registry);
+        opening.catch(() => undefined); // its failure is reported below, when it's awaited
         const loaded = await saveManager.loadWithRecovery();
-        openingLevels = await loadOpeningLevels(registry);
-        labLevels.set("motion-yard", await loadMotionYardLevels(registry));
-        labLevels.set("gear-garage", await loadGearGarageLevels(registry));
-        labLevels.set("builder-bay", await loadBuilderBayLevels(registry));
-        for (const m of LAB_MODULES)
-            labLevels.set(m.labId, await loadLabLevels(registry, m.labId, m.folder));
-        labLevels.set(CHAIN_WORKSHOP.id, await loadLabLevels(registry, CHAIN_WORKSHOP.id, "chain"));
-        labLevels.set(EXPERIMENT_LAB.id, await loadLabLevels(registry, EXPERIMENT_LAB.id, "experiment"));
-        labLevels.set(FREE_BUILD_ROOMS.id, await loadLabLevels(registry, FREE_BUILD_ROOMS.id, "sandbox"));
-        labLevels.set(CHALLENGE_LAB.id, await loadLabLevels(registry, CHALLENGE_LAB.id, "challenge"));
-        labLevels.set(CONTRACT_BOARD.id, await loadLabLevels(registry, CONTRACT_BOARD.id, "contract"));
-        labLevels.set(SCIENCE_FAIR.id, await loadLabLevels(registry, SCIENCE_FAIR.id, "fair"));
-        labLevels.set(CREATURE_MUSIC.id, await loadLabLevels(registry, CREATURE_MUSIC.id, "creature"));
-        labLevels.set(PROTOTYPE_LAB.id, await loadLabLevels(registry, PROTOTYPE_LAB.id, "prototype"));
-        labLevels.set(GRAND_HALL.id, await loadLevelFiles(registry, GRAND_STAGE_LEVEL_IDS, "grand", GRAND_HALL.title));
-        appSave = loaded.payload ?? createDefaultAppSave();
+        bootStep("language");
+        await withTimeLimit(startLocalisation(document.body), 4000, "en");
+        bootStep("opening levels");
+        openingLevels = await opening;
+        appSave = (_a = loaded.payload) !== null && _a !== void 0 ? _a : createDefaultAppSave();
+        bootStep("Google Play");
         // A verified ownership proof decides the full game; without one the save's own state stands (test builds).
-        const owned = await ownership.load(appSave.entitlement);
-        if (owned.source === "PROOF" && owned.state !== appSave.entitlement)
-            appSave = withEntitlement(appSave, owned.state);
-        // A release build never trusts a saved "owned" without a verified proof (that state could only come from a test tool).
-        else if (RELEASE_BUILD && owned.source === "SAVE" && ownsFullGame(appSave.entitlement))
-            appSave = withEntitlement(appSave, "LOCKED");
+        const applyOwnership = (owned) => {
+            if (owned.source === "PROOF" && owned.state !== appSave.entitlement)
+                appSave = withEntitlement(appSave, owned.state);
+            // A release build never trusts a saved "owned" without a verified proof (that state could only come from a test tool).
+            else if (RELEASE_BUILD && owned.source === "SAVE" && ownsFullGame(appSave.entitlement))
+                appSave = withEntitlement(appSave, "LOCKED");
+        };
+        const ownedLoad = ownership.load(appSave.entitlement);
+        const owned = await withTimeLimit(ownedLoad, 3000, undefined);
+        if (owned)
+            applyOwnership(owned);
+        else {
+            // No answer in time: carry on as if there were no proof, and use the answer when it does come.
+            applyOwnership({ state: appSave.entitlement, source: "SAVE" });
+            void ownedLoad.then(async (late) => { if (late.source === "PROOF" && late.state !== appSave.entitlement)
+                await commit(withEntitlement(appSave, late.state), true); }).catch(() => undefined);
+        }
         // Google Play: once the game is running, ask Play quietly (a refund relocks; a reinstall or a late payment unlocks).
         void ownership.refresh().then(async (changed) => {
             const s = ownership.current();
@@ -1143,7 +1306,7 @@ async function loadAppState() {
             await commit(withEntitlement(appSave, s.state), true);
             if (shell.current() === "PARENT_DASHBOARD")
                 renderParent();
-        });
+        }).catch(() => undefined);
         savingBlocked = loaded.futureVersion;
         applySettings();
         const lastBuild = currentLastBuild(appSave);
@@ -1170,16 +1333,26 @@ async function loadAppState() {
             recoveryDetail.textContent = "A fresh workshop has been started. The damaged save was kept aside, not deleted.";
             bootNotices.push("RECOVERY_NOTICE");
         }
-        lastStorage = await storageReport(appSave);
-        if (lastStorage.level === "NEARLY_FULL" || await storageWarningNeeded())
+        bootStep("storage");
+        // Storage checks never hold up start-up: no answer in time means "carry on".
+        lastStorage = (_b = await withTimeLimit(storageReport(appSave), 1500, undefined)) !== null && _b !== void 0 ? _b : await storageReport(appSave, undefined);
+        if (lastStorage.level === "NEARLY_FULL" || await withTimeLimit(storageWarningNeeded(), 1500, false))
             bootNotices.push("STORAGE_WARNING");
         if (!navigator.onLine)
             bootNotices.push("OFFLINE_ENTITLEMENT");
+        bootStep("ready");
+        booting = false;
+        window.clearTimeout(bootWatchdog);
+        const flags = window;
+        flags.__wobble = { ...((_c = flags.__wobble) !== null && _c !== void 0 ? _c : {}), booted: true };
+        console.info(`WobbleWorks start-up: ${bootTimes.map(t => `${t.step} ${t.ms} ms`).join(", ")}`);
         advanceBootNotice();
+        // Now, quietly: every lab's levels (all at once) and the art list for the tray.
+        void loadArtList();
+        void loadAllLabs().catch(() => undefined);
     }
     catch (error) {
-        loadingError.textContent = error instanceof Error ? `Your save has not been changed. ${error.message}` : "Your save has not been changed.";
-        transition("LOADING_FAILURE", true);
+        showStartupFailure(`Your save has not been changed. ${error instanceof Error ? error.message : ""}`.trim(), technicalLine(error));
     }
 }
 // ------------------------------------------------------------------ M10: hub, map, profiles, parent area
@@ -1198,6 +1371,8 @@ function continueGame() {
     resumeActiveProfile();
 }
 function resumeActiveProfile() {
+    if (afterLabs(resumeActiveProfile))
+        return;
     const p = activeProfile(appSave);
     if (!p) {
         startOpening(openingStepFromSave());
@@ -1273,6 +1448,7 @@ function showHub() {
     transition("HUB", true);
 }
 function queueHubMoments() {
+    var _a, _b;
     // Visitors whose job you just finished pop by first to say thank you.
     hubQueue.push(...visitorReactions);
     visitorReactions = [];
@@ -1282,13 +1458,14 @@ function queueHubMoments() {
     const moments = [...pendingRestorationMoments(appSave)];
     for (const m of moments)
         hubQueue.push({ kind: "BOLT", title: m.boltLine, body: m.change, onDone: () => { void commit(markRestorationSeen(appSave, [m])); } });
-    const unseen = (activeProfile(appSave)?.unseenRewards ?? []).filter(id => { const k = rewardById(id)?.kind; return k === "PART" || k === "TOOL" || k === "KEY_PIECE" || k === "PROP"; });
+    const unseen = ((_b = (_a = activeProfile(appSave)) === null || _a === void 0 ? void 0 : _a.unseenRewards) !== null && _b !== void 0 ? _b : []).filter(id => { var _a; const k = (_a = rewardById(id)) === null || _a === void 0 ? void 0 : _a.kind; return k === "PART" || k === "TOOL" || k === "KEY_PIECE" || k === "PROP"; });
     if (unseen.length)
         hubQueue.push({ kind: "REWARD", title: "New things for your workshop!", body: unseen.map(id => `${rewardById(id).icon} ${rewardById(id).title}`).join("   "), onDone: () => { void commit(markRewardsSeen(appSave, unseen)); } });
     if (creditsPending(appSave))
         hubQueue.push({ kind: "STORY", title: CREDITS.title, body: CREDITS.lines.join(" "), scene: CREDITS });
 }
 function showNextHubMoment() {
+    var _a, _b;
     const next = hubQueue[0];
     hubMoment.classList.toggle("hidden", !next || next.kind === "STORY");
     if (!next)
@@ -1300,10 +1477,10 @@ function showNextHubMoment() {
     }
     document.querySelector("#hub-moment-title").textContent = next.title;
     document.querySelector("#hub-moment-body").textContent = next.body;
-    document.querySelector("#btn-hub-moment").textContent = next.button ?? "OK!";
+    document.querySelector("#btn-hub-moment").textContent = (_a = next.button) !== null && _a !== void 0 ? _a : "OK!";
     document.querySelector("#btn-hub-moment-later").classList.toggle("hidden", !next.later);
     const face = document.querySelector("#hub-moment-bolt");
-    face.replaceChildren(boltArt(activeProfile(appSave)?.equipped.bolt, next.kind === "REWARD" ? "cheer" : "sign"));
+    face.replaceChildren(boltArt((_b = activeProfile(appSave)) === null || _b === void 0 ? void 0 : _b.equipped.bolt, next.kind === "REWARD" ? "cheer" : "sign"));
     if (next.kind === "BOLT") {
         currentNarration = next.title;
         speakCurrentLine();
@@ -1312,8 +1489,9 @@ function showNextHubMoment() {
 }
 document.querySelector("#btn-hub-moment-later").addEventListener("click", () => { hubQueue.shift(); renderHubScreen(); });
 document.querySelector("#btn-hub-moment").addEventListener("click", () => {
+    var _a;
     const done = hubQueue.shift();
-    done?.onDone?.();
+    (_a = done === null || done === void 0 ? void 0 : done.onDone) === null || _a === void 0 ? void 0 : _a.call(done);
     renderHubScreen();
 });
 // ---------------------------------------------------------------- Campus story moments (M20)
@@ -1335,6 +1513,7 @@ function playStory(scenes, done = () => undefined, markSeen = true) {
     showStoryScene();
 }
 function showStoryScene() {
+    var _a;
     const st = storyPlaying;
     if (!st)
         return;
@@ -1345,15 +1524,15 @@ function showStoryScene() {
     storyKicker.textContent = s.kicker;
     storyTitle.textContent = s.title;
     storySpeaker.textContent = s.kind === "RECORDING" ? `🎙️ ${s.speaker}` : s.speaker === "Bolt" ? "Bolt says:" : s.speaker;
-    storyArt.replaceChildren(s.kind === "ENTRY" || s.kind === "MEMORY" || s.kind === "CREDITS" ? boltArt(activeProfile(appSave)?.equipped.bolt, s.kind === "MEMORY" ? "sign" : s.kind === "CREDITS" ? "cheer" : "wave") : (() => { const img = document.createElement("img"); img.alt = ""; const a = assets.getImage(s.art); if (a)
+    storyArt.replaceChildren(s.kind === "ENTRY" || s.kind === "MEMORY" || s.kind === "CREDITS" ? boltArt((_a = activeProfile(appSave)) === null || _a === void 0 ? void 0 : _a.equipped.bolt, s.kind === "MEMORY" ? "sign" : s.kind === "CREDITS" ? "cheer" : "wave") : (() => { const img = document.createElement("img"); img.alt = ""; const a = assets.getImage(s.art); if (a)
         img.src = a.src; return img; })());
     showStoryLine();
     window.clearInterval(st.timer);
     st.timer = window.setInterval(tickStory, 200);
     sfx(s.kind === "RECORDING" ? 420 : 760, .06);
 }
-function showStoryLine() { const st = storyPlaying; if (!st)
-    return; const s = st.scenes[st.index]; storyLine.textContent = s.lines[st.line] ?? ""; currentNarration = storyLine.textContent; speakCurrentLine(); }
+function showStoryLine() { var _a; const st = storyPlaying; if (!st)
+    return; const s = st.scenes[st.index]; storyLine.textContent = (_a = s.lines[st.line]) !== null && _a !== void 0 ? _a : ""; currentNarration = storyLine.textContent; speakCurrentLine(); }
 function tickStory() {
     const st = storyPlaying;
     if (!st)
@@ -1389,20 +1568,21 @@ function nextStory() {
     finishStory(true);
 }
 function finishStory(runDone) {
+    var _a, _b;
     const st = storyPlaying;
     if (!st)
         return;
     window.clearInterval(st.timer);
     storyPlaying = undefined;
     storyEl.classList.add("hidden");
-    window.speechSynthesis?.cancel?.();
+    (_b = (_a = window.speechSynthesis) === null || _a === void 0 ? void 0 : _a.cancel) === null || _b === void 0 ? void 0 : _b.call(_a);
     if (st.markSeen)
         void commit(markStorySeen(appSave, st.scenes));
     if (runDone)
         st.done();
 }
 document.querySelector("#btn-story-next").addEventListener("click", () => nextStory());
-document.querySelector("#btn-story-skip").addEventListener("click", () => { const st = storyPlaying; finishStory(false); st?.done(); });
+document.querySelector("#btn-story-skip").addEventListener("click", () => { const st = storyPlaying; finishStory(false); st === null || st === void 0 ? void 0 : st.done(); });
 function renderHubScreen() {
     renderHub(hubRoot, appSave, {
         openMap: () => { mapNote.textContent = "Tap a building."; transition("CAMPUS_MAP"); void commit(withLocation(appSave, "MAP")); },
@@ -1417,8 +1597,8 @@ function renderHubScreen() {
         ...(jobBoardOpen(appSave) ? { openJobBoard: () => showLab(CONTRACT_BOARD.id) } : {}),
         ...(scienceFairOpen(appSave) ? { openFair: () => showLab(SCIENCE_FAIR.id) } : {}),
         ...(creatureMusicOpen(appSave) ? { openCreatures: () => showLab(CREATURE_MUSIC.id) } : {}),
-        pokeBolt: () => { const p = activeProfile(appSave); hubQueue.push({ kind: "BOLT", title: p?.openingComplete ? "Fully charged and ready to wobble!" : "Bzzt… still charging…", body: "Tap the Campus Map to pick where to go next." }); showNextHubMoment(); },
-        pokeSprocket: () => { audio.play("sprocket-bark"); hubRoot.querySelector(".station-sprocket")?.classList.add("wiggle"); window.setTimeout(() => hubRoot.querySelector(".station-sprocket")?.classList.remove("wiggle"), 600); },
+        pokeBolt: () => { const p = activeProfile(appSave); hubQueue.push({ kind: "BOLT", title: (p === null || p === void 0 ? void 0 : p.openingComplete) ? "Fully charged and ready to wobble!" : "Bzzt… still charging…", body: "Tap the Campus Map to pick where to go next." }); showNextHubMoment(); },
+        pokeSprocket: () => { var _a; audio.play("sprocket-bark"); (_a = hubRoot.querySelector(".station-sprocket")) === null || _a === void 0 ? void 0 : _a.classList.add("wiggle"); window.setTimeout(() => { var _a; return (_a = hubRoot.querySelector(".station-sprocket")) === null || _a === void 0 ? void 0 : _a.classList.remove("wiggle"); }, 600); },
         meetVisitor: id => {
             // Inventor Contract visitors (M27) ask for help: "Let's help!" accepts their jobs; "Maybe later" leaves them at the door.
             const cv = visitorById(id);
@@ -1447,7 +1627,7 @@ function renderMap() {
             if (route.kind === "ENTER") {
                 if (id === "workshop-hub")
                     showHub();
-                else if (labLevels.has(id))
+                else if (LAB_IDS.has(id))
                     showLab(id);
                 return;
             }
@@ -1480,22 +1660,25 @@ function renderLockerScreen() {
     });
 }
 function openShelfInvention(id) {
-    const item = activeProfile(appSave)?.shelf.find(s => s.id === id);
+    var _a, _b;
+    const item = (_a = activeProfile(appSave)) === null || _a === void 0 ? void 0 : _a.shelf.find(s => s.id === id);
     if (!item)
         return;
     // A shelf item from My Inventions opens that invention (in the room it was built in) ready to save its next version.
     if (item.inventionId && inventionById(appSave, item.inventionId)) {
-        openInvention(item.inventionId, item.versionN ?? latestVersion(inventionById(appSave, item.inventionId)).n);
+        openInvention(item.inventionId, (_b = item.versionN) !== null && _b !== void 0 ? _b : latestVersion(inventionById(appSave, item.inventionId)).n);
         return;
     }
     startFreeBuild(item.build);
 }
 /** Empty Workshop Free Build (free tier). Tray = the parts this inventor has unlocked. */
 function startFreeBuild(from) {
+    var _a, _b;
     leaveGameplay();
+    void loadPlayfieldPictures();
     const level = openingLevels.get("opening.free-build");
     const p = activeProfile(appSave);
-    const snapshot = from ?? p?.lastBuild;
+    const snapshot = from !== null && from !== void 0 ? from : p === null || p === void 0 ? void 0 : p.lastBuild;
     build.replaceAll(snapshot ? { parts: snapshot.parts, connections: snapshot.connections } : { parts: [], connections: [] });
     selectedId = undefined;
     dragStart = undefined;
@@ -1503,14 +1686,14 @@ function startFreeBuild(from) {
     panStart = undefined;
     camera.reset();
     freeBuildActive = true;
-    const allowed = p ? p.unlockedParts : level?.availablePartIds ?? [];
+    const allowed = p ? p.unlockedParts : (_a = level === null || level === void 0 ? void 0 : level.availablePartIds) !== null && _a !== void 0 ? _a : [];
     updateOpeningTray({ ...level, availablePartIds: [...allowed] });
     motionHud.classList.remove("hidden");
     motionTitle.textContent = "Free Build";
     motionObjective.textContent = "Build anything. TEST it. Change it. TEST again.";
     document.querySelector(".motion-badge").textContent = "WORKSHOP";
     resetGuidance(undefined);
-    const scanner = (p?.unlockedTools.includes("tool.force-scanner") || p?.unlockedTools.includes("tool.spin-scanner") || p?.unlockedTools.includes("tool.stress-scanner") || p?.unlockedTools.includes("tool.circuit-scanner") || p?.unlockedTools.includes("tool.magnet-scanner") || p?.unlockedTools.includes("tool.flow-scanner") || p?.unlockedTools.includes("tool.air-scanner") || p?.unlockedTools.includes("tool.program-debugger") || p?.unlockedTools.includes("tool.gravity-meter")) ?? false;
+    const scanner = (_b = ((p === null || p === void 0 ? void 0 : p.unlockedTools.includes("tool.force-scanner")) || (p === null || p === void 0 ? void 0 : p.unlockedTools.includes("tool.spin-scanner")) || (p === null || p === void 0 ? void 0 : p.unlockedTools.includes("tool.stress-scanner")) || (p === null || p === void 0 ? void 0 : p.unlockedTools.includes("tool.circuit-scanner")) || (p === null || p === void 0 ? void 0 : p.unlockedTools.includes("tool.magnet-scanner")) || (p === null || p === void 0 ? void 0 : p.unlockedTools.includes("tool.flow-scanner")) || (p === null || p === void 0 ? void 0 : p.unlockedTools.includes("tool.air-scanner")) || (p === null || p === void 0 ? void 0 : p.unlockedTools.includes("tool.program-debugger")) || (p === null || p === void 0 ? void 0 : p.unlockedTools.includes("tool.gravity-meter")))) !== null && _b !== void 0 ? _b : false;
     forceScannerButton.textContent = "Scanner";
     forceScannerButton.classList.toggle("hidden", !scanner);
     forceScannerButton.classList.remove("force-on");
@@ -1633,7 +1816,7 @@ function resetGuidance(levelId) {
     hideBoltTip();
     whyCard.classList.add("hidden");
     // Retry of the same challenge keeps the clues already opened and what the observer has learned.
-    if (levelId && hintTracker?.levelId === levelId) {
+    if (levelId && (hintTracker === null || hintTracker === void 0 ? void 0 : hintTracker.levelId) === levelId) {
         setHint(currentHint);
         return;
     }
@@ -1645,13 +1828,14 @@ function resetGuidance(levelId) {
     hintButton.innerHTML = '<span aria-hidden="true">💡</span> Clue';
 }
 function setHint(view) {
-    currentHint = view ?? { tier: 0, line: "", glowParts: [], ghosts: [] };
+    currentHint = view !== null && view !== void 0 ? view : { tier: 0, line: "", glowParts: [], ghosts: [] };
     applyTrayGlow();
 }
 function applyTrayGlow() {
+    var _a, _b;
     const glow = new Set(currentHint.glowParts);
     if (activeLevel && hintTracker && labActive && currentGuidance().highlightParts)
-        for (const id of LEVEL_HINTS[activeLevel.id]?.usefulParts ?? [])
+        for (const id of (_b = (_a = LEVEL_HINTS[activeLevel.id]) === null || _a === void 0 ? void 0 : _a.usefulParts) !== null && _b !== void 0 ? _b : [])
             glow.add(id);
     document.querySelectorAll("[data-part]").forEach(b => b.classList.toggle("hint-glow", glow.has(b.dataset.part)));
 }
@@ -1666,15 +1850,16 @@ function showBoltTip(line, pose = "point") {
 function hideBoltTip() { boltTip.classList.add("hidden"); }
 /** After a failed TEST: maybe a gentle Bolt tip, a pulsing clue button, glowing parts. Never changes the challenge. */
 function offerAdaptiveHelp() {
+    var _a, _b;
     const g = currentGuidance();
-    hintButton.classList.toggle("offer", g.offerHint && Boolean(hintTracker) && (hintTracker?.tier() ?? 3) < 3);
+    hintButton.classList.toggle("offer", g.offerHint && Boolean(hintTracker) && ((_a = hintTracker === null || hintTracker === void 0 ? void 0 : hintTracker.tier()) !== null && _a !== void 0 ? _a : 3) < 3);
     applyTrayGlow();
     if (g.boltTip) {
         showBoltTip(g.boltTip);
         observer.markTipShown(g.boltTip);
     }
     else if (g.replayInstruction && activeLevel)
-        showBoltTip(`Remember the job: ${motionObjective.textContent ?? ""}`);
+        showBoltTip(`Remember the job: ${(_b = motionObjective.textContent) !== null && _b !== void 0 ? _b : ""}`);
 }
 function askForHint() {
     if (!hintTracker || !activeLevel || testMode)
@@ -1764,10 +1949,11 @@ function openWhyCard() {
         icon.textContent = WHY_CHOICES[reason].icon;
         b.append(icon, document.createTextNode(WHY_CHOICES[reason].label));
         b.addEventListener("click", () => {
+            var _a;
             // Never graded or saved: every answer gets the real evidence straight away.
             choices.querySelectorAll("button").forEach(x => { x.classList.remove("picked"); x.disabled = true; });
             b.classList.add("picked");
-            choices.querySelectorAll("button")[card.choices.indexOf(card.reason)]?.classList.add("measured");
+            (_a = choices.querySelectorAll("button")[card.choices.indexOf(card.reason)]) === null || _a === void 0 ? void 0 : _a.classList.add("measured");
             answer.textContent = `${reason === card.reason ? "You spotted it!" : "Good thinking!"} Bolt's scanner saw: ${card.evidence}`;
             answer.classList.remove("hidden");
             currentNarration = answer.textContent;
@@ -1832,11 +2018,12 @@ function beamFromEnds(p, a, b) {
 }
 /** Let go of a beam end: it snaps onto a nearby joint, anchor, cliff top or the floor. Placement only. */
 function finishBeamEnd(drag) {
+    var _a;
     const others = build.allParts().filter(p => p.id !== drag.id);
     const reach = currentAssistance(appSave).snapAssist ? 0.35 : 0.2;
-    const target = (isPipePart(drag.id) ? pipeEndSnap(drag.moving.x, drag.moving.y, analyzeFluid(others, id => registry.has(id) ? registry.get(id) : undefined), reach) : isWirePart(drag.id)
+    const target = (_a = (isPipePart(drag.id) ? pipeEndSnap(drag.moving.x, drag.moving.y, analyzeFluid(others, id => registry.has(id) ? registry.get(id) : undefined), reach) : isWirePart(drag.id)
         ? wireEndSnap(drag.moving.x, drag.moving.y, analyzeCircuit(others, id => registry.has(id) ? registry.get(id) : undefined), undefined, reach)
-        : beamEndSnap(drag.moving.x, drag.moving.y, analyzeStructure(others, id => registry.has(id) ? registry.get(id) : undefined), undefined, reach)) ?? drag.moving;
+        : beamEndSnap(drag.moving.x, drag.moving.y, analyzeStructure(others, id => registry.has(id) ? registry.get(id) : undefined), undefined, reach))) !== null && _a !== void 0 ? _a : drag.moving;
     const shaped = beamFromEnds(build.getPart(drag.id), drag.fixed, target);
     build.reshape(drag.id, { position: shaped.position, rotation: shaped.rotation, parameters: { length: Number(shaped.parameters.length) } });
     sfx(700, .04);
@@ -1903,6 +2090,9 @@ function snapBeam(id) {
         build.move(id, { x: part.position.x + shift.x, y: part.position.y + shift.y });
 }
 async function boot() {
+    var _a;
+    const flags = window;
+    flags.__wobble = { ...((_a = flags.__wobble) !== null && _a !== void 0 ? _a : {}), alive: true, bootStart: performance.now() };
     renderShell();
     const support = detectDeviceSupport();
     if (!support.supported) {
@@ -1910,17 +2100,16 @@ async function boot() {
         transition("UNSUPPORTED_DEVICE", true);
         return;
     }
-    void loadArt();
-    await delay(220);
     await loadAppState();
 }
 const lifecycle = new LifecycleCoordinator(() => {
+    var _a, _b;
     if (testMode && !tests.isPaused()) {
         tests.togglePause();
         lifecyclePaused = true;
     }
     void audio.suspend();
-    window.speechSynthesis?.cancel?.();
+    (_b = (_a = window.speechSynthesis) === null || _a === void 0 ? void 0 : _a.cancel) === null || _b === void 0 ? void 0 : _b.call(_a);
 }, async () => {
     if (shell.current() === "WORKSHOP" || shell.current() === "PAUSE")
         await persistCurrentBuild(false, true);
@@ -1943,8 +2132,8 @@ window.addEventListener("offline", () => { if (shell.current() === "TITLE")
     renderTitle(); });
 window.addEventListener("online", () => { if (shell.current() === "TITLE")
     renderTitle(); });
-const orientationQuery = window.matchMedia?.("(orientation: portrait) and (max-width: 900px)");
-orientationQuery?.addEventListener("change", event => {
+const orientationQuery = (_d = window.matchMedia) === null || _d === void 0 ? void 0 : _d.call(window, "(orientation: portrait) and (max-width: 900px)");
+orientationQuery === null || orientationQuery === void 0 ? void 0 : orientationQuery.addEventListener("change", event => {
     if (event.matches && shell.current() === "WORKSHOP") {
         preRotateScreen = "WORKSHOP";
         transition("ROTATE_DEVICE", true);
@@ -1953,6 +2142,7 @@ orientationQuery?.addEventListener("change", event => {
         transition(preRotateScreen, true);
 });
 document.querySelectorAll("[data-shell-action]").forEach(button => button.addEventListener("click", async () => {
+    var _a;
     if (shell.isInputLocked(now()))
         return;
     const action = button.dataset.shellAction;
@@ -1973,7 +2163,7 @@ document.querySelectorAll("[data-shell-action]").forEach(button => button.addEve
     }
     if (action === "info") {
         infoReturn = shell.current() === "PAUSE" ? "PAUSE" : "SETTINGS";
-        showInfo(button.dataset.info ?? "help");
+        showInfo((_a = button.dataset.info) !== null && _a !== void 0 ? _a : "help");
         return;
     }
     if (action === "info-back") {
@@ -2086,6 +2276,10 @@ document.querySelectorAll("[data-shell-action]").forEach(button => button.addEve
         await loadAppState();
         return;
     }
+    if (action === "reload") {
+        location.reload();
+        return;
+    }
     if (action === "resume") {
         resumeFromPause();
         return;
@@ -2115,7 +2309,7 @@ document.querySelectorAll("[data-shell-action]").forEach(button => button.addEve
 }));
 // ------------------------------------------------------------------ inventor maker
 /** Rewards the inventor being edited owns (a brand-new inventor owns none yet). */
-function makerOwnedRewards() { return editingProfileId ? appSave.profiles.find(p => p.id === editingProfileId)?.rewards ?? [] : []; }
+function makerOwnedRewards() { var _a, _b; return editingProfileId ? (_b = (_a = appSave.profiles.find(p => p.id === editingProfileId)) === null || _a === void 0 ? void 0 : _a.rewards) !== null && _b !== void 0 ? _b : [] : []; }
 function resetMaker(look, style) {
     makerLook = look;
     selectedAvatar = style;
@@ -2124,6 +2318,7 @@ function resetMaker(look, style) {
     renderMaker();
 }
 function renderMaker() {
+    var _a, _b;
     const cats = document.querySelector("#maker-cats");
     const grid = document.querySelector("#maker-grid");
     const colours = document.querySelector("#maker-colours");
@@ -2143,7 +2338,7 @@ function renderMaker() {
         b.addEventListener("click", () => { makerCategory = c.id; sfx(700, .03); renderMaker(); });
         cats.append(b);
     }
-    preview.replaceChildren(makerLook ? renderLook(makerLook, artManifest) : Object.assign(document.createElement("img"), { src: AVATAR_PORTRAITS[selectedAvatar] ?? AVATAR_PORTRAITS.BLUE, alt: "" }));
+    preview.replaceChildren(makerLook ? renderLook(makerLook, artManifest) : Object.assign(document.createElement("img"), { src: (_a = AVATAR_PORTRAITS[selectedAvatar]) !== null && _a !== void 0 ? _a : AVATAR_PORTRAITS.BLUE, alt: "" }));
     grid.replaceChildren();
     colours.replaceChildren();
     note.textContent = "";
@@ -2179,7 +2374,7 @@ function renderMaker() {
             const b = document.createElement("button");
             b.className = `maker-colour${makerHairColour === c.id ? " on" : ""}`;
             b.setAttribute("aria-label", `${c.label} hair`);
-            const swatch = c.swatch ? pictureUrl(c.swatch, artManifest) ?? `./assets/ui/${c.swatch}.webp` : undefined;
+            const swatch = c.swatch ? (_b = pictureUrl(c.swatch, artManifest)) !== null && _b !== void 0 ? _b : `./assets/ui/${c.swatch}.webp` : undefined;
             b.style.setProperty("--c", swatch ? `url("${swatch}")` : c.css);
             b.addEventListener("click", () => { makerHairColour = c.id; renderMaker(); });
             colours.append(b);
@@ -2188,7 +2383,7 @@ function renderMaker() {
             pieces = pieces.filter(p => p.colour === makerHairColour);
     }
     const current = makerLook ? makerLook[category] : undefined;
-    const choose = (id) => { makerLook = withPiece(makerLook ?? { ...DEFAULT_LOOK }, category, id, owned); sfx(820, .04); renderMaker(); };
+    const choose = (id) => { makerLook = withPiece(makerLook !== null && makerLook !== void 0 ? makerLook : { ...DEFAULT_LOOK }, category, id, owned); sfx(820, .04); renderMaker(); };
     if (!meta.required) {
         const none = document.createElement("button");
         none.className = `maker-piece${makerLook && !current ? " on" : ""}`;
@@ -2250,7 +2445,7 @@ document.querySelector("#btn-create-inventor").addEventListener("click", async (
     creatingExtraProfile = false;
     document.querySelector("#btn-inventor-cancel").classList.add("hidden");
     try {
-        await commit(withCreatedProfile(appSave, inventorName.value, selectedAvatar, Date.now(), makerLook ?? undefined), true);
+        await commit(withCreatedProfile(appSave, inventorName.value, selectedAvatar, Date.now(), makerLook !== null && makerLook !== void 0 ? makerLook : undefined), true);
     }
     catch {
         transition("PROFILE_SELECT", true);
@@ -2284,9 +2479,10 @@ motionBackButton.addEventListener("click", () => { if (freeBuildActive || result
 else
     showLab(); });
 shelfButton.addEventListener("click", () => {
+    var _a, _b, _c, _d;
     const meta = lastMissionLevelId ? missionMeta(lastMissionLevelId) : undefined;
     // M24: a working mission build is also kept in My Inventions (Version 1), and the shelf shows that invention.
-    const kept = saveNewInvention(appSave, { name: meta?.title ?? "My Invention", content: contentOf(build.snapshot()), environment: lastMissionLevelId ? `lab:${lastMissionLevelId}` : currentEnvironment(), ...(metricsForCurrent() ? { metrics: metricsForCurrent() } : {}) });
+    const kept = saveNewInvention(appSave, { name: (_a = meta === null || meta === void 0 ? void 0 : meta.title) !== null && _a !== void 0 ? _a : "My Invention", content: contentOf(build.snapshot()), environment: lastMissionLevelId ? `lab:${lastMissionLevelId}` : currentEnvironment(), ...(metricsForCurrent() ? { metrics: metricsForCurrent() } : {}) });
     let next;
     let itemId;
     if (kept.invention) {
@@ -2297,22 +2493,22 @@ shelfButton.addEventListener("click", () => {
             return;
         }
         next = shelved.save;
-        itemId = shelfItemFor(next, kept.invention.id)?.id;
+        itemId = (_b = shelfItemFor(next, kept.invention.id)) === null || _b === void 0 ? void 0 : _b.id;
         void captureThumb(kept.invention.id, 1);
     }
     else {
-        const out = addToShelf(appSave, meta?.title ?? "My Invention", build.snapshot("shelf"), lastMissionLevelId);
+        const out = addToShelf(appSave, (_c = meta === null || meta === void 0 ? void 0 : meta.title) !== null && _c !== void 0 ? _c : "My Invention", build.snapshot("shelf"), lastMissionLevelId);
         if (out.full) {
             shelfButton.textContent = "Shelf is full";
             shelfButton.disabled = true;
             return;
         }
         next = out.save;
-        itemId = out.item?.id;
+        itemId = (_d = out.item) === null || _d === void 0 ? void 0 : _d.id;
     }
     // A chain keeps its chain numbers on the shelf too.
     const chainRun = tests.active();
-    const saved = itemId && chainRun?.chain.active ? withChainShelfMeta(next, itemId, chainStats(chainRun)) : next;
+    const saved = itemId && (chainRun === null || chainRun === void 0 ? void 0 : chainRun.chain.active) ? withChainShelfMeta(next, itemId, chainStats(chainRun)) : next;
     void commit(saved, true);
     shelfButton.textContent = "On the shelf ✓";
     shelfButton.disabled = true;
@@ -2337,6 +2533,7 @@ document.querySelector("#setting-snap").addEventListener("change", event => {
     void commit(withAssistance(appSave, { ...currentAssistance(appSave), snapAssist: event.target.checked }));
 });
 document.querySelectorAll("[data-part]").forEach(button => button.addEventListener("click", () => {
+    var _a;
     if (testMode || replayer || !gameplayAllowed())
         return;
     if (coop && !coop.canUseTray()) {
@@ -2345,7 +2542,7 @@ document.querySelectorAll("[data-part]").forEach(button => button.addEventListen
     }
     if (!roomForMore(1))
         return;
-    const limit = creator?.phase === "PROVE" ? creator.partLimit : customPlay?.challenge.partLimit ?? 0;
+    const limit = (creator === null || creator === void 0 ? void 0 : creator.phase) === "PROVE" ? creator.partLimit : (_a = customPlay === null || customPlay === void 0 ? void 0 : customPlay.challenge.partLimit) !== null && _a !== void 0 ? _a : 0;
     if (limit > 0 && addedParts() >= limit) {
         toast(`This challenge allows ${limit} part${limit === 1 ? "" : "s"}. Move or remove one to try something else.`);
         return;
@@ -2357,7 +2554,7 @@ document.querySelectorAll("[data-part]").forEach(button => button.addEventListen
     const placed = build.add(id, { x: 8 + Math.random() * 1.5 - 0.75, y: surfacePart ? 8.32 : 3 });
     audio.play("pickup");
     // Part Picker: the pick is made — over to the other player to place it.
-    if (coop?.pattern === "PICK") {
+    if ((coop === null || coop === void 0 ? void 0 : coop.pattern) === "PICK") {
         coop.pick(id);
         window.setTimeout(() => passTurn(), 250);
     }
@@ -2369,10 +2566,11 @@ document.querySelectorAll("[data-part]").forEach(button => button.addEventListen
     sfx(520, 0.035);
 }));
 ui.test.addEventListener("click", () => {
+    var _a;
     if (testMode || !gameplayAllowed())
         return;
     // Co-build, Builder & Predictor: the waiting player guesses what will happen before the TEST starts.
-    if (coop?.needsPrediction()) {
+    if (coop === null || coop === void 0 ? void 0 : coop.needsPrediction()) {
         openPredict();
         return;
     }
@@ -2392,7 +2590,7 @@ ui.test.addEventListener("click", () => {
     ui.mode.textContent = "TEST";
     sfx(700, 0.06);
     runMeter = new RunMeter(contentChecksum(contentOf(testSnap)));
-    challengeRun = challenge && activeLevel ? new ChallengeRun(challenge, build, new Set([...(activeLevel.staticObjects ?? []), ...activeLevel.starterParts].map(p => p.id))) : undefined;
+    challengeRun = challenge && activeLevel ? new ChallengeRun(challenge, build, new Set([...((_a = activeLevel.staticObjects) !== null && _a !== void 0 ? _a : []), ...activeLevel.starterParts].map(p => p.id))) : undefined;
     cargoBox.classList.add("locked");
     // M25: record the run (the build + every tap) so it can be replayed exactly.
     recorder = openingActive || exp ? undefined : new ReplayRecorder(testSnap, contentChecksum(contentOf(testSnap)));
@@ -2456,12 +2654,13 @@ document.querySelector("#btn-zoom-out").addEventListener("click", () => { if (ga
 ui.tools.addEventListener("click", () => { if (gameplayAllowed() && !RELEASE_BUILD)
     editor.toggle(); });
 window.addEventListener("wobbleworks:preview-level", (event) => {
+    var _a;
     if (!gameplayAllowed())
         return;
     const level = event.detail;
     tests.stop();
     testMode = false;
-    build.replaceAll({ parts: [...(level.staticObjects ?? []), ...level.starterParts], connections: level.starterConnections });
+    build.replaceAll({ parts: [...((_a = level.staticObjects) !== null && _a !== void 0 ? _a : []), ...level.starterParts], connections: level.starterConnections });
     tests.start(build.snapshot(`preview.${level.id}`));
     testMode = true;
     selectedId = undefined;
@@ -2495,13 +2694,14 @@ window.addEventListener("pointerdown", () => { void audio.unlock().then(() => up
 function pointerWorld(sample) { const logical = renderer.viewport.screenToLogical(sample.x, sample.y); const worldLogical = camera.logicalToWorld(logical); return { x: worldLogical.x / 100, y: worldLogical.y / 100 }; }
 /** Things you can tap while building: switches flip, magnets turn. Locked ones in a level can still be tapped (never moved). */
 function tapAction(p) {
+    var _a;
     const def = registry.get(p.definitionId);
     // Music Machines: tap an instrument to change its note, a timer switch to change its beat.
     if (def.id === "music.timer")
         return "EVERY";
     if (familyOf(def))
         return "NOTE";
-    if (circuitBehaviour(def)?.role === "SWITCH")
+    if (((_a = circuitBehaviour(def)) === null || _a === void 0 ? void 0 : _a.role) === "SWITCH")
         return "FLIP";
     // Space Centre settings: lean the launch pad, choose a booster's burn time, a launcher's power; turn a solar panel.
     if (def.id === "space.launch-pad")
@@ -2513,7 +2713,7 @@ function tapAction(p) {
     if (def.id === "space.solar-panel")
         return "EIGHTH";
     const fluid = fluidBehaviour(def);
-    if (fluid?.role === "VALVE")
+    if ((fluid === null || fluid === void 0 ? void 0 : fluid.role) === "VALVE")
         return "VALVE";
     if (def.id === "plumb.nozzle")
         return "AIM";
@@ -2524,10 +2724,11 @@ function tapAction(p) {
         return undefined;
     return def.id === "magnetic.bar" ? "QUARTER" : "HALF";
 }
-function lockedSwitchAt(x, y) { return build.allParts().find(p => p.parameters.locked === true && tapAction(p) && Math.abs(p.position.x - x) <= 0.55 && Math.abs(p.position.y - y) <= 0.55)?.id; }
+function lockedSwitchAt(x, y) { var _a; return (_a = build.allParts().find(p => p.parameters.locked === true && tapAction(p) && Math.abs(p.position.x - x) <= 0.55 && Math.abs(p.position.y - y) <= 0.55)) === null || _a === void 0 ? void 0 : _a.id; }
 function hitPart(x, y, padding = (labActive || freeBuildActive) ? currentGuidance().touchPadding : 0.18) {
+    var _a;
     const parts = [...build.allParts()].reverse();
-    return parts.find(p => {
+    return (_a = parts.find(p => {
         if (p.parameters.locked === true)
             return false;
         const ends = beamEndpoints(p, registry.get(p.definitionId));
@@ -2539,42 +2740,44 @@ function hitPart(x, y, padding = (labActive || freeBuildActive) ? currentGuidanc
         const d = registry.get(p.definitionId);
         const rigid = d.behaviours.find(b => b.kind === "RIGID_BODY");
         const gear = d.behaviours.find(b => b.kind === "GEAR");
-        const w = gear?.kind === "GEAR" ? Math.max(0.5, gear.radius * 2) : rigid?.kind === "RIGID_BODY" ? rigid.width : 0.9;
-        const h = gear?.kind === "GEAR" ? Math.max(0.5, gear.radius * 2) : rigid?.kind === "RIGID_BODY" ? rigid.height : 0.7;
+        const w = (gear === null || gear === void 0 ? void 0 : gear.kind) === "GEAR" ? Math.max(0.5, gear.radius * 2) : (rigid === null || rigid === void 0 ? void 0 : rigid.kind) === "RIGID_BODY" ? rigid.width : 0.9;
+        const h = (gear === null || gear === void 0 ? void 0 : gear.kind) === "GEAR" ? Math.max(0.5, gear.radius * 2) : (rigid === null || rigid === void 0 ? void 0 : rigid.kind) === "RIGID_BODY" ? rigid.height : 0.7;
         return Math.abs(p.position.x - x) <= w / 2 + padding && Math.abs(p.position.y - y) <= h / 2 + padding;
-    })?.id;
+    })) === null || _a === void 0 ? void 0 : _a.id;
 }
 /** During a TEST: hold a button down with a finger, or tap a switch to flip it (the circuit reacts straight away). */
 let fingerButton;
 function testModeTouch(event, sample) {
+    var _a, _b;
     const runtime = tests.active();
     if (!runtime)
         return;
     if (event === "down") {
         const w = pointerWorld(sample);
-        const hit = [...build.allParts()].reverse().find(p => { const b = circuitBehaviour(registry.get(p.definitionId)); return (b?.role === "BUTTON" || b?.role === "SWITCH" || fluidBehaviour(registry.get(p.definitionId))?.role === "VALVE") && Math.abs(p.position.x - w.x) <= 0.6 && Math.abs(p.position.y - w.y) <= 0.5; });
+        const hit = [...build.allParts()].reverse().find(p => { var _a; const b = circuitBehaviour(registry.get(p.definitionId)); return ((b === null || b === void 0 ? void 0 : b.role) === "BUTTON" || (b === null || b === void 0 ? void 0 : b.role) === "SWITCH" || ((_a = fluidBehaviour(registry.get(p.definitionId))) === null || _a === void 0 ? void 0 : _a.role) === "VALVE") && Math.abs(p.position.x - w.x) <= 0.6 && Math.abs(p.position.y - w.y) <= 0.5; });
         if (!hit)
             return;
-        const role = circuitBehaviour(registry.get(hit.definitionId))?.role ?? "SWITCH";
+        const role = (_b = (_a = circuitBehaviour(registry.get(hit.definitionId))) === null || _a === void 0 ? void 0 : _a.role) !== null && _b !== void 0 ? _b : "SWITCH";
         if (role === "BUTTON") {
             fingerButton = hit.id;
             runtime.pressButton(hit.id, true);
-            recorder?.noteInput(runtime.tick, "PRESS", hit.id);
+            recorder === null || recorder === void 0 ? void 0 : recorder.noteInput(runtime.tick, "PRESS", hit.id);
         }
         else {
             runtime.flipSwitch(hit.id);
-            recorder?.noteInput(runtime.tick, "FLIP", hit.id);
+            recorder === null || recorder === void 0 ? void 0 : recorder.noteInput(runtime.tick, "FLIP", hit.id);
         }
         sfx(role === "BUTTON" ? 520 : 680, .04);
         buzz(15);
     }
     else if (event !== "move" && fingerButton) {
         runtime.pressButton(fingerButton, false);
-        recorder?.noteInput(runtime.tick, "RELEASE", fingerButton);
+        recorder === null || recorder === void 0 ? void 0 : recorder.noteInput(runtime.tick, "RELEASE", fingerButton);
         fingerButton = undefined;
     }
 }
 input.on((event, sample) => {
+    var _a, _b, _c, _d, _e, _f, _g, _h;
     if (replayer)
         return; // replays are watch-only
     if (coop && !coopAllows(event, sample.id))
@@ -2589,7 +2792,7 @@ input.on((event, sample) => {
     if (event === "down") {
         if (openingActive)
             openingDirector.noteInteraction(now());
-        const hit = hitPart(w.x, w.y) ?? lockedSwitchAt(w.x, w.y);
+        const hit = (_a = hitPart(w.x, w.y)) !== null && _a !== void 0 ? _a : lockedSwitchAt(w.x, w.y);
         selectedId = hit;
         const hitBeam = hit ? beamEndpoints(build.getPart(hit), registry.get(build.getPart(hit).definitionId)) : undefined;
         const nearEnd = hitBeam ? (Math.hypot(w.x - hitBeam.x1, w.y - hitBeam.y1) <= 0.35 ? 1 : Math.hypot(w.x - hitBeam.x2, w.y - hitBeam.y2) <= 0.35 ? 2 : 0) : 0;
@@ -2627,7 +2830,7 @@ input.on((event, sample) => {
         else if (dragStart && dragPreview) {
             const droppedId = dragStart.id;
             const dropped = build.getPart(droppedId);
-            const openingRamp = openingActive && dropped?.definitionId === "motion.ramp" && [2, 5].includes(openingDirector.currentStep());
+            const openingRamp = openingActive && (dropped === null || dropped === void 0 ? void 0 : dropped.definitionId) === "motion.ramp" && [2, 5].includes(openingDirector.currentStep());
             const surfacePart = dropped && ["motion.friction-high", "motion.friction-low", "motion.bounce-pad"].includes(dropped.definitionId);
             // A tap (no real drag) on a switch flips it on or off.
             const tap = dropped && Math.hypot(dragPreview.x - dragStart.originalX, dragPreview.y - dragStart.originalY) < 0.06 ? tapAction(dropped) : undefined;
@@ -2635,7 +2838,7 @@ input.on((event, sample) => {
                 if (tap === "FLIP")
                     build.reshape(droppedId, { parameters: { closed: dropped.parameters.closed !== true } });
                 else if (tap === "NOTE") {
-                    const n = Math.round(Number(dropped.parameters.note ?? 1)) % 8 + 1;
+                    const n = Math.round(Number((_b = dropped.parameters.note) !== null && _b !== void 0 ? _b : 1)) % 8 + 1;
                     build.reshape(droppedId, { parameters: { note: n } });
                     sfx(SCALE_HZ[n - 1], .2);
                     dragStart = undefined;
@@ -2645,20 +2848,20 @@ input.on((event, sample) => {
                 }
                 else if (tap === "EVERY") {
                     const beats = [1, 0.5, 2];
-                    const i = beats.indexOf(Number(dropped.parameters.every ?? 1));
+                    const i = beats.indexOf(Number((_c = dropped.parameters.every) !== null && _c !== void 0 ? _c : 1));
                     build.reshape(droppedId, { parameters: { every: beats[(i + 1) % beats.length] } });
                 }
                 else if (tap === "TILT")
-                    build.reshape(droppedId, { parameters: { tilt: (Number(dropped.parameters.tilt ?? 0) + 15) % 60 } });
+                    build.reshape(droppedId, { parameters: { tilt: (Number((_d = dropped.parameters.tilt) !== null && _d !== void 0 ? _d : 0) + 15) % 60 } });
                 else if (tap === "BURN") {
                     const burns = [1.5, 1.0, 0.5];
-                    const i = burns.indexOf(Number(dropped.parameters.burn ?? 1.5));
+                    const i = burns.indexOf(Number((_e = dropped.parameters.burn) !== null && _e !== void 0 ? _e : 1.5));
                     build.reshape(droppedId, { parameters: { burn: burns[(i + 1) % burns.length] } });
                 }
                 else if (tap === "POWER") {
                     const l = registry.get(dropped.definitionId).behaviours.find(b => b.kind === "LAUNCHER");
-                    const n = l?.kind === "LAUNCHER" ? l.speeds.length : 4;
-                    build.reshape(droppedId, { parameters: { power: (Math.round(Number(dropped.parameters.power ?? 0)) + 1) % n } });
+                    const n = (l === null || l === void 0 ? void 0 : l.kind) === "LAUNCHER" ? l.speeds.length : 4;
+                    build.reshape(droppedId, { parameters: { power: (Math.round(Number((_f = dropped.parameters.power) !== null && _f !== void 0 ? _f : 0)) + 1) % n } });
                 }
                 else if (tap === "VALVE")
                     build.reshape(droppedId, { parameters: { open: dropped.parameters.open !== true } });
@@ -2672,7 +2875,7 @@ input.on((event, sample) => {
                 panStart = undefined;
                 return;
             }
-            if (dropped?.parameters.locked === true || dropped?.parameters.pinned === true) {
+            if ((dropped === null || dropped === void 0 ? void 0 : dropped.parameters.locked) === true || (dropped === null || dropped === void 0 ? void 0 : dropped.parameters.pinned) === true) {
                 dragStart = undefined;
                 dragPreview = undefined;
                 panStart = undefined;
@@ -2681,12 +2884,12 @@ input.on((event, sample) => {
             if (dragPreview.x < 0.4 || dragPreview.x > 15.6 || dragPreview.y < 0.5 || dragPreview.y > 9)
                 observer.noteDragError();
             build.move(droppedId, { x: Math.max(0.4, Math.min(15.6, dragPreview.x)), y: openingRamp ? 7.95 : surfacePart ? 8.32 : Math.max(0.5, Math.min(8.2, dragPreview.y)) });
-            const placedAt = build.getPart(droppedId)?.position;
+            const placedAt = (_g = build.getPart(droppedId)) === null || _g === void 0 ? void 0 : _g.position;
             snapToGhost(droppedId);
             snapToCraft(droppedId);
             snapToVessel(droppedId);
             snapGear(droppedId);
-            const settledAt = build.getPart(droppedId)?.position;
+            const settledAt = (_h = build.getPart(droppedId)) === null || _h === void 0 ? void 0 : _h.position;
             audio.play(placedAt && settledAt && (placedAt.x !== settledAt.x || placedAt.y !== settledAt.y) ? "snap" : "drop");
             snapBeam(droppedId);
             autoSnapOpeningWheel(droppedId);
@@ -2702,6 +2905,7 @@ const programState = { selected: undefined };
 let programRobotId;
 let programPanelKey = "";
 function updateProgramPanel() {
+    var _a, _b, _c, _d, _e, _f, _g;
     const isBot = (id) => { const p = id ? build.getPart(id) : undefined; return Boolean(p && registry.has(p.definitionId) && isRobot(registry.get(p.definitionId))); };
     if (selectedId && !testMode && isBot(selectedId) && selectedId !== programRobotId) {
         programRobotId = selectedId;
@@ -2717,25 +2921,26 @@ function updateProgramPanel() {
         }
         return;
     }
-    const running = testMode ? tests.active()?.robots.robot(part.id)?.current : undefined;
-    const key = [part.id, String(part.parameters.program ?? ""), programState.selected ?? "", testMode, running?.join(".") ?? ""].join("|");
+    const running = testMode ? (_b = (_a = tests.active()) === null || _a === void 0 ? void 0 : _a.robots.robot(part.id)) === null || _b === void 0 ? void 0 : _b.current : undefined;
+    const key = [part.id, String((_c = part.parameters.program) !== null && _c !== void 0 ? _c : ""), (_d = programState.selected) !== null && _d !== void 0 ? _d : "", testMode, (_e = running === null || running === void 0 ? void 0 : running.join(".")) !== null && _e !== void 0 ? _e : ""].join("|");
     if (key === programPanelKey)
         return;
     programPanelKey = key;
     programPanel.classList.remove("hidden");
-    const robotName = part.definitionId === "space.robot-arm" ? "Robot Arm" : (part.tags ?? []).find(t => t !== "robot")?.replace(/^robot[-.]?/, "") || "Robot";
+    const robotName = part.definitionId === "space.robot-arm" ? "Robot Arm" : ((_g = ((_f = part.tags) !== null && _f !== void 0 ? _f : []).find(t => t !== "robot")) === null || _g === void 0 ? void 0 : _g.replace(/^robot[-.]?/, "")) || "Robot";
     renderBlockEditor(programPanel, parseProgram(part.parameters.program), programState, next => {
+        var _a;
         if (testMode) {
             programPanelKey = "";
             return;
         }
         const text = JSON.stringify(next);
-        if (text !== String(part.parameters.program ?? "")) {
+        if (text !== String((_a = part.parameters.program) !== null && _a !== void 0 ? _a : "")) {
             build.reshape(part.id, { parameters: { program: text } });
             sfx(600, .03);
         }
         programPanelKey = "";
-    }, { ...(running ? { running } : {}), locked: testMode, robotName: robotName.charAt(0).toUpperCase() + robotName.slice(1), close: () => { programRobotId = undefined; selectedId = undefined; programPanelKey = ""; programPanel.classList.add("hidden"); } });
+    }, { ...(running ? { running } : {}), locked: testMode, robotName: robotName.charAt(0).toUpperCase() + robotName.slice(1), close: () => { programRobotId = undefined; selectedId = undefined; programPanelKey = ""; programPanel.classList.add("hidden"); }, picture: label => artUrl(PROGRAM_PICTURES[label]) });
 }
 // ---------------------------------------------------------------- Experiment Lab (M22)
 // Question → Prediction → Build A → Build B → Test → Compare → Change one thing → Retest → Save.
@@ -2751,8 +2956,8 @@ function startExperiment(level) {
     rebuildExperimentRig();
     renderExperimentPanel();
 }
-function rebuildExperimentRig() { if (!exp)
-    return; stopToBuild(); build.replaceAll({ parts: buildExperimentRig(exp.level.staticObjects ?? [], exp.t, exp.a, exp.b), connections: [] }); }
+function rebuildExperimentRig() { var _a; if (!exp)
+    return; stopToBuild(); build.replaceAll({ parts: buildExperimentRig((_a = exp.level.staticObjects) !== null && _a !== void 0 ? _a : [], exp.t, exp.a, exp.b), connections: [] }); }
 function beginTrial() { if (!exp)
     return; const finish = {}; for (const k of ["a", "b"]) {
     const lane = exp.t.lanes[k];
@@ -2762,7 +2967,7 @@ function beginTrial() { if (!exp)
 /** Every simulation tick of a trial: measure; finish when both have a result (or the time is up). */
 function experimentTick() {
     const runtime = tests.active();
-    if (!exp?.recorder || !runtime || !testMode)
+    if (!(exp === null || exp === void 0 ? void 0 : exp.recorder) || !runtime || !testMode)
         return;
     const t = exp.t;
     exp.recorder.sample(runtime);
@@ -2788,7 +2993,7 @@ function finishTrial(va, vb) {
     exp.saved = false;
     sfx(v === "SAME" ? 700 : 980, .07);
     // The trial itself is real evidence: discoveries straight away (the save keeps the whole experiment).
-    const awards = experimentDiscoveries(exp.trials, exp.prediction).map(id => ({ id, evidence: EXPERIMENT_CONCEPT_EVIDENCE[id] ?? "Measured in an experiment." }));
+    const awards = experimentDiscoveries(exp.trials, exp.prediction).map(id => { var _a; return ({ id, evidence: (_a = EXPERIMENT_CONCEPT_EVIDENCE[id]) !== null && _a !== void 0 ? _a : "Measured in an experiment." }); });
     const res = recordRunEvidence(appSave, awards, []);
     if (res.newDiscoveries.length) {
         void commit(res.save);
@@ -2840,10 +3045,11 @@ function renderExperimentPanel(showResult = false) {
     expSave.textContent = exp.saved ? "Saved ✓" : "💾 Save";
     expTrials.replaceChildren();
     exp.trials.forEach((tr, i) => {
+        var _a, _b;
         const li = document.createElement("li");
         const b = document.createElement("button");
         const w = experimentWords(t);
-        b.textContent = `Trial ${i + 1}: ${t.options[tr.a].label} vs ${t.options[tr.b].label} → ${tr.verdict === "SAME" ? "same" : `${tr.verdict} ${t.asks === "MORE" ? w?.more ?? "more" : w?.less ?? "less"}`}  ▶ watch again`;
+        b.textContent = `Trial ${i + 1}: ${t.options[tr.a].label} vs ${t.options[tr.b].label} → ${tr.verdict === "SAME" ? "same" : `${tr.verdict} ${t.asks === "MORE" ? (_a = w === null || w === void 0 ? void 0 : w.more) !== null && _a !== void 0 ? _a : "more" : (_b = w === null || w === void 0 ? void 0 : w.less) !== null && _b !== void 0 ? _b : "less"}`}  ▶ watch again`;
         b.addEventListener("click", () => { if (!exp)
             return; exp.a = tr.a; exp.b = tr.b; rebuildExperimentRig(); renderExperimentPanel(); ui.test.click(); });
         li.append(b);
@@ -2891,7 +3097,7 @@ let promptsHidden = false;
 let toastTimer = 0;
 function toast(text) { toastEl.textContent = text; toastEl.classList.remove("hidden"); window.clearTimeout(toastTimer); toastTimer = window.setTimeout(() => toastEl.classList.add("hidden"), 2600); }
 /** Part caps keep big builds smooth: warn near the cap, and stop adding at it (room furniture doesn't count). */
-function partCap() { return currentRoom?.partCap ?? (labActive ? CAMPAIGN_PART_CAP : SANDBOX_PART_CAP); }
+function partCap() { var _a; return (_a = currentRoom === null || currentRoom === void 0 ? void 0 : currentRoom.partCap) !== null && _a !== void 0 ? _a : (labActive ? CAMPAIGN_PART_CAP : SANDBOX_PART_CAP); }
 function roomForMore(n) {
     const st = capStatus(build.allParts(), partCap());
     if (st.count + n > st.cap) {
@@ -2912,6 +3118,8 @@ else if (room.theme === "builder")
 else if (hasLabBackdrop(room.theme))
     renderer.drawLabBackdrop(room.theme, now() / 1000); }
 function startSandbox(level) {
+    var _a, _b, _c;
+    void loadPlayfieldPictures();
     const room = sandboxById(level.id);
     if (!room)
         return;
@@ -2919,10 +3127,10 @@ function startSandbox(level) {
     currentRoom = room;
     promptIndex = 0;
     const p = activeProfile(appSave);
-    const saved = p?.lastBuild?.id === `sandbox:${room.id}` ? p.lastBuild : undefined;
-    let parts = saved ? [...saved.parts] : [...(level.staticObjects ?? [])];
+    const saved = ((_a = p === null || p === void 0 ? void 0 : p.lastBuild) === null || _a === void 0 ? void 0 : _a.id) === `sandbox:${room.id}` ? p.lastBuild : undefined;
+    let parts = saved ? [...saved.parts] : [...((_b = level.staticObjects) !== null && _b !== void 0 ? _b : [])];
     if (!saved)
-        for (const m of room.defaultModifiers ?? [])
+        for (const m of (_c = room.defaultModifiers) !== null && _c !== void 0 ? _c : [])
             parts = withModifier(parts, m, true);
     build.replaceAll({ parts, connections: saved ? saved.connections : [] });
     selectedId = undefined;
@@ -2961,8 +3169,13 @@ function openDrawer(kind) {
     sandboxDrawer.dataset.kind = kind;
     sandboxDrawer.replaceChildren();
     const room = currentRoom;
-    const btn = (icon, label, on, active = false) => { const b = document.createElement("button"); if (active)
-        b.classList.add("on"); const i = document.createElement("span"); i.className = "ico"; i.textContent = icon; const t = document.createElement("span"); t.textContent = label; b.append(i, t); b.addEventListener("click", on); sandboxDrawer.append(b); };
+    const btn = (icon, label, on, active = false, picture) => { const b = document.createElement("button"); if (active)
+        b.classList.add("on"); const src = artUrl(picture); const i = document.createElement(src ? "img" : "span"); i.className = src ? "ico-pic" : "ico"; if (i instanceof HTMLImageElement && src) {
+        i.src = src;
+        i.alt = "";
+    }
+    else
+        i.textContent = icon; const t = document.createElement("span"); t.textContent = label; b.append(i, t); b.addEventListener("click", on); sandboxDrawer.append(b); };
     const head = (text) => { const h = document.createElement("h3"); h.textContent = text; sandboxDrawer.append(h); };
     if (kind === "ideas") {
         promptsHidden = false;
@@ -2975,7 +3188,7 @@ function openDrawer(kind) {
         const list = room.robotFloor ? SPAWN_CATALOGUE.filter(s => s.definitionId === "robot.bot") : SPAWN_CATALOGUE.filter(s => s.definitionId !== "robot.bot");
         for (const s of list)
             btn(s.icon, s.type, () => { if (!roomForMore(1))
-                return; const placed = build.add(s.definitionId, { x: 6 + Math.random() * 4, y: s.definitionId === "motion.goal-zone" ? 8 : 2 }); selectedId = placed.id; sfx(620, .04); updateSandboxCap(); });
+                return; const placed = build.add(s.definitionId, { x: 6 + Math.random() * 4, y: s.definitionId === "motion.goal-zone" ? 8 : 2 }); selectedId = placed.id; sfx(620, .04); updateSandboxCap(); }, false, SPAWN_PICTURES[s.definitionId]);
     }
     if (kind === "starters") {
         head("Starter machines");
@@ -3013,7 +3226,7 @@ let chainShown = -1;
 let capFrame = 0;
 /** The live counter: the longest real cause → effect sequence so far, and the newest step. */
 function updateChainHud(runtime) {
-    const on = Boolean(runtime?.chain.active && testMode);
+    const on = Boolean((runtime === null || runtime === void 0 ? void 0 : runtime.chain.active) && testMode);
     chainHud.classList.toggle("hidden", !on);
     if (!on || !runtime) {
         chainShown = -1;
@@ -3025,7 +3238,7 @@ function updateChainHud(runtime) {
     chainShown = n;
     chainCount.textContent = String(n);
     const e = runtime.chain.edges[runtime.chain.edges.length - 1];
-    const name = (id) => registry.get(build.getPart(id)?.definitionId ?? "chain.counter").displayName;
+    const name = (id) => { var _a, _b; return registry.get((_b = (_a = build.getPart(id)) === null || _a === void 0 ? void 0 : _a.definitionId) !== null && _b !== void 0 ? _b : "chain.counter").displayName; };
     chainLast.textContent = e ? `${name(e.causeId)} → ${name(e.effectId)}` : "";
     chainHud.classList.remove("bump");
     void chainHud.offsetWidth;
@@ -3036,7 +3249,7 @@ function updateChainHud(runtime) {
 /** After a chain run: update personal records (kept in the profile's records table) and say so. */
 function noteChainRun() {
     const runtime = tests.active();
-    if (!runtime?.chain.active || !activeProfile(appSave))
+    if (!(runtime === null || runtime === void 0 ? void 0 : runtime.chain.active) || !activeProfile(appSave))
         return "";
     const stats = chainStats(runtime);
     const out = withChainRecords(appSave, stats);
@@ -3060,8 +3273,8 @@ function currentEnvironment() { if (currentRoom && freeBuildActive)
 /** Results for the build on screen — only if the TEST measured this exact build. */
 function metricsForCurrent() {
     const sum = contentChecksum(contentOf(build.snapshot()));
-    const live = runMeter?.buildChecksum === sum ? runMeter.result() : undefined;
-    return live ?? (lastRun?.checksum === sum ? lastRun.metrics : undefined);
+    const live = (runMeter === null || runMeter === void 0 ? void 0 : runMeter.buildChecksum) === sum ? runMeter.result() : undefined;
+    return live !== null && live !== void 0 ? live : ((lastRun === null || lastRun === void 0 ? void 0 : lastRun.checksum) === sum ? lastRun.metrics : undefined);
 }
 /** A clean picture of the build for My Inventions (no selection glow). */
 async function captureThumb(id, n) {
@@ -3092,6 +3305,7 @@ const SAVE_PROBLEMS = {
     MISSING: "That invention isn't there any more — save this as a new invention."
 };
 function openSaveDialog() {
+    var _a;
     if (!activeProfile(appSave)) {
         toast(SAVE_PROBLEMS.NO_PROFILE);
         return;
@@ -3106,7 +3320,7 @@ function openSaveDialog() {
         invSaveName.value = motionTitle.textContent && labActive ? motionTitle.textContent.slice(0, 40) : suggestedName(appSave);
     // Made together: it still belongs to this device's inventor (profile-local), and says who helped.
     if (coop) {
-        const partner = coop.players.find(p => p.profileId !== activeProfile(appSave)?.id) ?? coop.players[1];
+        const partner = (_a = coop.players.find(p => { var _a; return p.profileId !== ((_a = activeProfile(appSave)) === null || _a === void 0 ? void 0 : _a.id); })) !== null && _a !== void 0 ? _a : coop.players[1];
         invSaveName.value = togetherName(invSaveName.value.replace(/ \(with [^)]*\)$/, ""), partner);
     }
     const m = metricsForCurrent();
@@ -3115,8 +3329,9 @@ function openSaveDialog() {
     window.setTimeout(() => invSaveName.focus(), 0);
 }
 async function finishSave(r, label) {
+    var _a;
     if (r.reason) {
-        toast(SAVE_PROBLEMS[r.reason] ?? "Couldn't save that.");
+        toast((_a = SAVE_PROBLEMS[r.reason]) !== null && _a !== void 0 ? _a : "Couldn't save that.");
         return;
     }
     if (r.unchanged && r.version) {
@@ -3140,17 +3355,21 @@ invSaveVersion.addEventListener("click", () => { if (!editingInvention)
 document.querySelector("#inv-save-new").addEventListener("click", () => { const m = metricsForCurrent(); void finishSave(saveNewInvention(appSave, { name: invSaveName.value, content: contentOf(build.snapshot()), environment: currentEnvironment(), ...(m ? { metrics: m } : {}) }), (_n, name) => `Saved "${name}" in My Inventions!`); });
 document.querySelector("#inv-save-cancel").addEventListener("click", () => invSave.classList.add("hidden"));
 function placeName(env) {
+    var _a, _b, _c, _d, _e;
     if (env.startsWith("sandbox:"))
-        return `Free Build — ${sandboxById(env.slice(8))?.title ?? "a room"}`;
+        return `Free Build — ${(_b = (_a = sandboxById(env.slice(8))) === null || _a === void 0 ? void 0 : _a.title) !== null && _b !== void 0 ? _b : "a room"}`;
     if (env.startsWith("lab:")) {
         const id = env.slice(4);
         const lab = PLAY_SETS.find(l => l.missions.some(m => m.id === id));
-        return `${lab?.title ?? "a lab"} — ${missionMeta(id)?.title ?? id}`;
+        return `${(_c = lab === null || lab === void 0 ? void 0 : lab.title) !== null && _c !== void 0 ? _c : "a lab"} — ${(_e = (_d = missionMeta(id)) === null || _d === void 0 ? void 0 : _d.title) !== null && _e !== void 0 ? _e : id}`;
     }
     return "the Workshop (Free Build)";
 }
 /** Opens one version, in the room or mission it was built in when that is still open (otherwise in Free Build). */
 function openInvention(id, n) {
+    var _a, _b;
+    if (afterLabs(() => openInvention(id, n)))
+        return;
     const inv = inventionById(appSave, id);
     const content = inv ? resolveVersion(inv, n) : undefined;
     if (!inv || !content) {
@@ -3158,9 +3377,9 @@ function openInvention(id, n) {
         return;
     }
     const env = inv.environment;
-    if (env.startsWith("sandbox:") && labLevels.get(FREE_BUILD_ROOMS.id)?.get(env.slice(8)) && (sandboxOpen(appSave, env.slice(8)) || testingLabs.has(FREE_BUILD_ROOMS.id)))
+    if (env.startsWith("sandbox:") && ((_a = labLevels.get(FREE_BUILD_ROOMS.id)) === null || _a === void 0 ? void 0 : _a.get(env.slice(8))) && (sandboxOpen(appSave, env.slice(8)) || testingLabs.has(FREE_BUILD_ROOMS.id)))
         startSandbox(labLevels.get(FREE_BUILD_ROOMS.id).get(env.slice(8)));
-    else if (env.startsWith("lab:") && labLevels.get(labOfLevel(env.slice(4)))?.get(env.slice(4)) && (labMissionUnlocked(labDef(labOfLevel(env.slice(4))), env.slice(4), completedSet()) || Boolean(grandStageOf(env.slice(4)))) && labIsOpen(labOfLevel(env.slice(4))))
+    else if (env.startsWith("lab:") && ((_b = labLevels.get(labOfLevel(env.slice(4)))) === null || _b === void 0 ? void 0 : _b.get(env.slice(4))) && (labMissionUnlocked(labDef(labOfLevel(env.slice(4))), env.slice(4), completedSet()) || Boolean(grandStageOf(env.slice(4)))) && labIsOpen(labOfLevel(env.slice(4))))
         loadMission(env.slice(4));
     else
         startFreeBuild();
@@ -3176,8 +3395,8 @@ function afterLibraryChange(next, prune = false) { void commit(next, true).then(
 function renderInventionScreen() {
     renderInventions(inventionsRoot, appSave, {
         open: (id, n) => openInvention(id, n),
-        duplicate: (id, n) => { const r = duplicateInvention(appSave, id, n); if (r.reason || !r.invention) {
-            toast(SAVE_PROBLEMS[r.reason ?? "MISSING"]);
+        duplicate: (id, n) => { var _a; const r = duplicateInvention(appSave, id, n); if (r.reason || !r.invention) {
+            toast(SAVE_PROBLEMS[(_a = r.reason) !== null && _a !== void 0 ? _a : "MISSING"]);
             return;
         } void thumbs.copy(thumbKey(id, n), thumbKey(r.invention.id, 1)); showInventionDetail(r.invention.id); afterLibraryChange(r.save); toast(`Made a copy: "${r.invention.name}".`); },
         restore: (id, n) => { const r = restoreAsNewVersion(appSave, id, n); if (r.reason) {
@@ -3213,9 +3432,9 @@ function renderInventionScreen() {
 const photo = new PhotoMode({
     stage: document.querySelector(".stage"), canvas: canvas, app: appElement,
     pan: (dx, dy) => camera.pan(dx, dy), zoom: f => camera.setZoom(camera.zoom * f),
-    stickers: () => photoStickers(activeProfile(appSave)?.rewards ?? []),
-    boltUrl: pose => boltPoseUrl(pose), sprocket: () => sprocketArt(activeProfile(appSave)?.equipped.sprocket),
-    title: () => (editingInvention ? inventionById(appSave, editingInvention)?.name : undefined) ?? motionTitle.textContent ?? "invention",
+    stickers: () => { var _a, _b; return photoStickers((_b = (_a = activeProfile(appSave)) === null || _a === void 0 ? void 0 : _a.rewards) !== null && _b !== void 0 ? _b : []); },
+    boltUrl: pose => boltPoseUrl(pose), sprocket: () => { var _a; return sprocketArt((_a = activeProfile(appSave)) === null || _a === void 0 ? void 0 : _a.equipped.sprocket); },
+    title: () => { var _a, _b, _c; return (_c = (_b = (editingInvention ? (_a = inventionById(appSave, editingInvention)) === null || _a === void 0 ? void 0 : _a.name : undefined)) !== null && _b !== void 0 ? _b : motionTitle.textContent) !== null && _c !== void 0 ? _c : "invention"; },
     toast,
     // The photo can be the invention's picture only when the build on screen IS its newest version.
     useAsCover: () => { const inv = editingInvention ? inventionById(appSave, editingInvention) : undefined; if (!inv || contentChecksum(contentOf(build.snapshot())) !== latestVersion(inv).checksum)
@@ -3241,6 +3460,7 @@ const FOLLOW_ICONS = { BALL: "⚽", BOLT: "🤖", ROBOT: "🦾", VEHICLE: "🚗"
 /** Slow motion slows the clock; every physics step stays exactly the same size, so results never change. */
 function setSlow(on) { slowMo = on; clock.setSpeed(on ? 0.25 : 1); slowButton.classList.toggle("on", on); slowButton.setAttribute("aria-pressed", String(on)); }
 function setFollow(partId, announce = true) {
+    var _a, _b;
     if (!partId && !following)
         return;
     if (partId && !following)
@@ -3251,7 +3471,7 @@ function setFollow(partId, announce = true) {
     if (partId) {
         camera.setZoom(Math.max(camera.zoom, 1.6));
         if (announce)
-            toast(`Following the ${registry.get(build.getPart(partId)?.definitionId ?? "motion.ball").displayName}.`);
+            toast(`Following the ${registry.get((_b = (_a = build.getPart(partId)) === null || _a === void 0 ? void 0 : _a.definitionId) !== null && _b !== void 0 ? _b : "motion.ball").displayName}.`);
     }
     else
         camera.setZoom(zoomBeforeFollow);
@@ -3390,12 +3610,13 @@ function updateReplayUi() {
 }
 /** Red rings where the recorded problems happened, shown around the moment they happened. */
 function drawReplayMarkers(rp) {
+    var _a, _b;
     const c = renderer.ctx;
     const t = rp.tick;
     for (const mk of rp.recording.markers) {
         if (t < mk.tick - 15 || t > mk.tick + 150)
             continue;
-        const p = followPoint(rp.runtime, mk.partId) ?? build.getPart(mk.partId)?.position;
+        const p = (_a = followPoint(rp.runtime, mk.partId)) !== null && _a !== void 0 ? _a : (_b = build.getPart(mk.partId)) === null || _b === void 0 ? void 0 : _b.position;
         if (!p)
             continue;
         const pulse = 1 + 0.12 * Math.sin(now() / 120);
@@ -3446,7 +3667,7 @@ let contract;
 function setupChallenge(def) {
     challenge = def;
     challengeRun = undefined;
-    cargoBox.classList.toggle("hidden", def?.capture.kind !== "CARGO");
+    cargoBox.classList.toggle("hidden", (def === null || def === void 0 ? void 0 : def.capture.kind) !== "CARGO");
     cargoBox.classList.remove("locked");
     if (!def)
         return;
@@ -3455,16 +3676,17 @@ function setupChallenge(def) {
     document.querySelector(".motion-hud .motion-badge").textContent = `CHALLENGE ${def.number}`;
     showCargo();
 }
-function showCargo() { const c = challenge?.capture; if (c?.kind !== "CARGO")
-    return; cargoValue.textContent = `Cargo: ${Number(build.getPart(c.subject)?.parameters.weight ?? c.choices[0])}`; }
+function showCargo() { var _a, _b; const c = challenge === null || challenge === void 0 ? void 0 : challenge.capture; if ((c === null || c === void 0 ? void 0 : c.kind) !== "CARGO")
+    return; cargoValue.textContent = `Cargo: ${Number((_b = (_a = build.getPart(c.subject)) === null || _a === void 0 ? void 0 : _a.parameters.weight) !== null && _b !== void 0 ? _b : c.choices[0])}`; }
 function changeCargo(step) {
-    const c = challenge?.capture;
-    if (c?.kind !== "CARGO" || testMode || replayer)
+    var _a;
+    const c = challenge === null || challenge === void 0 ? void 0 : challenge.capture;
+    if ((c === null || c === void 0 ? void 0 : c.kind) !== "CARGO" || testMode || replayer)
         return;
     const cart = build.getPart(c.subject);
     if (!cart)
         return;
-    const now = Number(cart.parameters.weight ?? c.choices[0]);
+    const now = Number((_a = cart.parameters.weight) !== null && _a !== void 0 ? _a : c.choices[0]);
     const i = Math.max(0, Math.min(c.choices.length - 1, c.choices.indexOf(now) + step));
     build.reshape(c.subject, { parameters: { ...cart.parameters, weight: c.choices[i] } });
     showCargo();
@@ -3474,13 +3696,14 @@ document.querySelector("#cargo-down").addEventListener("click", () => changeCarg
 document.querySelector("#cargo-up").addEventListener("click", () => changeCargo(1));
 /** The TEST reached the challenge's scoring moment: save the score (if it's a record) and celebrate honestly. */
 function finishChallenge() {
+    var _a, _b, _c;
     const def = challenge, run = challengeRun, level = activeLevel, rt = tests.active();
-    if (!def || !run?.result || !level || !rt)
+    if (!def || !(run === null || run === void 0 ? void 0 : run.result) || !level || !rt)
         return;
     if (!tests.isPaused())
         tests.togglePause();
     const r = run.result;
-    const seeded = new Set([...(level.staticObjects ?? []), ...level.starterParts].map(p => p.id));
+    const seeded = new Set([...((_a = level.staticObjects) !== null && _a !== void 0 ? _a : []), ...level.starterParts].map(p => p.id));
     const added = playerParts(build, seeded).length;
     if (!r.success || r.value === undefined) {
         void commit(withChallengeResult(appSave, def, r).save);
@@ -3502,7 +3725,7 @@ function finishChallenge() {
     showMotionResult(true, `${def.measureName}: ${score}.${verdict}${ratings}${fun}`, outcome.stars, outcome.newStars, outcome.newRewards);
     if (scored.verdict === "NEW_RECORD" || scored.verdict === "FIRST")
         motionResultTitle.textContent = scored.verdict === "FIRST" ? "RECORD SET!" : "NEW RECORD!";
-    motionObjective.textContent = `${def.goal} Your best: ${formatScore(def, challengeBest(scored.save, def.id)?.value ?? r.value)}.`;
+    motionObjective.textContent = `${def.goal} Your best: ${formatScore(def, (_c = (_b = challengeBest(scored.save, def.id)) === null || _b === void 0 ? void 0 : _b.value) !== null && _c !== void 0 ? _c : r.value)}.`;
     sfx(980, .09);
     buzz(60);
 }
@@ -3514,6 +3737,7 @@ let fair;
 let fairRun;
 function resetFairButton() { fairEnter.textContent = "🎪 Enter the fair!"; delete fairEnter.dataset.left; fairEnter.disabled = false; }
 function setupFair(def, level) {
+    var _a, _b;
     fair = def;
     fairRun = undefined;
     fairEnter.classList.toggle("hidden", !def);
@@ -3521,13 +3745,14 @@ function setupFair(def, level) {
     if (!def || !level)
         return;
     // The tray shows the fair's parts that this inventor has unlocked.
-    const owned = new Set(sandboxTrayParts(activeProfile(appSave)?.unlockedParts ?? []));
+    const owned = new Set(sandboxTrayParts((_b = (_a = activeProfile(appSave)) === null || _a === void 0 ? void 0 : _a.unlockedParts) !== null && _b !== void 0 ? _b : []));
     updateOpeningTray({ ...level, availablePartIds: level.availablePartIds.filter(id => owned.has(id)) });
     motionObjective.textContent = `${def.prompt} Entry rule: ${def.rule}`;
     document.querySelector(".motion-hud .motion-badge").textContent = `${def.icon} FAIR ${def.number}`;
 }
 /** "Enter the fair!": one fair TEST of the build as it is now, then the honest results. */
 fairEnter.addEventListener("click", () => {
+    var _a;
     if (!fair || !activeLevel || !gameplayAllowed() || fairRun)
         return;
     if (testMode)
@@ -3535,11 +3760,12 @@ fairEnter.addEventListener("click", () => {
     ui.test.click();
     if (!testMode)
         return;
-    fairRun = new FairRun(fair, build, new Set([...(activeLevel.staticObjects ?? []), ...activeLevel.starterParts].map(p => p.id)));
+    fairRun = new FairRun(fair, build, new Set([...((_a = activeLevel.staticObjects) !== null && _a !== void 0 ? _a : []), ...activeLevel.starterParts].map(p => p.id)));
     fairEnter.disabled = true;
     sfx(880, .08);
 });
 function finishFair() {
+    var _a, _b;
     const def = fair, run = fairRun, rt = tests.active(), level = activeLevel;
     if (!def || !run || !rt || !level)
         return;
@@ -3550,7 +3776,7 @@ function finishFair() {
     const ev = run.evidence(rt);
     const result = judgeEntry(def, ev, build, rt);
     if (!result.accepted) {
-        showMotionResult(false, `Almost! For this fair: ${result.missing ?? def.rule} Change it and enter again!`);
+        showMotionResult(false, `Almost! For this fair: ${(_a = result.missing) !== null && _a !== void 0 ? _a : def.rule} Change it and enter again!`);
         motionResultTitle.textContent = "ALMOST!";
         sfx(420, .08);
         return;
@@ -3564,7 +3790,7 @@ function finishFair() {
         editingInvention = kept.invention.id;
         void captureThumb(kept.invention.id, 1);
     }
-    save = withFairEntry(save, def, result, title, Date.now(), kept.invention?.id);
+    save = withFairEntry(save, def, result, title, Date.now(), (_b = kept.invention) === null || _b === void 0 ? void 0 : _b.id);
     void commit(save, true).catch(() => undefined);
     const awards = result.awards.length ? result.awards.map(a => ` 🏅 ${a.label} — ${a.because}.`).join("") : " (No measured awards this time — try going faster, steadier or with fewer parts!)";
     const cheers = crowdCheers(appSave).map(c => ` ${c}`).join("");
@@ -3578,6 +3804,7 @@ let notesHeard = 0;
 let notesRuntime;
 let creatorFrame = 0;
 function playNotes(runtime) {
+    var _a;
     if (!runtime || !runtime.music.active) {
         notesRuntime = runtime;
         notesHeard = 0;
@@ -3590,7 +3817,7 @@ function playNotes(runtime) {
     const notes = runtime.music.notes;
     for (; notesHeard < notes.length; notesHeard++) {
         const n = notes[notesHeard];
-        sfx(SCALE_HZ[n.pitch - 1] * (n.family === "DRUM" ? 0.5 : n.family === "HORN" ? 1 : n.family === "CHIME" ? 2 : 1), RING_SECONDS[n.family] ?? 0.1);
+        sfx(SCALE_HZ[n.pitch - 1] * (n.family === "DRUM" ? 0.5 : n.family === "HORN" ? 1 : n.family === "CHIME" ? 2 : 1), (_a = RING_SECONDS[n.family]) !== null && _a !== void 0 ? _a : 0.1);
     }
 }
 // ---------------------------------------------------------------- Build together (M30): taking turns on one device
@@ -3632,7 +3859,7 @@ function renderCoopSetup() {
         const b = document.createElement("button");
         b.textContent = p.name;
         b.style.setProperty("--who", p.colour);
-        b.classList.toggle("on", coopPartner?.id === p.id);
+        b.classList.toggle("on", (coopPartner === null || coopPartner === void 0 ? void 0 : coopPartner.id) === p.id);
         b.addEventListener("click", () => { coopPartner = p; renderCoopSetup(); });
         partners.append(b);
     }
@@ -3726,10 +3953,11 @@ document.querySelectorAll("[data-guess]").forEach(b => b.addEventListener("click
     return; coop.predict(b.dataset.guess); coopPredict.classList.add("hidden"); ui.test.click(); }));
 /** The TEST ended: did the prediction come true? (A mission: did it work? Free Build: did something move?) */
 function settlePrediction(success) {
+    var _a, _b, _c;
     if (!coop)
         return;
     const mission = labActive && Boolean(activeLevel);
-    const happened = mission ? success : success || (runMeter?.result()?.distance ?? lastRun?.metrics.distance ?? 0) >= 0.5;
+    const happened = mission ? success : success || ((_c = (_b = (_a = runMeter === null || runMeter === void 0 ? void 0 : runMeter.result()) === null || _a === void 0 ? void 0 : _a.distance) !== null && _b !== void 0 ? _b : lastRun === null || lastRun === void 0 ? void 0 : lastRun.metrics.distance) !== null && _c !== void 0 ? _c : 0) >= 0.5;
     const line = coop.resolve(happened, mission ? ["it worked", "it didn't work this time"] : ["something moved", "nothing moved"]);
     if (line)
         toast(line);
@@ -3762,9 +3990,9 @@ document.querySelectorAll("[data-hold]").forEach(b => {
     b.addEventListener("pointerdown", e => { e.preventDefault(); try {
         b.setPointerCapture(e.pointerId);
     }
-    catch { /* not a real pointer */ } b.classList.add("held"); launch?.press(side, true); });
+    catch { /* not a real pointer */ } b.classList.add("held"); launch === null || launch === void 0 ? void 0 : launch.press(side, true); });
     for (const ev of ["pointerup", "pointercancel", "lostpointercapture"])
-        b.addEventListener(ev, () => { b.classList.remove("held"); launch?.press(side, false); });
+        b.addEventListener(ev, () => { b.classList.remove("held"); launch === null || launch === void 0 ? void 0 : launch.press(side, false); });
 });
 document.querySelector("#coop-launch-close").addEventListener("click", () => { launch = undefined; coopLaunch.classList.add("hidden"); });
 // ---------------------------------------------------------------- Build-your-own challenges (M31)
@@ -3772,24 +4000,27 @@ const creatorPanel = document.querySelector("#creator-panel"), creatorNext = doc
 /** Making a challenge: SET = placing the room; PROVE = the creator solving it (the only way it can be saved). */
 let creator;
 let customPlay;
-function addedParts() { const skip = creator ? new Set([...creator.roomIds, ...creator.fixedIds]) : customPlay?.seeded ?? new Set(); return build.allParts().filter(p => !skip.has(p.id) && p.parameters.locked !== true).length; }
-function roomLevel(id) { return labLevels.get(FREE_BUILD_ROOMS.id)?.get(id); }
+function addedParts() { var _a; const skip = creator ? new Set([...creator.roomIds, ...creator.fixedIds]) : (_a = customPlay === null || customPlay === void 0 ? void 0 : customPlay.seeded) !== null && _a !== void 0 ? _a : new Set(); return build.allParts().filter(p => !skip.has(p.id) && p.parameters.locked !== true).length; }
+function roomLevel(id) { var _a; return (_a = labLevels.get(FREE_BUILD_ROOMS.id)) === null || _a === void 0 ? void 0 : _a.get(id); }
 function renderCreatorScreen() {
     renderCreator(document.querySelector("#creator-root"), appSave, {
         play: id => startCustomChallenge(id), remove: id => { void commit(withoutCustomChallenge(appSave, id), true); }, make: id => startCreator(id),
-        rooms: () => FREE_BUILD_ROOMS.missions.filter(m => sandboxOpen(appSave, m.id) && !sandboxById(m.id)?.robotFloor).map(m => ({ id: m.id, title: m.title, icon: sandboxById(m.id)?.icon ?? "🧰" })),
-        roomTitle: id => sandboxById(id)?.title ?? "a room", rerender: renderCreatorScreen
+        rooms: () => FREE_BUILD_ROOMS.missions.filter(m => { var _a; return sandboxOpen(appSave, m.id) && !((_a = sandboxById(m.id)) === null || _a === void 0 ? void 0 : _a.robotFloor); }).map(m => { var _a, _b; return ({ id: m.id, title: m.title, icon: (_b = (_a = sandboxById(m.id)) === null || _a === void 0 ? void 0 : _a.icon) !== null && _b !== void 0 ? _b : "🧰" }); }),
+        roomTitle: id => { var _a, _b; return (_b = (_a = sandboxById(id)) === null || _a === void 0 ? void 0 : _a.title) !== null && _b !== void 0 ? _b : "a room"; }, rerender: renderCreatorScreen
     });
 }
 function startCreator(roomId) {
+    var _a, _b;
+    if (afterLabs(() => startCreator(roomId)))
+        return;
     const room = roomLevel(roomId);
     if (!room)
         return;
     startSandbox(room);
     sandboxBar.classList.add("hidden");
     sandboxPrompt.classList.add("hidden");
-    build.replaceAll({ parts: [...(room.staticObjects ?? [])], connections: [] });
-    creator = { phase: "SET", roomId, roomIds: new Set((room.staticObjects ?? []).map(p => p.id)), fixedIds: new Set(), allowed: new Set(["motion.ramp", "motion.spring", "structure.block"]), partLimit: 0 };
+    build.replaceAll({ parts: [...((_a = room.staticObjects) !== null && _a !== void 0 ? _a : [])], connections: [] });
+    creator = { phase: "SET", roomId, roomIds: new Set(((_b = room.staticObjects) !== null && _b !== void 0 ? _b : []).map(p => p.id)), fixedIds: new Set(), allowed: new Set(["motion.ramp", "motion.spring", "structure.block"]), partLimit: 0 };
     motionTitle.textContent = "Make a challenge";
     motionObjective.textContent = "Put down something to start with, one goal zone and some obstacles.";
     document.querySelector(".motion-badge").textContent = "🛠️ CREATOR";
@@ -3799,6 +4030,7 @@ function startCreator(roomId) {
 }
 function creatorFixed() { return creator ? build.allParts().filter(p => !creator.roomIds.has(p.id)) : []; }
 function renderCreatorPanel() {
+    var _a, _b;
     const c = creator;
     if (!c)
         return;
@@ -3818,7 +4050,7 @@ function renderCreatorPanel() {
         nameRow.classList.add("hidden");
         const parts = document.querySelector("#creator-parts");
         parts.replaceChildren();
-        for (const id of sandboxTrayParts(activeProfile(appSave)?.unlockedParts ?? []).filter(id => !CREATOR_PALETTE.includes(id) || id === "motion.ramp" || id === "structure.block")) {
+        for (const id of sandboxTrayParts((_b = (_a = activeProfile(appSave)) === null || _a === void 0 ? void 0 : _a.unlockedParts) !== null && _b !== void 0 ? _b : []).filter(id => !CREATOR_PALETTE.includes(id) || id === "motion.ramp" || id === "structure.block")) {
             const b = document.createElement("button");
             b.textContent = registry.has(id) ? registry.get(id).displayName : id;
             b.classList.toggle("on", c.allowed.has(id));
@@ -3838,7 +4070,7 @@ function renderCreatorPanel() {
             limits.append(b);
         }
         const missing = setupMissing(fixedForChallenge(fixed), [...c.allowed]);
-        note.textContent = missing ?? "Ready! Now prove it can be done.";
+        note.textContent = missing !== null && missing !== void 0 ? missing : "Ready! Now prove it can be done.";
         creatorNext.textContent = "Next: prove it! ▶";
         creatorNext.disabled = Boolean(missing);
         creatorBackBtn.textContent = "✕ Stop making";
@@ -3854,6 +4086,7 @@ function renderCreatorPanel() {
     }
 }
 creatorNext.addEventListener("click", () => {
+    var _a;
     const c = creator;
     if (!c)
         return;
@@ -3869,7 +4102,7 @@ creatorNext.addEventListener("click", () => {
         c.phase = "PROVE";
         delete c.proof;
         c.level = challengeLevel({ id: "draft", name: "Draft", creatorProfileId: "x", creatorName: "x", createdAtMs: 0, roomId: c.roomId, fixed, allowedParts: [...c.allowed], partLimit: c.partLimit, proof: { roomHash: "", buildHash: "", partsUsed: 0, seconds: 0 } }, room);
-        build.replaceAll({ parts: [...(room.staticObjects ?? []), ...fixed], connections: [] });
+        build.replaceAll({ parts: [...((_a = room.staticObjects) !== null && _a !== void 0 ? _a : []), ...fixed], connections: [] });
         selectedId = undefined;
         updateOpeningTray({ ...room, availablePartIds: [...c.allowed] });
         renderCreatorPanel();
@@ -3891,6 +4124,7 @@ creatorNext.addEventListener("click", () => {
     transition("CREATOR");
 });
 creatorBackBtn.addEventListener("click", () => {
+    var _a, _b;
     const c = creator;
     if (!c)
         return;
@@ -3904,8 +4138,8 @@ creatorBackBtn.addEventListener("click", () => {
     }
     // Back to setting up: the proof no longer counts, and the solving parts are cleared away.
     const room = roomLevel(c.roomId);
-    const fixed = (c.fixed ?? []).map(p => ({ ...p, parameters: { ...p.parameters, locked: false } }));
-    build.replaceAll({ parts: [...(room.staticObjects ?? []), ...fixed], connections: [] });
+    const fixed = ((_a = c.fixed) !== null && _a !== void 0 ? _a : []).map(p => ({ ...p, parameters: { ...p.parameters, locked: false } }));
+    build.replaceAll({ parts: [...((_b = room.staticObjects) !== null && _b !== void 0 ? _b : []), ...fixed], connections: [] });
     c.phase = "SET";
     delete c.proof;
     c.fixedIds = new Set();
@@ -3917,7 +4151,7 @@ function creatorSolved(tick) {
     if (!tests.isPaused())
         tests.togglePause();
     const used = addedParts();
-    if (creator?.phase === "PROVE" && creator.fixed) {
+    if ((creator === null || creator === void 0 ? void 0 : creator.phase) === "PROVE" && creator.fixed) {
         if (creator.partLimit && used > creator.partLimit) {
             showMotionResult(false, `Solved — but with ${used} parts. Your limit is ${creator.partLimit}. Can you do it with fewer?`);
             return;
@@ -3941,6 +4175,7 @@ function creatorSolved(tick) {
     sfx(980, .09);
 }
 function startCustomChallenge(id) {
+    var _a, _b;
     const c = appSave.customChallenges.find(x => x.id === id);
     const room = c ? roomLevel(c.roomId) : undefined;
     if (!c || !room)
@@ -3949,15 +4184,16 @@ function startCustomChallenge(id) {
     sandboxBar.classList.add("hidden");
     sandboxPrompt.classList.add("hidden");
     const level = challengeLevel(c, room);
-    build.replaceAll({ parts: level.staticObjects ?? [], connections: [] });
+    build.replaceAll({ parts: (_a = level.staticObjects) !== null && _a !== void 0 ? _a : [], connections: [] });
     selectedId = undefined;
-    customPlay = { challenge: c, level, seeded: new Set((level.staticObjects ?? []).map(p => p.id)) };
+    customPlay = { challenge: c, level, seeded: new Set(((_b = level.staticObjects) !== null && _b !== void 0 ? _b : []).map(p => p.id)) };
     updateOpeningTray({ ...room, availablePartIds: [...c.allowedParts] });
     motionTitle.textContent = c.name;
     motionObjective.textContent = `Get it into the goal${c.partLimit ? ` with up to ${c.partLimit} parts` : ""}. Made by ${c.creatorName} · ✅ ${VALIDATED_LABEL}.`;
     document.querySelector(".motion-badge").textContent = "🛠️ CHALLENGE";
 }
 function render() {
+    var _a, _b;
     maybeCompleteOpeningChallenge();
     maybeCompleteMotionMission();
     updateProgramPanel();
@@ -3970,11 +4206,11 @@ function render() {
         drawPhotoBackground(renderer.ctx, photo.background, decoTime);
     if (freeBuildActive && currentRoom && !photoBackground)
         drawRoomBackdrop(currentRoom);
-    const themed = challenge ?? contract;
-    const gStage = grandRun?.challenge.stages[grandRun.stage]?.baseLevelId;
+    const themed = challenge !== null && challenge !== void 0 ? challenge : contract;
+    const gStage = (_a = grandRun === null || grandRun === void 0 ? void 0 : grandRun.challenge.stages[grandRun.stage]) === null || _a === void 0 ? void 0 : _a.baseLevelId;
     const gBase = gStage === CAMPUS_SWITCH_ROOM ? "contract.generator-test" : gStage;
-    const lookLab = fair ? FAIR_LOOK[fair.id] ?? "motion-yard" : themed ? (themed.baseLevelId.startsWith("chain.") ? CHAIN_WORKSHOP.id : themed.labId) : gBase ? (gBase.startsWith("robot.") ? "robot-lab" : GRAND_HALL.id) : currentLabId;
-    const sceneryId = themed ? themed.baseLevelId : gBase ?? activeLevel?.id;
+    const lookLab = fair ? (_b = FAIR_LOOK[fair.id]) !== null && _b !== void 0 ? _b : "motion-yard" : themed ? (themed.baseLevelId.startsWith("chain.") ? CHAIN_WORKSHOP.id : themed.labId) : gBase ? (gBase.startsWith("robot.") ? "robot-lab" : GRAND_HALL.id) : currentLabId;
+    const sceneryId = themed ? themed.baseLevelId : gBase !== null && gBase !== void 0 ? gBase : activeLevel === null || activeLevel === void 0 ? void 0 : activeLevel.id;
     if (labActive && photoBackground)
         renderer.drawScenery(sceneryId);
     else if (labActive) {
@@ -3989,10 +4225,10 @@ function render() {
         renderer.drawScenery(sceneryId);
     }
     const runtime = replayer ? replayer.runtime : tests.active();
-    const states = runtime?.physics.states();
-    const parts = build.allParts().map(p => p.id === dragStart?.id && dragPreview ? { ...p, position: dragPreview } : p);
+    const states = runtime === null || runtime === void 0 ? void 0 : runtime.physics.states();
+    const parts = build.allParts().map(p => p.id === (dragStart === null || dragStart === void 0 ? void 0 : dragStart.id) && dragPreview ? { ...p, position: dragPreview } : p);
     const shown = beamEndDrag ? parts.map(p => p.id === beamEndDrag.id ? beamFromEnds(p, beamEndDrag.fixed, beamEndDrag.moving) : p) : parts;
-    renderer.drawParts(shown, registry, states, selectedId, runtime?.gears, now() / 1000, runtime?.structures, forceScanner, runtime);
+    renderer.drawParts(shown, registry, states, selectedId, runtime === null || runtime === void 0 ? void 0 : runtime.gears, now() / 1000, runtime === null || runtime === void 0 ? void 0 : runtime.structures, forceScanner, runtime);
     if (!runtime && shown.some(p => circuitBehaviour(registry.get(p.definitionId))))
         renderer.drawCircuitTerminals(analyzeCircuit(shown, id => registry.has(id) ? registry.get(id) : undefined));
     if (runtime && forceScanner && runtime.circuits.layout.elements.length)
@@ -4003,12 +4239,12 @@ function render() {
         renderer.drawWaterEffects(runtime, now() / 1000);
     if (runtime && forceScanner && runtime.flight.hasFlight())
         renderer.drawFlightForces(runtime);
-    if (runtime?.chain.active)
+    if (runtime === null || runtime === void 0 ? void 0 : runtime.chain.active)
         renderer.drawChainEdges(runtime, shown);
     updateChainHud(runtime);
     playNotes(runtime);
     playEventSounds(replayer ? undefined : runtime);
-    if (creator?.phase === "SET" && ++creatorFrame % 20 === 0)
+    if ((creator === null || creator === void 0 ? void 0 : creator.phase) === "SET" && ++creatorFrame % 20 === 0)
         renderCreatorPanel();
     if (currentRoom && !testMode && ++capFrame % 20 === 0)
         updateSandboxCap();
@@ -4051,26 +4287,29 @@ function render() {
     const budgetFlag = labActive && perf.simulationMs > MOTION_PERFORMANCE_BUDGET.targetSimulationMs ? " | ⚠ SIM BUDGET" : "";
     ui.debug.textContent = `FPS ${perf.fps} | frame ${perf.frameMs.toFixed(1)}ms | sim ${perf.simulationMs.toFixed(2)}ms | 60 Hz | parts ${build.allParts().length} | TEST ${t.testPresses} | drags ${t.dragAttempts}${runtime ? ` | tick ${runtime.tick}` : ""}${budgetFlag}`;
 }
+/** The playfield shows in the workshop, and behind the pause screen and the turn-your-tablet picture. */
+function playfieldVisible() { const s = shell.current(); return s === "WORKSHOP" || s === "PAUSE" || s === "ROTATE_DEVICE"; }
 function frame(frameNow) {
+    var _a;
     perf.frame(frameNow);
     perf.measureSimulation(() => clock.consume(frameNow, dt => { tests.step(dt); experimentTick(); if (testMode) {
         const rt = tests.active();
         if (rt) {
-            runMeter?.sample(rt);
-            recorder?.record(rt);
+            runMeter === null || runMeter === void 0 ? void 0 : runMeter.sample(rt);
+            recorder === null || recorder === void 0 ? void 0 : recorder.record(rt);
             if (challengeRun && !challengeRun.done && activeLevel && !tests.isPaused())
                 challengeRun.tick(rt, evaluateLevelOutcome(activeLevel, build, rt).complete);
             if (fairRun && !tests.isPaused())
                 fairRun.sample(rt);
         }
-    } replayer?.step(); }, 8, STEP_BUDGET_MS));
-    if (replayer?.frame())
+    } replayer === null || replayer === void 0 ? void 0 : replayer.step(); }, 8, STEP_BUDGET_MS));
+    if (replayer === null || replayer === void 0 ? void 0 : replayer.frame())
         replayNote = "Fast-forwarding…";
-    if (challengeRun?.done && testMode && !resultShown)
+    if ((challengeRun === null || challengeRun === void 0 ? void 0 : challengeRun.done) && testMode && !resultShown)
         finishChallenge();
-    if ((creator?.phase === "PROVE" || customPlay) && testMode && !resultShown) {
+    if (((creator === null || creator === void 0 ? void 0 : creator.phase) === "PROVE" || customPlay) && testMode && !resultShown) {
         const rt = tests.active();
-        const lvl = creator?.level ?? customPlay?.level;
+        const lvl = (_a = creator === null || creator === void 0 ? void 0 : creator.level) !== null && _a !== void 0 ? _a : customPlay === null || customPlay === void 0 ? void 0 : customPlay.level;
         if (rt && lvl && evaluateLevelOutcome(lvl, build, rt).complete)
             creatorSolved(rt.tick);
     }
@@ -4085,7 +4324,9 @@ function frame(frameNow) {
             }
         }
     }
-    render();
+    // M44: the playfield is only drawn while it can be seen. Behind the menus a cheap tablet keeps its time for the menus.
+    if (playfieldVisible())
+        render();
     requestAnimationFrame(frame);
 }
 const resizeObserver = new ResizeObserver(() => renderer.resize());

@@ -1,16 +1,42 @@
 import { createBuildSnapshot } from "../core/BuildSnapshot.js";
 import { deepClone } from "../core/clone.js";
 export class BuildSystem {
-    parts = [];
-    connections = [];
-    undoStack = [];
-    redoStack = [];
-    revision = 0;
     constructor(seed) {
-        this.parts = [...deepClone(seed?.parts ?? [])];
-        this.connections = [...deepClone(seed?.connections ?? [])];
+        var _a, _b;
+        Object.defineProperty(this, "parts", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "connections", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "undoStack", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "redoStack", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "revision", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        this.parts = [...deepClone((_a = seed === null || seed === void 0 ? void 0 : seed.parts) !== null && _a !== void 0 ? _a : [])];
+        this.connections = [...deepClone((_b = seed === null || seed === void 0 ? void 0 : seed.connections) !== null && _b !== void 0 ? _b : [])];
     }
-    replaceAll(seed) { this.parts = [...deepClone(seed.parts ?? [])]; this.connections = [...deepClone(seed.connections ?? [])]; this.undoStack.length = 0; this.redoStack.length = 0; this.revision += 1; }
+    replaceAll(seed) { var _a, _b; this.parts = [...deepClone((_a = seed.parts) !== null && _a !== void 0 ? _a : [])]; this.connections = [...deepClone((_b = seed.connections) !== null && _b !== void 0 ? _b : [])]; this.undoStack.length = 0; this.redoStack.length = 0; this.revision += 1; }
     allParts() { return this.parts; }
     allConnections() { return this.connections; }
     getPart(id) { return this.parts.find(p => p.id === id); }

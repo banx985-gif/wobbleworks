@@ -18,7 +18,9 @@ export function measureSave(save) {
     }
     return { saveBytes: utf8Length(canonicalJson(save)), inventionCount: save.profiles.reduce((n, p) => n + p.inventions.length + p.shelf.filter(s => s.inventionId === undefined).length, 0) + save.myInventionsCount, ...(largest ? { largestProfile: largest } : {}) };
 }
-export async function storageReport(save, estimate = globalThis.navigator?.storage?.estimate?.bind(navigator.storage)) {
+export async function storageReport(save, estimate) {
+    var _a, _b, _c;
+    if (estimate === void 0) { estimate = (_c = (_b = (_a = globalThis.navigator) === null || _a === void 0 ? void 0 : _a.storage) === null || _b === void 0 ? void 0 : _b.estimate) === null || _c === void 0 ? void 0 : _c.bind(navigator.storage); }
     const measured = measureSave(save);
     try {
         if (!estimate)

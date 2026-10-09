@@ -26,8 +26,9 @@ export const PART_PICTURES = {
     "gear.belt-pulley": W("gear.pulley", undefined, { spin: "MARKS", hub: [0.5, 0.55, 0.42] }),
     "gear.belt-pulley-big": W("gear.pulley", undefined, { spin: "MARKS", hub: [0.5, 0.55, 0.42] }),
     "gear.crank": W("gear.crank", [1.25, 1.25], { pin: [0.18, 0.78], turn: -0.8, spin: "WHOLE" }),
-    "gear.motor": W("power.motor", [0.9, 0.73]),
-    "gear.fan-shaft": W("air.wind-turbine", [1.7, 2.1], { pin: [0.6, 0.37], spin: "MARKS", hub: [0.6, 0.37, 0.56] }),
+    "gear.motor": W("robot.gearbox-motor", [0.95, 0.66]),
+    // The fan on a gear shaft (M44): the smaller desk fan, drawn in FRONT of the gears (CanvasRenderer draw order), its head over the shaft.
+    "gear.fan-shaft": W("air.fan", [0.9, 1.05], { pin: [0.53, 0.31], spin: "MARKS", hub: [0.53, 0.31, 0.3] }),
     "gear.heavy-crate": W("structure.crate"),
     // Builder Bay (beams are laid along their length in StructureRenderer)
     "builder.beam-wood": W("structure.beam-wood-long"), "builder.beam-metal": W("structure.beam-metal-long"),
@@ -40,6 +41,9 @@ export const PART_PICTURES = {
     "circuit.bulb": W("power.bulb", [0.56, 0.86], { pin: [0.5, 0.56] }),
     "circuit.generator": W("power.generator", [0.98, 0.74]),
     "circuit.motor": W("power.motor", [0.9, 0.73]),
+    "circuit.buzzer": W("sound.bell", [0.6, 0.62], { pin: [0.5, 0.55] }),
+    "music.horn": W("sound.horn", [0.74, 0.66], { mirror: true }),
+    "music.timer": W("logic.speed-gauge", [0.5, 0.5], { pin: [0.5, 0.45] }),
     // Magnet Factory
     "magnetic.bar": W("magnet.bar-pivot", [1.1, 0.42], { crop: [0, 0, 1, 0.52], mirror: true }),
     "magnetic.puck": W("magnet.horseshoe", [0.62, 0.62], { mirror: true }),
@@ -54,30 +58,66 @@ export const PART_PICTURES = {
     "plumb.drain": W("water.drain", [0.78, 0.62], { pin: [0.5, 0.28] }),
     "plumb.wheel": W("water.water-wheel", [1.34, 1.34], { spin: "WHOLE" }),
     "plumb.splitter": W("water.pipe-tee", [0.5, 0.4], { pin: [0.5, 0.42] }),
+    "plumb.sprinkler": W("water.sprinkler", [0.86, 0.76], { pin: [0.5, 0.62] }),
+    "plumb.rotor-nozzle": W("water.sprinkler", [0.86, 0.76], { pin: [0.5, 0.62], spin: "MARKS", hub: [0.5, 0.33, 0.22] }),
     // Flight Hangar
     "flight.fan": W("air.fan-motor", [0.82, 0.84], { spin: "MARKS", hub: [0.73, 0.32, 0.26] }),
     "flight.balloon": W("air.balloon", [0.52, 0.64], { pin: [0.5, 0.48] }),
     "flight.cargo": W("structure.crate", [0.54, 0.54]),
+    // Clip-on flight parts, drawn where they sit on the glider (the wing pictures also tilt with the wing's angle)
+    "flight.wing-small": W("air.wing-small", [0.44, 0.22]), "flight.wing-large": W("air.wing-large", [0.64, 0.4]), "flight.wing-steep": W("air.wing-large", [0.64, 0.4]),
+    "flight.tail": W("air.tail-fin", [0.46, 0.46], { pin: [0.55, 0.7] }),
+    "flight.propeller": W("air.propeller", [0.5, 0.5], { spin: "WHOLE" }),
+    "flight.power-pack": W("power.battery-small", [0.4, 0.2], { turn: Math.PI / 2 }),
+    "flight.parachute": W("air.parachute", [1.3, 1.4], { pin: [0.5, 0.4] }),
     // Robot Lab (top-down arena)
     "robot.box": W("structure.crate", [0.62, 0.62]), "robot.button": W("power.push-button", [0.76, 0.66]),
+    "robot.lamp": W("logic.light", [0.56, 0.56]),
     // Space Centre
-    "space.wheel": W("motion.wheel-small", [0.5, 0.5], { spin: "WHOLE" }), "space.grip-wheel": W("motion.wheel-large", [0.54, 0.54], { spin: "WHOLE" }),
-    "space.drive-motor": W("power.motor", [0.5, 0.4]), "space.solar-panel": W("power.solar-panel", [0.9, 0.9]),
+    "space.wheel": W("motion.wheel-small", [0.5, 0.5], { spin: "WHOLE" }), "space.grip-wheel": W("robot.wheel-big", [0.56, 0.56], { spin: "WHOLE" }),
+    "space.drive-motor": W("robot.drive-motor", [0.5, 0.44]), "space.solar-panel": W("power.solar-panel", [0.9, 0.9]),
+    "space.capsule": W("space.capsule", [0.56, 0.6], { pin: [0.5, 0.56] }), "space.cargo-pod": W("space.orb-pod", [0.5, 0.5]),
     "space.landing-pad": W("level.landing-pad", [2.3, 1.56], { pin: [0.5, 0.53] }),
     // Chain Reaction, Free Build objects, creatures and the Prototype Lab
     "chain.seesaw": W("motion.seesaw", [2.1, 1.4], { pin: [0.56, 0.6] }),
+    "chain.bell": W("sound.bell-frame", [0.68, 0.72], { pin: [0.5, 0.42] }),
+    "chain.cannon": W("launch.cannon", [0.84, 0.88], { pin: [0.5, 0.62] }),
     "sandbox.balloon": W("air.balloon", [0.52, 0.66], { pin: [0.5, 0.45] }),
     "sandbox.moving-platform": W("structure.platform-yellow", [2.0, 0.66], { pin: [0.5, 0.2], stretch: true }),
     "creature.claw": W("robot.claw", [0.5, 0.5], { turn: -Math.PI / 2 }),
+    "creature.motor": W("robot.gearbox-motor", [0.46, 0.32]),
+    "music.drum": W("sound.drum", [0.62, 0.66], { pin: [0.5, 0.5] }), "music.chime": W("sound.chimes", [0.6, 0.9], { pin: [0.5, 0.42] }),
+    "music.tone-block": W("sound.woodblock", [0.64, 0.56]),
+    "scrap.glass-vase": W("toy.glass-vase", [0.5, 0.72]),
     "proto.super-spring": W("motion.spring-heavy", [0.8, 0.42], { pin: [0.5, 0.38], stretch: true }),
-    "proto.worm-gear": W("gear.worm", [0.62, 0.32])
+    "proto.worm-gear": W("gear.worm", [0.62, 0.32]),
+    "proto.bubble-blower": W("toy.bubble-blower", [0.66, 0.7], { mirror: true })
+};
+/** A part shown a second way: the Space Centre solar panel standing on its own (not clipped to a rover) uses the panel-on-a-stand picture. */
+export const STANDING_PICTURES = {
+    "space.solar-panel": W("power.solar-stand", [0.9, 0.92], { pin: [0.5, 0.4] })
 };
 /**
  * Tray pictures that differ from the playfield: bendy parts drawn in code on the playfield on purpose (rope, pipes, conveyor
  * belt), and the brace, which is laid along its length as a bar but is easiest to recognise in the tray as a triangle.
  */
 export const TRAY_ONLY_PICTURES = {
-    "builder.brace": "structure.brace-triangle", "builder.rope": "structure.rope", "plumb.pipe": "water.pipe-straight", "plumb.pipe-narrow": "water.pipe-straight", "motion.conveyor": "motion.conveyor"
+    "builder.brace": "structure.brace-triangle", "builder.rope": "structure.rope", "plumb.pipe": "water.pipe-straight", "plumb.pipe-narrow": "water.pipe-straight", "motion.conveyor": "motion.conveyor",
+    // M44: a picture that suits the tray button but not the playfield part (a group of things, or a whole machine for one piece of it)
+    "motion.goal-zone": "target.bullseye", "motion.marble": "toy.marbles", "scrap.wood-block": "toy.blocks", "flight.nose-weight": "toy.weights",
+    "flight.glider": "air.plane", "space.booster": "air.rocket", "chain.confetti": "sound.party-horn", "chain.counter": "logic.screen"
+};
+/** Free Build "Drop something in" buttons (M44): the group pictures (several toys in one) belong here, on buttons only. */
+export const SPAWN_PICTURES = {
+    "motion.ball": "toy.balls", "motion.marble": "toy.marbles", "gear.heavy-crate": "toy.crates", "sandbox.egg": "toy.eggs", "silly.duck": "toy.ducks",
+    "sandbox.toy-car": "toy.cars", "sandbox.balloon": "toy.balloons", "sandbox.weight": "toy.weights", "sandbox.bowling-ball": "toy.bowling-balls",
+    "sandbox.feather": "toy.feathers", "scrap.wood-block": "toy.blocks", "motion.goal-zone": "target.bullseye", "chain.bell": "sound.bell-frame",
+    "circuit.switch": "power.button-lever", "scrap.glass-vase": "toy.glass-vase", "sandbox.toy-animal": "toy.bunny", "silly.bolt": "char.bolt.wave",
+    "plumb.tank": "water.tank-large", "flight.fan": "air.fan", "motion.ramp": "motion.ramp"
+};
+/** Robot program buttons (M44), by the button's label. */
+export const PROGRAM_PICTURES = {
+    "Repeat": "logic.loop", "Repeat until": "logic.colour-sensor", "If": "logic.decision", "Wait": "logic.speed-gauge", "Grab": "robot.arm-claw", "Press": "logic.big-button", "start": "logic.start"
 };
 /**
  * Tray parts with no part picture, and why. "ON PURPOSE" ones stay code-drawn; "ART NEEDED" ones are waiting for a
@@ -90,29 +130,23 @@ export const CODE_DRAWN_ON_PURPOSE = {
     "builder.rope": "ON PURPOSE: a rope sags and goes tight as it is loaded (tray shows the rope picture)",
     "plumb.pipe": "ON PURPOSE: a pipe is any length and shows water flowing (tray shows the pipe picture)",
     "plumb.pipe-narrow": "ON PURPOSE: a pipe is any length and shows water flowing (tray shows the pipe picture)",
-    "motion.marble": "ART NEEDED: marble", "motion.barrier": "ART NEEDED: barrier wall", "circuit.buzzer": "ART NEEDED: buzzer",
+    // Waiting for a picture of their own (docs/ART_NEEDED.md). Those marked "tray" already show a tray picture (TRAY_ONLY_PICTURES).
+    "motion.marble": "ART NEEDED: marble", "motion.barrier": "ART NEEDED: barrier wall",
     "magnetic.floater": "ART NEEDED: ring magnet", "scrap.iron-block": "ART NEEDED: iron block", "scrap.wood-block": "ART NEEDED: wooden block",
-    "plumb.sprinkler": "ART NEEDED: sprinkler",
-    "flight.glider": "ART NEEDED: glider body", "flight.wing-large": "ART NEEDED: big wing", "flight.wing-small": "ART NEEDED: small wing",
-    "flight.wing-steep": "ART NEEDED: steep wing", "flight.tail": "ART NEEDED: tail", "flight.propeller": "ART NEEDED: propeller",
-    "flight.power-pack": "ART NEEDED: battery pack", "flight.parachute": "ART NEEDED: parachute", "flight.nose-weight": "ART NEEDED: nose weight",
+    "flight.glider": "ART NEEDED: glider body", "flight.nose-weight": "ART NEEDED: nose weight",
     "space.booster": "ART NEEDED: booster", "space.fins": "ART NEEDED: fins", "space.nose-cone": "ART NEEDED: nose cone",
-    "space.landing-legs": "ART NEEDED: landing legs", "space.capsule": "ART NEEDED: capsule", "space.cargo-pod": "ART NEEDED: cargo pod",
+    "space.landing-legs": "ART NEEDED: landing legs",
     "magnetic.reed-switch": "ART NEEDED: magnet switch",
-    "chain.domino": "ART NEEDED: domino", "chain.bell": "ART NEEDED: bell", "chain.trapdoor": "ART NEEDED: trapdoor",
-    "chain.cannon": "ART NEEDED: duck cannon", "chain.confetti": "ART NEEDED: confetti ring", "chain.counter": "ART NEEDED: chain counter",
-    "proto.bubble-blower": "ART NEEDED: bubble blower",
+    "chain.domino": "ART NEEDED: domino", "chain.trapdoor": "ART NEEDED: trapdoor",
+    "chain.confetti": "ART NEEDED: confetti ring", "chain.counter": "ART NEEDED: chain counter",
     "creature.body": "ART NEEDED: creature body", "creature.leg": "ART NEEDED: leg", "creature.big-leg": "ART NEEDED: big leg",
     "creature.spring-leg": "ART NEEDED: spring leg", "creature.wing": "ART NEEDED: flapping wing", "creature.segment": "ART NEEDED: body segment",
-    "creature.motor": "ART NEEDED: creature motor",
-    "music.drum": "ART NEEDED: drum", "music.chime": "ART NEEDED: chime", "music.tone-block": "ART NEEDED: tone block",
-    "music.horn": "ART NEEDED: electric horn", "music.beater": "ART NEEDED: beater", "music.timer": "ART NEEDED: timer switch",
-    "plumb.rotor-nozzle": "ART NEEDED: spinning sprayer"
+    "music.beater": "ART NEEDED: beater"
 };
 /** The picture a part uses on the playfield, if it has one. */
-export function partPictureArt(partId) { return PART_PICTURES[partId]?.art; }
+export function partPictureArt(partId) { var _a; return (_a = PART_PICTURES[partId]) === null || _a === void 0 ? void 0 : _a.art; }
 /** The picture a part's tray button shows (its playfield picture, or a tray-only one for bendy parts). */
-export function trayPictureArt(partId) { return TRAY_ONLY_PICTURES[partId] ?? PART_PICTURES[partId]?.art; }
+export function trayPictureArt(partId) { var _a, _b; return (_a = TRAY_ONLY_PICTURES[partId]) !== null && _a !== void 0 ? _a : (_b = PART_PICTURES[partId]) === null || _b === void 0 ? void 0 : _b.art; }
 /** Picture aspect ratios (width / height) of the part art, so fitting can be checked without loading pictures. */
 export const PICTURE_ASPECT = {
     "air.balloon": 0.81, "air.fan-motor": 0.97, "air.wind-turbine": 0.81, "gear.crank": 1.1, "gear.large": 0.98, "gear.medium": 1.0, "gear.pulley": 0.85,
@@ -122,18 +156,26 @@ export const PICTURE_ASPECT = {
     "power.generator": 1.32, "power.meter": 0.46, "power.motor": 1.24, "power.push-button": 1.18, "power.solar-panel": 0.98, "robot.claw": 0.75,
     "structure.crate": 1.03, "structure.platform": 1.51, "structure.platform-yellow": 1.43, "water.drain": 1.25, "water.nozzle-launcher": 0.99,
     "water.pipe-tee": 1.27, "water.pipe-valve": 1.11, "water.pump": 0.91, "water.tank-large": 0.77, "water.tap-nozzle": 1.28, "water.water-wheel": 0.99,
-    "duck.plain": 0.93, "structure.beam-wood-long": 1.71, "level.landing-pad": 1.48
+    "duck.plain": 0.93, "structure.beam-wood-long": 1.71, "level.landing-pad": 1.48,
+    // M44 (sheets 81–90)
+    "air.wing-small": 2.01, "air.wing-large": 1.58, "air.tail-fin": 0.95, "air.propeller": 0.97, "air.parachute": 0.93, "water.sprinkler": 1.12,
+    "sound.bell": 0.71, "sound.horn": 1.08, "logic.speed-gauge": 0.96, "logic.light": 0.98, "robot.wheel-big": 0.95, "robot.drive-motor": 1.15,
+    "space.capsule": 0.64, "space.orb-pod": 0.91, "sound.bell-frame": 0.94, "launch.cannon": 0.95, "robot.gearbox-motor": 1.45, "sound.drum": 0.86,
+    "sound.chimes": 0.68, "sound.woodblock": 1.07, "toy.glass-vase": 0.73, "toy.bubble-blower": 0.93, "power.solar-stand": 0.97, "air.fan": 0.85
 };
 /**
  * Where a boxed picture is drawn, in pixels, in the part's frame (before `turn`/`mirror`). It keeps the picture's shape and is
  * as big as fits in the box; the pin point lands on the part's position.
  */
-export function pictureRect(pic, fullAspect = PICTURE_ASPECT[pic.art] ?? 1, box = pic.box ?? [1, 1]) {
+export function pictureRect(pic, fullAspect, box) {
+    var _a, _b, _c, _d;
+    if (fullAspect === void 0) { fullAspect = (_a = PICTURE_ASPECT[pic.art]) !== null && _a !== void 0 ? _a : 1; }
+    if (box === void 0) { box = (_b = pic.box) !== null && _b !== void 0 ? _b : [1, 1]; }
     const aspect = pic.crop ? fullAspect * (pic.crop[2] - pic.crop[0]) / (pic.crop[3] - pic.crop[1]) : fullAspect;
-    const sideways = Math.abs(Math.sin(pic.turn ?? 0)) > 0.7;
+    const sideways = Math.abs(Math.sin((_c = pic.turn) !== null && _c !== void 0 ? _c : 0)) > 0.7;
     const bw = (sideways ? box[1] : box[0]) * 100, bh = (sideways ? box[0] : box[1]) * 100;
     const width = pic.stretch ? bw : Math.min(bw, bh * aspect), height = pic.stretch ? bh : width / aspect;
-    const [px, py] = pic.pin ?? [0.5, 0.5];
+    const [px, py] = (_d = pic.pin) !== null && _d !== void 0 ? _d : [0.5, 0.5];
     return { x: -px * width, y: -py * height, width, height };
 }
 /**
@@ -141,13 +183,14 @@ export function pictureRect(pic, fullAspect = PICTURE_ASPECT[pic.art] ?? 1, box 
  * part has turned. Returns false when the part has no boxed picture or it hasn't loaded, so the caller draws its code shape.
  */
 export function drawPartPicture(c, art, partId, opts = {}) {
-    const pic = PART_PICTURES[partId];
-    if (!pic?.box && !opts.box)
+    var _a, _b, _c, _d;
+    const pic = (_a = opts.picture) !== null && _a !== void 0 ? _a : PART_PICTURES[partId];
+    if (!(pic === null || pic === void 0 ? void 0 : pic.box) && !opts.box)
         return false;
-    const img = art?.(pic.art);
+    const img = art === null || art === void 0 ? void 0 : art(pic.art);
     if (!img)
         return false;
-    const r = pictureRect(pic, PICTURE_ASPECT[pic.art] ?? imageAspect(img), opts.box ?? pic.box);
+    const r = pictureRect(pic, (_b = PICTURE_ASPECT[pic.art]) !== null && _b !== void 0 ? _b : imageAspect(img), (_c = opts.box) !== null && _c !== void 0 ? _c : pic.box);
     c.save();
     if (pic.spin === "WHOLE" && opts.spinAngle)
         c.rotate(opts.spinAngle);
@@ -168,7 +211,7 @@ export function drawPartPicture(c, art, partId, opts = {}) {
         c.drawImage(img, r.x, r.y, r.width, r.height);
     c.restore();
     if (pic.spin === "MARKS" && opts.spinning && pic.hub)
-        drawSpinMarks(c, pic, r, opts.spinAngle ?? 0);
+        drawSpinMarks(c, pic, r, (_d = opts.spinAngle) !== null && _d !== void 0 ? _d : 0);
     return true;
 }
 /** Curved motion marks round a painted hub, turning with the part (the blades are painted into their stand). */

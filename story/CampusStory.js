@@ -51,11 +51,12 @@ function scene(id, kind, labId, kicker, title, speaker, lines, art) {
     return { id, kind, labId, kicker, title, speaker, lines, art, seconds: sceneSeconds(lines), skippable: true };
 }
 export function labStoryScenes(labId) {
+    var _a;
     const s = LAB_STORY[labId];
     const lab = MAIN_LABS.find(l => l.id === labId);
     if (!s || !lab)
         throw new Error(`No story for ${labId}`);
-    const art = LAB_ICON_ART[labId] ?? "ui.icon.tools";
+    const art = (_a = LAB_ICON_ART[labId]) !== null && _a !== void 0 ? _a : "ui.icon.tools";
     return {
         entry: scene(`entry.${labId}`, "ENTRY", labId, "NEW LAB", lab.title, "Bolt", s.entry, art),
         recording: scene(`recording.${labId}`, "RECORDING", labId, "OLD INVENTOR RECORDING", `${FOUNDER}'s ${lab.title} notes`, FOUNDER, s.recording, "ui.icon.voice-bubble"),
@@ -82,8 +83,8 @@ export const PROTOTYPE_ENTRY = scene(`entry.${SECRET}`, "ENTRY", SECRET, "A SECR
 /** Bolt's last missing memory: found at the end of the Prototype Lab's bonus chain. */
 export const BOLT_FINAL_MEMORY = scene("memory.final", "MEMORY", SECRET, "BOLT'S LAST MEMORY", "The memory chip", "Bolt", ["I remember! Professor Wobble built me right here, out of spare prototype parts.", "She said every wobbly invention is just a good one that isn't finished yet.", "She'd be so proud of you, inventor. I know I am."], "hub.prop.bolt-charger");
 export const FINAL_PROTOTYPE_LEVEL = "prototype.bolts-missing-memory";
-function seen(save) { return new Set(activeProfile(save)?.restorationSeen ?? []); }
-function megaDone(save, labId) { const lab = MAIN_LABS.find(l => l.id === labId); const p = activeProfile(save); const mega = lab?.missions.find(m => m.slot === "MEGA"); return Boolean(p && mega && p.levels[mega.id]?.completed); }
+function seen(save) { var _a, _b; return new Set((_b = (_a = activeProfile(save)) === null || _a === void 0 ? void 0 : _a.restorationSeen) !== null && _b !== void 0 ? _b : []); }
+function megaDone(save, labId) { var _a; const lab = MAIN_LABS.find(l => l.id === labId); const p = activeProfile(save); const mega = lab === null || lab === void 0 ? void 0 : lab.missions.find(m => m.slot === "MEGA"); return Boolean(p && mega && ((_a = p.levels[mega.id]) === null || _a === void 0 ? void 0 : _a.completed)); }
 /** Every story piece this inventor has found so far, in campaign order (derived from progress). */
 export function collectedStory(save) {
     const cleared = new Set(clearedLabIds(save));
@@ -114,6 +115,7 @@ export function pendingEntryScene(save, labId) {
 }
 /** Story moments earned but not watched yet (recordings, then blueprint + memory per lab, then the finale clue). */
 export function pendingStoryScenes(save) {
+    var _a, _b;
     if (!activeProfile(save))
         return [];
     const c = collectedStory(save);
@@ -129,7 +131,7 @@ export function pendingStoryScenes(save) {
         for (const s of ENDING_SCENES)
             if (!done.has(`story.${s.id}`))
                 out.push(s);
-    if (activeProfile(save)?.levels[FINAL_PROTOTYPE_LEVEL]?.completed && !done.has(`story.${BOLT_FINAL_MEMORY.id}`))
+    if (((_b = (_a = activeProfile(save)) === null || _a === void 0 ? void 0 : _a.levels[FINAL_PROTOTYPE_LEVEL]) === null || _b === void 0 ? void 0 : _b.completed) && !done.has(`story.${BOLT_FINAL_MEMORY.id}`))
         out.push(BOLT_FINAL_MEMORY);
     return out;
 }

@@ -19,14 +19,33 @@ import { creatureLayer, drawCreatureOrMusicPart, isCreatureOrMusicPart } from ".
 import { drawPrototypePart, isPrototypePart } from "./PrototypeRenderer.js";
 import { drawDoorPanel, drawGearGarageBackdrop, drawGearLinks, drawGearPart, drawRotationView, gearBehaviour, gearOutput } from "./GearRenderer.js";
 export class CanvasRenderer {
-    canvas;
-    ctx;
-    viewport = new Viewport();
-    art = () => undefined;
     /** Hand the renderer the loaded pictures. Until then (or for a missing picture) parts are drawn in code. */
     setArt(lookup) { this.art = lookup; }
     constructor(canvas) {
-        this.canvas = canvas;
+        Object.defineProperty(this, "canvas", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: canvas
+        });
+        Object.defineProperty(this, "ctx", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "viewport", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Viewport()
+        });
+        Object.defineProperty(this, "art", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: () => undefined
+        });
         const ctx = canvas.getContext("2d");
         if (!ctx)
             throw new Error("Canvas 2D unavailable");
@@ -124,9 +143,10 @@ export class CanvasRenderer {
         }
     }
     drawParts(parts, registry, runtimeStates, selectedId, gears, time = 0, structures, showStress = false, runtime) {
-        const states = new Map(runtimeStates?.map(s => [s.id, s]) ?? []);
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+        const states = new Map((_a = runtimeStates === null || runtimeStates === void 0 ? void 0 : runtimeStates.map(s => [s.id, s])) !== null && _a !== void 0 ? _a : []);
         // Draw order only: fixed things first (zones, ramps, pads), then shafts, then gears, then moving things in front.
-        const layer = (p) => { const def = registry.get(p.definitionId); if (isPrototypePart(def))
+        const layer = (p) => { var _a; const def = registry.get(p.definitionId); if (isPrototypePart(def))
             return 4; if (isCreatureOrMusicPart(def))
             return creatureLayer(def); if (isSandboxPart(def))
             return sandboxLayer(def); if (isExperimentPart(def))
@@ -134,13 +154,13 @@ export class CanvasRenderer {
             return chainLayer(def); if (isSpacePart(def))
             return spaceLayer(def); if (isRobotPart(def)) {
             const t = def.behaviours.find(b => b.kind === "ARENA");
-            return t?.kind === "ARENA" ? (t.thing === "TILE" || t.thing === "GOAL" || t.thing === "DROP" || t.thing === "PAD" ? -1 : t.thing === "BOX" || t.thing === "SWEEPER" ? 3 : 0) : 3.5;
+            return (t === null || t === void 0 ? void 0 : t.kind) === "ARENA" ? (t.thing === "TILE" || t.thing === "GOAL" || t.thing === "DROP" || t.thing === "PAD" ? -1 : t.thing === "BOX" || t.thing === "SWEEPER" ? 3 : 0) : 3.5;
         } if (isFlightPart(def))
             return def.id === "flight.cliff" ? -1 : def.behaviours.some(b => b.kind === "AERO" && (b.part === "PARACHUTE" || b.part === "BALLOON" || b.part === "TAIL")) ? 2.5 : def.behaviours.some(b => b.kind === "AERO") ? 3.5 : def.behaviours.some(b => b.kind === "CRAFT") ? 3 : 0.5; if (isWaterPart(def))
-            return def.behaviours.some(b => b.kind === "PIPE") ? 0.7 : def.behaviours.some(b => b.kind === "WATER_TARGET") ? -1 : def.behaviours.some(b => b.kind === "GEAR") ? 1 : 0.5; if (isCircuitPart(def))
+            return def.id === "plumb.rotor-nozzle" ? 2.5 : def.behaviours.some(b => b.kind === "PIPE") ? 0.7 : def.behaviours.some(b => b.kind === "WATER_TARGET") ? -1 : def.behaviours.some(b => b.kind === "GEAR") ? 1 : 0.5; if (isCircuitPart(def))
             return def.behaviours.some(b => b.kind === "WIRE") ? 2.5 : def.behaviours.some(b => b.kind === "GEAR") ? 1 : 0.5; if (structureKind(def))
-            return [-2, -1, 1.5, 1.6, 4][structureLayer(def)] ?? 4; const g = gearBehaviour(def); if (g)
-            return g.role === "SHAFT" ? 1 : 2; const r = def.behaviours.find(b => b.kind === "RIGID_BODY"); return !r || (r.kind === "RIGID_BODY" && r.bodyType === "STATIC") ? 0 : 3; };
+            return (_a = [-2, -1, 1.5, 1.6, 4][structureLayer(def)]) !== null && _a !== void 0 ? _a : 4; const g = gearBehaviour(def); if (g)
+            return def.id === "gear.fan-shaft" ? 2.5 : g.role === "SHAFT" ? 1 : 2; const r = def.behaviours.find(b => b.kind === "RIGID_BODY"); return !r || (r.kind === "RIGID_BODY" && r.bodyType === "STATIC") ? 0 : 3; };
         const LAYERS = [-2, -1, 0, 0.5, 0.7, 1, 1.5, 1.6, 2, 2.5, 3, 3.5, 4];
         const rank = new Map(LAYERS.map((k, i) => [k, i]));
         const ordered = parts.map((p, i) => ({ p, i, r: rank.get(layer(p)) })).filter(x => x.r !== undefined).sort((a, b) => a.r - b.r || a.i - b.i).map(x => x.p);
@@ -148,20 +168,20 @@ export class CanvasRenderer {
         const magnetCtx = { ...(runtime ? { magnets: runtime.magnets } : {}), states, art: this.art, time, scanner: showStress };
         const robotCtx = { ...(runtime ? { robots: runtime.robots } : {}), time, scanner: showStress, art: this.art };
         // Space Centre: clip-on parts ride on their rocket or rover; in BUILD a rocket on a tilted pad leans with its parts.
-        const tilts = runtime ? undefined : (parts.some(p => p.definitionId === "space.launch-pad" && Number(p.parameters.tilt ?? 0) !== 0) ? tiltedPoses(parts, id => registry.has(id) ? registry.get(id) : undefined) : undefined);
-        const spacePose = (id) => runtime ? runtime.space.attachedPose(id, runtime.physics) : tilts?.get(id);
-        const chainCtx = { ...(runtime?.chain.active ? { chain: runtime.chain } : {}), time, art: this.art };
+        const tilts = runtime ? undefined : (parts.some(p => { var _a; return p.definitionId === "space.launch-pad" && Number((_a = p.parameters.tilt) !== null && _a !== void 0 ? _a : 0) !== 0; }) ? tiltedPoses(parts, id => registry.has(id) ? registry.get(id) : undefined) : undefined);
+        const spacePose = (id) => runtime ? runtime.space.attachedPose(id, runtime.physics) : tilts === null || tilts === void 0 ? void 0 : tilts.get(id);
+        const chainCtx = { ...((runtime === null || runtime === void 0 ? void 0 : runtime.chain.active) ? { chain: runtime.chain } : {}), time, art: this.art };
         const spaceCtx = { ...(runtime ? { space: runtime.space, robots: runtime.robots } : {}), states, time, scanner: showStress, pose: spacePose, art: this.art };
-        const flightCtx = { ...(runtime ? { flight: runtime.flight } : {}), states, art: this.art, time, scanner: showStress, pose: (id) => runtime?.flight.attachedPose(id, runtime.physics) };
-        const waterCtx = { ...(runtime ? { water: runtime.water } : {}), art: this.art, time, scanner: showStress, gearAngle: (id) => gears?.state(id)?.angle ?? 0 };
+        const flightCtx = { ...(runtime ? { flight: runtime.flight } : {}), states, art: this.art, time, scanner: showStress, pose: (id) => runtime === null || runtime === void 0 ? void 0 : runtime.flight.attachedPose(id, runtime.physics) };
+        const waterCtx = { ...(runtime ? { water: runtime.water } : {}), art: this.art, time, scanner: showStress, gearAngle: (id) => { var _a, _b; return (_b = (_a = gears === null || gears === void 0 ? void 0 : gears.state(id)) === null || _a === void 0 ? void 0 : _a.angle) !== null && _b !== void 0 ? _b : 0; } };
         const powerCtx = { ...(runtime ? { circuits: runtime.circuits } : {}), art: this.art, time, scanner: showStress };
         const gearCtx = { ...(gears ? { gears } : {}), states, parts, registry: (id) => registry.get(id), time, art: this.art };
         for (const placed of ordered) {
             const def = registry.get(placed.definitionId);
             const rigid = def.behaviours.find(b => b.kind === "RIGID_BODY");
-            if (isPrototypePart(def) && drawPrototypePart(this.ctx, placed, def, selectedId === placed.id, { states, time, ...(runtime ? { runtime } : {}), gearAngle: (id) => gears?.state(id)?.angle ?? 0, art: this.art }))
+            if (isPrototypePart(def) && drawPrototypePart(this.ctx, placed, def, selectedId === placed.id, { states, time, ...(runtime ? { runtime } : {}), gearAngle: (id) => { var _a, _b; return (_b = (_a = gears === null || gears === void 0 ? void 0 : gears.state(id)) === null || _a === void 0 ? void 0 : _a.angle) !== null && _b !== void 0 ? _b : 0; }, art: this.art }))
                 continue;
-            if (isCreatureOrMusicPart(def) && drawCreatureOrMusicPart(this.ctx, placed, def, selectedId === placed.id, { states, ...(runtime ? { runtime } : {}), time, gearAngle: (id) => gears?.state(id)?.angle ?? 0, art: this.art }))
+            if (isCreatureOrMusicPart(def) && drawCreatureOrMusicPart(this.ctx, placed, def, selectedId === placed.id, { states, ...(runtime ? { runtime } : {}), time, gearAngle: (id) => { var _a, _b; return (_b = (_a = gears === null || gears === void 0 ? void 0 : gears.state(id)) === null || _a === void 0 ? void 0 : _a.angle) !== null && _b !== void 0 ? _b : 0; }, art: this.art }))
                 continue;
             if (isSandboxPart(def) && drawSandboxPart(this.ctx, placed, def, selectedId === placed.id, { states, ...(runtime ? { runtime } : {}), time, art: this.art }))
                 continue;
@@ -172,7 +192,7 @@ export class CanvasRenderer {
             if (isSpacePart(def) && drawSpacePart(this.ctx, placed, def, selectedId === placed.id, spaceCtx))
                 continue;
             // A Power Lab battery or a Flight Hangar parachute clipped onto a rover or rocket is drawn where it is now.
-            const moved = (runtime?.space.hasSpace() ? spacePose(placed.id) : undefined) ?? (runtime?.creatures.active ? runtime.creatures.clipPose(placed.id, runtime.physics) : undefined);
+            const moved = (_b = ((runtime === null || runtime === void 0 ? void 0 : runtime.space.hasSpace()) ? spacePose(placed.id) : undefined)) !== null && _b !== void 0 ? _b : ((runtime === null || runtime === void 0 ? void 0 : runtime.creatures.active) ? runtime.creatures.clipPose(placed.id, runtime.physics) : undefined);
             const part = moved ? { ...placed, position: { x: moved.x, y: moved.y }, rotation: moved.angle } : placed;
             if (drawStructurePart(this.ctx, part, def, selectedId === part.id, structCtx))
                 continue;
@@ -187,8 +207,8 @@ export class CanvasRenderer {
             if (isCircuitPart(def) && drawCircuitPart(this.ctx, part, def, selectedId === part.id, powerCtx))
                 continue;
             if (gearBehaviour(def)) {
-                if (gearOutput(def)?.output === "DOOR")
-                    drawDoorPanel(this.ctx, part, gears?.state(part.id)?.turns ?? 0);
+                if (((_c = gearOutput(def)) === null || _c === void 0 ? void 0 : _c.output) === "DOOR")
+                    drawDoorPanel(this.ctx, part, (_e = (_d = gears === null || gears === void 0 ? void 0 : gears.state(part.id)) === null || _d === void 0 ? void 0 : _d.turns) !== null && _e !== void 0 ? _e : 0);
                 drawGearPart(this.ctx, part, def, selectedId === part.id, gearCtx);
                 if (part.parameters.locked === true) {
                     const c = this.ctx;
@@ -206,14 +226,14 @@ export class CanvasRenderer {
                 continue;
             }
             const state = states.get(part.id);
-            const x = (state?.x ?? part.position.x) * 100;
-            const y = (state?.y ?? part.position.y) * 100;
-            const angle = state?.angle ?? part.rotation;
-            const width = rigid?.kind === "RIGID_BODY" ? rigid.width * 100 : 80;
-            const height = rigid?.kind === "RIGID_BODY" ? rigid.height * 100 : 60;
+            const x = ((_f = state === null || state === void 0 ? void 0 : state.x) !== null && _f !== void 0 ? _f : part.position.x) * 100;
+            const y = ((_g = state === null || state === void 0 ? void 0 : state.y) !== null && _g !== void 0 ? _g : part.position.y) * 100;
+            const angle = (_h = state === null || state === void 0 ? void 0 : state.angle) !== null && _h !== void 0 ? _h : part.rotation;
+            const width = (rigid === null || rigid === void 0 ? void 0 : rigid.kind) === "RIGID_BODY" ? rigid.width * 100 : 80;
+            const height = (rigid === null || rigid === void 0 ? void 0 : rigid.kind) === "RIGID_BODY" ? rigid.height * 100 : 60;
             const selected = selectedId === part.id;
             const c = this.ctx;
-            if (part.definitionId === "motion.goal-zone" && this.drawGoalZoneArt(x, y, width, part.tags ?? []))
+            if (part.definitionId === "motion.goal-zone" && this.drawGoalZoneArt(x, y, width, (_j = part.tags) !== null && _j !== void 0 ? _j : []))
                 continue;
             if (part.definitionId === "motion.ramp" && this.drawRampArt(x, y, width, angle, selected))
                 continue;
@@ -226,7 +246,7 @@ export class CanvasRenderer {
             c.lineCap = "round";
             if (!this.drawPartArt(part.definitionId, width, height, selected) && !drawPartPicture(c, this.art, part.definitionId, { selected }) && !this.drawMotionPart(part.definitionId, width, height, selected)) {
                 c.fillStyle = selected ? "#ffd14a" : this.categoryColor(def.category);
-                if (rigid?.kind === "RIGID_BODY" && rigid.shape === "CIRCLE") {
+                if ((rigid === null || rigid === void 0 ? void 0 : rigid.kind) === "RIGID_BODY" && rigid.shape === "CIRCLE") {
                     c.beginPath();
                     c.arc(0, 0, width / 2, 0, Math.PI * 2);
                     c.fill();
@@ -255,13 +275,14 @@ export class CanvasRenderer {
     }
     /** A Motion conveyor belt; its stripes move with whatever drum drives it. */
     drawConveyor(part, def, gears) {
+        var _a, _b, _c, _d;
         const r = def.behaviours.find(b => b.kind === "RIGID_BODY");
-        if (r?.kind !== "RIGID_BODY")
+        if ((r === null || r === void 0 ? void 0 : r.kind) !== "RIGID_BODY")
             return;
         const c = this.ctx;
         const w = r.width * 100, h = r.height * 100, x = part.position.x * 100, y = part.position.y * 100;
-        const drum = gears?.nodes.find(n => n.parameters.drives === part.id);
-        const travel = drum && gears ? (gears.state(drum.id)?.angle ?? 0) * (drum.output?.drum ?? 0.35) * 100 : 0;
+        const drum = gears === null || gears === void 0 ? void 0 : gears.nodes.find(n => n.parameters.drives === part.id);
+        const travel = drum && gears ? ((_b = (_a = gears.state(drum.id)) === null || _a === void 0 ? void 0 : _a.angle) !== null && _b !== void 0 ? _b : 0) * ((_d = (_c = drum.output) === null || _c === void 0 ? void 0 : _c.drum) !== null && _d !== void 0 ? _d : 0.35) * 100 : 0;
         c.save();
         c.fillStyle = "#495057";
         c.strokeStyle = "#203040";
@@ -400,7 +421,7 @@ export class CanvasRenderer {
         for (const g of ghosts) {
             const def = registry.get(g.definitionId);
             const rigid = def.behaviours.find(b => b.kind === "RIGID_BODY");
-            const w = rigid?.kind === "RIGID_BODY" ? rigid.width * 100 : 80, h = rigid?.kind === "RIGID_BODY" ? rigid.height * 100 : 60;
+            const w = (rigid === null || rigid === void 0 ? void 0 : rigid.kind) === "RIGID_BODY" ? rigid.width * 100 : 80, h = (rigid === null || rigid === void 0 ? void 0 : rigid.kind) === "RIGID_BODY" ? rigid.height * 100 : 60;
             const x = g.x * 100, y = g.y * 100;
             if (structureKind(def) === "BEAM") {
                 c.save();
@@ -557,7 +578,7 @@ export class CanvasRenderer {
             return true;
         }
         if (id === "motion.ramp") {
-            c.fillStyle = select ?? "#ffb84d";
+            c.fillStyle = select !== null && select !== void 0 ? select : "#ffb84d";
             c.beginPath();
             c.moveTo(-w / 2, h / 2);
             c.lineTo(w / 2, h / 2);
@@ -574,7 +595,7 @@ export class CanvasRenderer {
             return true;
         }
         if (id === "motion.ball" || id === "motion.marble") {
-            c.fillStyle = select ?? (id === "motion.marble" ? "#51cf66" : "#4dabf7");
+            c.fillStyle = select !== null && select !== void 0 ? select : (id === "motion.marble" ? "#51cf66" : "#4dabf7");
             c.beginPath();
             c.arc(0, 0, w / 2, 0, Math.PI * 2);
             c.fill();
@@ -586,7 +607,7 @@ export class CanvasRenderer {
             return true;
         }
         if (id === "motion.wheel" || id === "motion.roller") {
-            c.fillStyle = select ?? "#74c0fc";
+            c.fillStyle = select !== null && select !== void 0 ? select : "#74c0fc";
             c.beginPath();
             c.arc(0, 0, w / 2, 0, Math.PI * 2);
             c.fill();
@@ -605,7 +626,7 @@ export class CanvasRenderer {
             return true;
         }
         if (id === "motion.cart") {
-            c.fillStyle = select ?? "#4dabf7";
+            c.fillStyle = select !== null && select !== void 0 ? select : "#4dabf7";
             c.beginPath();
             c.roundRect(-w / 2, -h / 2, w, h, 14);
             c.fill();
@@ -616,7 +637,7 @@ export class CanvasRenderer {
             return true;
         }
         if (id === "motion.spring") {
-            c.fillStyle = select ?? "#b2f2bb";
+            c.fillStyle = select !== null && select !== void 0 ? select : "#b2f2bb";
             c.beginPath();
             c.roundRect(-w / 2, -h / 2, w, h, 12);
             c.fill();
@@ -630,7 +651,7 @@ export class CanvasRenderer {
             return true;
         }
         if (id === "motion.friction-high" || id === "motion.friction-low" || id === "motion.bounce-pad") {
-            c.fillStyle = select ?? (id === "motion.friction-high" ? "#ff8787" : id === "motion.friction-low" ? "#a5d8ff" : "#b197fc");
+            c.fillStyle = select !== null && select !== void 0 ? select : (id === "motion.friction-high" ? "#ff8787" : id === "motion.friction-low" ? "#a5d8ff" : "#b197fc");
             c.beginPath();
             c.roundRect(-w / 2, -h / 2, w, h, 10);
             c.fill();
@@ -657,7 +678,7 @@ export class CanvasRenderer {
             return true;
         }
         if (id === "motion.barrier") {
-            c.fillStyle = select ?? "#ff6b6b";
+            c.fillStyle = select !== null && select !== void 0 ? select : "#ff6b6b";
             c.fillRect(-w / 2, -h / 2, w, h);
             c.strokeRect(-w / 2, -h / 2, w, h);
             c.strokeStyle = "#fff";
@@ -671,7 +692,7 @@ export class CanvasRenderer {
             return true;
         }
         if (id === "motion.platform") {
-            c.fillStyle = select ?? "#adb5bd";
+            c.fillStyle = select !== null && select !== void 0 ? select : "#adb5bd";
             c.beginPath();
             c.roundRect(-w / 2, -h / 2, w, h, 10);
             c.fill();
@@ -679,7 +700,7 @@ export class CanvasRenderer {
             return true;
         }
         if (id === "motion.parcel") {
-            c.fillStyle = select ?? "#f6b26b";
+            c.fillStyle = select !== null && select !== void 0 ? select : "#f6b26b";
             c.fillRect(-w / 2, -h / 2, w, h);
             c.strokeRect(-w / 2, -h / 2, w, h);
             c.strokeStyle = "#8d5524";
@@ -691,7 +712,7 @@ export class CanvasRenderer {
             return true;
         }
         if (id === "silly.duck") {
-            c.fillStyle = select ?? "#ffd43b";
+            c.fillStyle = select !== null && select !== void 0 ? select : "#ffd43b";
             c.beginPath();
             c.ellipse(-w * .05, h * .05, w * .42, h * .3, 0, 0, Math.PI * 2);
             c.fill();
@@ -716,5 +737,5 @@ export class CanvasRenderer {
         }
         return false;
     }
-    categoryColor(category) { return { STRUCTURE: "#f6b26b", MOTION: "#74c0fc", GEAR: "#c7a0ff", POWER: "#ffe066", MAGNET: "#ff8787", WATER: "#66d9e8", AIR: "#a5d8ff", LOGIC: "#8ce99a", SPACE: "#b197fc", MUSICAL: "#ffa8a8", SILLY: "#ffd8a8" }[category] ?? "#ddd"; }
+    categoryColor(category) { var _a; return (_a = { STRUCTURE: "#f6b26b", MOTION: "#74c0fc", GEAR: "#c7a0ff", POWER: "#ffe066", MAGNET: "#ff8787", WATER: "#66d9e8", AIR: "#a5d8ff", LOGIC: "#8ce99a", SPACE: "#b197fc", MUSICAL: "#ffa8a8", SILLY: "#ffd8a8" }[category]) !== null && _a !== void 0 ? _a : "#ddd"; }
 }

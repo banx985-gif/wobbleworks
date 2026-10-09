@@ -46,18 +46,61 @@ export function bodyFingerprint(runtime) {
     return h;
 }
 export class ReplayRecorder {
-    snapshot;
-    buildChecksum;
-    bodies = new Float64Array(REPLAY_MAX_TICKS);
-    events = new Uint32Array(REPLAY_MAX_TICKS);
-    inputList = [];
-    markerList = [];
-    ticks = 0;
-    seenEvents = 0;
-    truncatedFlag = false;
     constructor(snapshot, buildChecksum = "") {
-        this.snapshot = snapshot;
-        this.buildChecksum = buildChecksum;
+        Object.defineProperty(this, "snapshot", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: snapshot
+        });
+        Object.defineProperty(this, "buildChecksum", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: buildChecksum
+        });
+        Object.defineProperty(this, "bodies", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Float64Array(REPLAY_MAX_TICKS)
+        });
+        Object.defineProperty(this, "events", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Uint32Array(REPLAY_MAX_TICKS)
+        });
+        Object.defineProperty(this, "inputList", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "markerList", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "ticks", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "seenEvents", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "truncatedFlag", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: false
+        });
     }
     get length() { return this.ticks; }
     get truncated() { return this.truncatedFlag; }
@@ -98,18 +141,56 @@ function collectMarkers(events, from, out) {
 }
 /** Plays a recording back by running the same build with the same taps, checking every tick. */
 export class ReplayPlayer {
-    registry;
-    recording;
-    runtime;
-    paused = false;
-    /** Ticks where playback didn't match the recording (should always stay 0). */
-    mismatches = 0;
-    inputIndex = 0;
-    fastTarget;
-    playAfterJump = true;
     constructor(registry, recording) {
-        this.registry = registry;
-        this.recording = recording;
+        Object.defineProperty(this, "registry", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: registry
+        });
+        Object.defineProperty(this, "recording", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: recording
+        });
+        Object.defineProperty(this, "runtime", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "paused", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: false
+        });
+        /** Ticks where playback didn't match the recording (should always stay 0). */
+        Object.defineProperty(this, "mismatches", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "inputIndex", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "fastTarget", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "playAfterJump", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: true
+        });
         this.runtime = new RuntimeWorld(recording.snapshot, registry);
     }
     get tick() { return this.runtime.tick; }

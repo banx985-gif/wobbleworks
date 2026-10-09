@@ -18,7 +18,7 @@ const day = (ms) => new Date(ms).toLocaleDateString(undefined, { day: "numeric",
 /** A picture of one version: the saved photo when there is one, otherwise a sketch drawn from its parts. */
 function picture(cb, inv, n, parts) {
     const box = el("div", "inv-thumb");
-    box.append(miniBuild((parts ?? []).map(p => ({ x: p.position.x, y: p.position.y, id: p.definitionId }))));
+    box.append(miniBuild((parts !== null && parts !== void 0 ? parts : []).map(p => ({ x: p.position.x, y: p.position.y, id: p.definitionId }))));
     void cb.thumb(thumbKey(inv.id, n)).then(src => { if (!src)
         return; const img = el("img"); img.src = src; img.alt = ""; box.replaceChildren(img); });
     return box;
@@ -52,7 +52,7 @@ export function renderInventions(root, save, cb) {
         const last = latestVersion(inv);
         const card = button("", () => { view = { kind: "DETAIL", id: inv.id, picks: [] }; cb.rerender(); }, "inv-card");
         const content = resolveAll(inv).get(last.n);
-        card.append(picture(cb, inv, last.n, content?.parts), el("strong", "", inv.name), el("span", "muted", `Version ${last.n} · ${last.partCount} parts`));
+        card.append(picture(cb, inv, last.n, content === null || content === void 0 ? void 0 : content.parts), el("strong", "", inv.name), el("span", "muted", `Version ${last.n} · ${last.partCount} parts`));
         if (shelfItemFor(save, inv.id))
             card.append(el("span", "inv-shelf-tag", "⭐ On shelf"));
         grid.append(card);
@@ -94,7 +94,7 @@ function renderDetail(root, save, inv, cb) {
         const content = all.get(ver.n);
         const row = el("div", `inv-version${v.picks.includes(ver.n) ? " picked" : ""}`);
         const words = el("div", "inv-version-words");
-        words.append(el("strong", "", `Version ${ver.n}${ver.n === newest.n ? " (newest)" : ""}`), el("span", "muted", `${day(ver.savedAtMs)} · ${ver.partCount} parts${ver.restoredFrom ? ` · brought back from Version ${ver.restoredFrom}` : ""}${onShelf?.versionN === ver.n ? " · ⭐ on the shelf" : ""}`));
+        words.append(el("strong", "", `Version ${ver.n}${ver.n === newest.n ? " (newest)" : ""}`), el("span", "muted", `${day(ver.savedAtMs)} · ${ver.partCount} parts${ver.restoredFrom ? ` · brought back from Version ${ver.restoredFrom}` : ""}${(onShelf === null || onShelf === void 0 ? void 0 : onShelf.versionN) === ver.n ? " · ⭐ on the shelf" : ""}`));
         if (ver.metrics) {
             const chips = el("div", "inv-chips");
             for (const [k, x] of Object.entries(ver.metrics)) {
@@ -115,7 +115,7 @@ function renderDetail(root, save, inv, cb) {
             pick.setAttribute("aria-pressed", String(v.picks.includes(ver.n)));
             buttons.append(pick);
         }
-        row.append(picture(cb, inv, ver.n, content?.parts), words, buttons);
+        row.append(picture(cb, inv, ver.n, content === null || content === void 0 ? void 0 : content.parts), words, buttons);
         list.append(row);
     }
     root.append(list);

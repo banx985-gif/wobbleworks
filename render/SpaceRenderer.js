@@ -2,9 +2,9 @@ import { spaceBehaviour, vesselBehaviour } from "../space/SpaceSystem.js";
 import { describeBlock } from "../robots/BlockEditor.js";
 import { parseProgram } from "../robots/RobotProgram.js";
 import { blockAt } from "./RobotRenderer.js";
-import { drawPartPicture, PART_PICTURES } from "./PartPictures.js";
+import { drawPartPicture, PART_PICTURES, STANDING_PICTURES } from "./PartPictures.js";
 /**
- * Space Centre drawing (M19). Wheels, drive motor and solar panel are painted (part-art map, PartPictures.ts); the rest is
+ * Space Centre drawing (M19). Wheels, drive motor, solar panel (on its stand when on its own), capsule and cargo pod are painted (part-art map, PartPictures.ts); the rest is
  * code-drawn behind each part id until the space art arrives (docs/ART_NEEDED.md, Batch S).
  * Drawing only — nothing here changes the simulation. 100 px per metre.
  */
@@ -27,9 +27,10 @@ export function spaceLayer(def) {
     return 0;
 }
 export function drawSpacePart(c, part, def, selected, ctx) {
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z;
     const st = ctx.states.get(part.id);
     const pose = ctx.pose(part.id);
-    const x = (pose?.x ?? st?.x ?? part.position.x) * 100, y = (pose?.y ?? st?.y ?? part.position.y) * 100, angle = pose?.angle ?? st?.angle ?? part.rotation;
+    const x = ((_b = (_a = pose === null || pose === void 0 ? void 0 : pose.x) !== null && _a !== void 0 ? _a : st === null || st === void 0 ? void 0 : st.x) !== null && _b !== void 0 ? _b : part.position.x) * 100, y = ((_d = (_c = pose === null || pose === void 0 ? void 0 : pose.y) !== null && _c !== void 0 ? _c : st === null || st === void 0 ? void 0 : st.y) !== null && _d !== void 0 ? _d : part.position.y) * 100, angle = (_f = (_e = pose === null || pose === void 0 ? void 0 : pose.angle) !== null && _e !== void 0 ? _e : st === null || st === void 0 ? void 0 : st.angle) !== null && _f !== void 0 ? _f : part.rotation;
     c.save();
     c.lineJoin = "round";
     c.lineCap = "round";
@@ -114,7 +115,7 @@ export function drawSpacePart(c, part, def, selected, ctx) {
             c.roundRect(-40, -15, 80, 30, 8);
             c.fill();
             c.stroke();
-            const power = Math.round(Number(part.parameters.power ?? 0));
+            const power = Math.round(Number((_g = part.parameters.power) !== null && _g !== void 0 ? _g : 0));
             for (let i = 0; i < 4; i++) {
                 c.fillStyle = i <= power ? "#ff6b6b" : "#dee2e6";
                 c.fillRect(-30 + i * 16, 22, 12, 10 + i * 4);
@@ -143,7 +144,7 @@ export function drawSpacePart(c, part, def, selected, ctx) {
             c.fillStyle = "#ffd43b";
             for (let k = -70; k < 70; k += 28)
                 c.fillRect(k, -10, 14, 20);
-            const tilt = Number(part.parameters.tilt ?? 0);
+            const tilt = Number((_h = part.parameters.tilt) !== null && _h !== void 0 ? _h : 0);
             if (tilt) {
                 c.strokeStyle = "#e8590c";
                 c.lineWidth = 5;
@@ -243,16 +244,16 @@ export function drawSpacePart(c, part, def, selected, ctx) {
         case "space.rocket":
         case "space.lander": {
             c.rotate(angle);
-            drawVessel(c, def.id, ctx.space?.vessel(part.id)?.thrust ?? 0, ctx.time);
+            drawVessel(c, def.id, (_l = (_k = (_j = ctx.space) === null || _j === void 0 ? void 0 : _j.vessel(part.id)) === null || _k === void 0 ? void 0 : _k.thrust) !== null && _l !== void 0 ? _l : 0, ctx.time);
             break;
         }
         case "space.rover": {
-            drawRover(c, ctx.space?.vessel(part.id), ctx.time, st?.angle ?? 0);
+            drawRover(c, (_m = ctx.space) === null || _m === void 0 ? void 0 : _m.vessel(part.id), ctx.time, (_o = st === null || st === void 0 ? void 0 : st.angle) !== null && _o !== void 0 ? _o : 0);
             break;
         }
         case "space.booster": {
             c.rotate(angle);
-            const burning = (ctx.space?.boosterFuel(part.id) ?? 1) > 0 && ctx.space?.vessel(ownerOf(ctx, part.id) ?? "")?.thrust;
+            const burning = ((_q = (_p = ctx.space) === null || _p === void 0 ? void 0 : _p.boosterFuel(part.id)) !== null && _q !== void 0 ? _q : 1) > 0 && ((_t = (_r = ctx.space) === null || _r === void 0 ? void 0 : _r.vessel((_s = ownerOf(ctx, part.id)) !== null && _s !== void 0 ? _s : "")) === null || _t === void 0 ? void 0 : _t.thrust);
             c.fillStyle = "#ff922b";
             c.beginPath();
             c.roundRect(-15, -26, 30, 46, 8);
@@ -274,7 +275,7 @@ export function drawSpacePart(c, part, def, selected, ctx) {
                 c.fillStyle = INK;
                 c.font = "800 12px system-ui";
                 c.textAlign = "center";
-                c.fillText(`${Number(part.parameters.burn ?? spaceBehaviour(def)?.burn ?? 1.5)} s`, 0, -34);
+                c.fillText(`${Number((_w = (_u = part.parameters.burn) !== null && _u !== void 0 ? _u : (_v = spaceBehaviour(def)) === null || _v === void 0 ? void 0 : _v.burn) !== null && _w !== void 0 ? _w : 1.5)} s`, 0, -34);
             }
             break;
         }
@@ -399,7 +400,8 @@ export function drawSpacePart(c, part, def, selected, ctx) {
             const attached = Boolean(pose);
             c.save();
             c.rotate(attached ? angle : part.rotation);
-            const painted = drawPartPicture(c, ctx.art, def.id);
+            const stand = STANDING_PICTURES[def.id];
+            const painted = drawPartPicture(c, ctx.art, def.id, attached || !stand ? {} : { picture: stand });
             c.restore();
             if (painted)
                 break;
@@ -476,12 +478,12 @@ export function drawSpacePart(c, part, def, selected, ctx) {
             c.fillStyle = "#f08c00";
             c.font = "900 13px system-ui";
             c.textAlign = "center";
-            c.fillText(String(part.parameters.label ?? "SLOT"), 0, 5);
+            c.fillText(String((_x = part.parameters.label) !== null && _x !== void 0 ? _x : "SLOT"), 0, 5);
             break;
         }
         case "space.repair-module": {
-            const b = ctx.robots?.box(part.id);
-            if (b?.carried) {
+            const b = (_y = ctx.robots) === null || _y === void 0 ? void 0 : _y.box(part.id);
+            if (b === null || b === void 0 ? void 0 : b.carried) {
                 c.restore();
                 return true;
             }
@@ -496,7 +498,7 @@ export function drawSpacePart(c, part, def, selected, ctx) {
             c.font = "900 12px system-ui";
             c.textAlign = "center";
             c.textBaseline = "middle";
-            c.fillText(String(part.parameters.label ?? "PART"), 0, 1);
+            c.fillText(String((_z = part.parameters.label) !== null && _z !== void 0 ? _z : "PART"), 0, 1);
             break;
         }
         case "space.hull": {
@@ -523,11 +525,12 @@ export function drawSpacePart(c, part, def, selected, ctx) {
     return true;
 }
 function artSize(id) { return id === "space.sun" ? [180, 180] : id === "space.planet" ? [170, 170] : id === "space.moon-plateau" ? [400, 200] : id === "space.moon-base" ? [150, 110] : [90, 90]; }
-function ownerOf(ctx, partId) { return ctx.space?.vesselViews().find(v => v.attached.includes(partId))?.id; }
+function ownerOf(ctx, partId) { var _a, _b; return (_b = (_a = ctx.space) === null || _a === void 0 ? void 0 : _a.vesselViews().find(v => v.attached.includes(partId))) === null || _b === void 0 ? void 0 : _b.id; }
 function drawZone(c, part, time) {
-    const w = Number(part.parameters.width ?? 16) * 100, x1 = part.position.x * 100 - w / 2;
-    const g = Number(part.parameters.g ?? 1.62);
-    const label = String(part.parameters.label ?? (g < 0.01 ? "ZERO G" : g < 5 ? "MOON" : "EARTH"));
+    var _a, _b, _c;
+    const w = Number((_a = part.parameters.width) !== null && _a !== void 0 ? _a : 16) * 100, x1 = part.position.x * 100 - w / 2;
+    const g = Number((_b = part.parameters.g) !== null && _b !== void 0 ? _b : 1.62);
+    const label = String((_c = part.parameters.label) !== null && _c !== void 0 ? _c : (g < 0.01 ? "ZERO G" : g < 5 ? "MOON" : "EARTH"));
     c.fillStyle = g < 0.01 ? "#1c1f4a55" : g < 5 ? "#ced4da33" : "#74c0fc22";
     c.fillRect(x1, 0, w, 840);
     if (g < 5) {
@@ -644,7 +647,7 @@ function drawRover(c, v, time, _angle) {
             c.stroke();
         }
     }
-    if (v?.slipping) {
+    if (v === null || v === void 0 ? void 0 : v.slipping) {
         c.fillStyle = "#adb5bd";
         for (let k = 0; k < 4; k++) {
             const a = time * 8 + k;
@@ -656,10 +659,11 @@ function drawRover(c, v, time, _angle) {
 }
 /** The station's robot arm: a base where it was built, a jointed arm out to the gripper, which runs a Robot Lab program. */
 function drawArm(c, part, selected, ctx) {
+    var _a, _b, _c, _d, _e;
     const bx = Math.round(part.position.x) * 100, by = Math.round(part.position.y) * 100;
-    const v = ctx.robots?.robot(part.id);
-    const gx = (v?.x ?? Math.round(part.position.x)) * 100, gy = (v?.y ?? Math.round(part.position.y)) * 100;
-    const heading = v?.angle ?? Math.round(Number(part.parameters.heading ?? 0)) * Math.PI / 2;
+    const v = (_a = ctx.robots) === null || _a === void 0 ? void 0 : _a.robot(part.id);
+    const gx = ((_b = v === null || v === void 0 ? void 0 : v.x) !== null && _b !== void 0 ? _b : Math.round(part.position.x)) * 100, gy = ((_c = v === null || v === void 0 ? void 0 : v.y) !== null && _c !== void 0 ? _c : Math.round(part.position.y)) * 100;
+    const heading = (_d = v === null || v === void 0 ? void 0 : v.angle) !== null && _d !== void 0 ? _d : Math.round(Number((_e = part.parameters.heading) !== null && _e !== void 0 ? _e : 0)) * Math.PI / 2;
     c.save();
     c.lineJoin = "round";
     c.lineCap = "round";
@@ -699,7 +703,7 @@ function drawArm(c, part, selected, ctx) {
     if (claw) {
         c.save();
         c.rotate(-Math.PI / 2);
-        if (v?.holding)
+        if (v === null || v === void 0 ? void 0 : v.holding)
             c.scale(0.85, 1);
         c.drawImage(claw, -26, -14, 52, 70);
         c.restore();
@@ -714,13 +718,13 @@ function drawArm(c, part, selected, ctx) {
         for (const s of [-1, 1]) {
             c.beginPath();
             c.moveTo(14, s * 12);
-            c.lineTo(36, s * (v?.holding ? 22 : 14));
+            c.lineTo(36, s * ((v === null || v === void 0 ? void 0 : v.holding) ? 22 : 14));
             c.lineTo(42, s * 6);
             c.stroke();
         }
     }
     c.rotate(-heading);
-    if (v?.holding) {
+    if (v === null || v === void 0 ? void 0 : v.holding) {
         c.fillStyle = "#4dabf7";
         c.beginPath();
         c.roundRect(-22, -22, 44, 44, 6);
@@ -729,7 +733,7 @@ function drawArm(c, part, selected, ctx) {
         c.globalAlpha = 1;
         c.stroke();
     }
-    if (v?.current) {
+    if (v === null || v === void 0 ? void 0 : v.current) {
         const b = blockAt(parseProgram(part.parameters.program), v.current);
         if (b) {
             const text = describeBlock(b);

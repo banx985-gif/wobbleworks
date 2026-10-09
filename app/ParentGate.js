@@ -13,13 +13,37 @@ export function makeParentChallenge(random = Math.random) {
     return { digits, prompt: digits.map(d => WORDS[d].toUpperCase()).join(" · ") };
 }
 export class ParentGate {
-    random;
-    challenge;
-    entered = [];
-    failures = 0;
-    lockedUntilMs = 0;
     constructor(random = Math.random) {
-        this.random = random;
+        Object.defineProperty(this, "random", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: random
+        });
+        Object.defineProperty(this, "challenge", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "entered", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "failures", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "lockedUntilMs", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
         this.challenge = makeParentChallenge(random);
     }
     current() { return this.challenge; }

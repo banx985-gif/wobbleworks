@@ -1,10 +1,11 @@
 import { deepClone, deepFreeze, fnv1a, stableStringify } from "./clone.js";
 export function createBuildSnapshot(input) {
+    var _a;
     const payload = {
         schemaVersion: 1,
         id: input.id,
         revision: input.revision,
-        createdAtMs: input.createdAtMs ?? Date.now(),
+        createdAtMs: (_a = input.createdAtMs) !== null && _a !== void 0 ? _a : Date.now(),
         parts: deepClone(input.parts),
         connections: deepClone(input.connections)
     };

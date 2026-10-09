@@ -18,8 +18,8 @@ export function collectRobotDiscoveries(build, runtime) {
         if (v.done && v.blocks >= 2 && moved && turned)
             out.add("robot.sequence");
         // The same sensor gave different answers, and the program did different things because of it.
-        const decisions = of("SENSOR_DECISION").filter(e => e.sourceId === v.id && e.data?.block === "IF");
-        if (decisions.some(e => e.data?.result === true) && decisions.some(e => e.data?.result === false))
+        const decisions = of("SENSOR_DECISION").filter(e => { var _a; return e.sourceId === v.id && ((_a = e.data) === null || _a === void 0 ? void 0 : _a.block) === "IF"; });
+        if (decisions.some(e => { var _a; return ((_a = e.data) === null || _a === void 0 ? void 0 : _a.result) === true; }) && decisions.some(e => { var _a; return ((_a = e.data) === null || _a === void 0 ? void 0 : _a.result) === false; }))
             out.add("robot.condition");
         if (of("SENSOR_DECISION").some(e => e.sourceId === v.id))
             out.add("robot.sensor");

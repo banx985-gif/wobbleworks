@@ -1,7 +1,7 @@
-import { assertLevelDefinition } from "../data/validation.js";
 import { evaluateLevelOutcome } from "../core/OutcomeEvaluator.js";
 import { MAIN_LABS } from "../progression/CampaignData.js";
 import { MATERIALS, STRUCTURE_TRUTH_CONTRACT } from "./StructureSystem.js";
+import { loadLevelSet } from "../data/LevelFiles.js";
 /**
  * Lab 3 — Builder Bay (M13). Missions, content loading, evidence-backed discoveries, parent mappings and
  * real-world connection moments. Every claim maps to STRUCTURE_TRUTH_CONTRACT and to something the
@@ -10,17 +10,7 @@ import { MATERIALS, STRUCTURE_TRUTH_CONTRACT } from "./StructureSystem.js";
 export { STRUCTURE_TRUTH_CONTRACT };
 export const BUILDER_MISSIONS = MAIN_LABS.find(l => l.id === "builder-bay").missions;
 export async function loadBuilderBayLevels(registry) {
-    const known = new Set(registry.all().map(part => part.id));
-    const levels = new Map();
-    for (const mission of BUILDER_MISSIONS) {
-        const response = await fetch(`./content/builder/${mission.id}.json`, { cache: "no-store" });
-        if (!response.ok)
-            throw new Error(`Builder Bay content failed to load: ${mission.id}`);
-        const value = await response.json();
-        assertLevelDefinition(value, known);
-        levels.set(mission.id, value);
-    }
-    return levels;
+    return loadLevelSet(registry, "builder", BUILDER_MISSIONS.map(m => m.id), "Builder Bay");
 }
 export function runSummary(build, runtime) {
     const s = runtime.structures;
@@ -62,7 +52,7 @@ export function collectStructureDiscoveries(build, runtime, previous) {
         out.add("structure.buckle");
     if (events.some(e => e.kind === "TRAVELLER_ARRIVED") && events.some(e => e.kind === "TRAVELLER_START") && s.travellerStates().some(t => t.arrived && runtime.structures.walkedOnStructure(t.id)))
         out.add("structure.load-path");
-    if (s.eggStates().some(e => e.landed && e.onStructure && e.impact !== undefined && e.onMember !== undefined && s.members.find(m => m.id === e.onMember)?.material === "ROPE"))
+    if (s.eggStates().some(e => { var _a; return e.landed && e.onStructure && e.impact !== undefined && e.onMember !== undefined && ((_a = s.members.find(m => m.id === e.onMember)) === null || _a === void 0 ? void 0 : _a.material) === "ROPE"; }))
         out.add("structure.soft-landing");
     if (events.some(e => e.kind === "WINCH_LIFT") && build.allParts().some(p => p.parameters.mountOnStructure === true) && !events.some(e => e.kind === "WINCH_UNSUPPORTED"))
         out.add("combo.crane");

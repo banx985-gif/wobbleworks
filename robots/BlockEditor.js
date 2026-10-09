@@ -16,10 +16,11 @@ function el(tag, className = "", text) { const n = document.createElement(tag); 
     n.textContent = text; return n; }
 /** Immutable edit helpers on paths like [2, "body", 0]. */
 function getList(blocks, slot) {
+    var _a;
     let list = blocks;
     for (let i = 0; i < slot.length; i += 2) {
         const b = list[slot[i]];
-        list = b?.[slot[i + 1]] ?? [];
+        list = (_a = b === null || b === void 0 ? void 0 : b[slot[i + 1]]) !== null && _a !== void 0 ? _a : [];
     }
     return list;
 }
@@ -27,11 +28,11 @@ function setList(blocks, slot, next) {
     if (!slot.length)
         return [...next];
     const [i, field, ...rest] = slot;
-    return blocks.map((b, k) => k !== i ? b : { ...b, [field]: setList((b[field]) ?? [], rest, next) });
+    return blocks.map((b, k) => { var _a; return k !== i ? b : { ...b, [field]: setList((_a = (b[field])) !== null && _a !== void 0 ? _a : [], rest, next) }; });
 }
 function parsePath(key) { return key ? key.split(".").map(p => /^\d+$/.test(p) ? Number(p) : p) : []; }
 export function describeBlock(b) {
-    const sensor = (s) => SENSORS.find(x => x.id === s)?.label ?? s;
+    const sensor = (s) => { var _a, _b; return (_b = (_a = SENSORS.find(x => x.id === s)) === null || _a === void 0 ? void 0 : _a.label) !== null && _b !== void 0 ? _b : s; };
     switch (b.op) {
         case "FORWARD": return `Forward ${b.n}`;
         case "TURN": return b.dir === "L" ? "Turn left" : "Turn right";
@@ -44,9 +45,24 @@ export function describeBlock(b) {
         case "PRESS": return "Press";
     }
 }
+/** A palette button's icon: its painted picture when there is one (a picture address from the game), else its emoji. */
+function paletteIcon(label, icon, picture) {
+    const src = picture === null || picture === void 0 ? void 0 : picture(label);
+    if (!src)
+        return el("span", "ico", icon);
+    const img = document.createElement("img");
+    img.className = "ico-pic";
+    img.src = src;
+    img.alt = "";
+    return img;
+}
 export function renderBlockEditor(root, program, state, onChange, opts) {
+    var _a, _b;
     root.replaceChildren();
     const head = el("div", "prog-head");
+    const start = (_a = opts.picture) === null || _a === void 0 ? void 0 : _a.call(opts, "start");
+    if (start)
+        head.append(paletteIcon("start", "", opts.picture));
     head.append(el("strong", "", `🤖 ${opts.robotName}'s program`), el("span", "prog-count", `${blockCount(program)} blocks`));
     const close = el("button", "prog-close", "✕");
     close.setAttribute("aria-label", "Close the program");
@@ -57,7 +73,7 @@ export function renderBlockEditor(root, program, state, onChange, opts) {
         const pal = el("div", "prog-palette");
         for (const p of PALETTE) {
             const b = el("button", "prog-pal");
-            b.append(el("span", "ico", p.icon), el("span", "", p.label));
+            b.append(paletteIcon(p.label, p.icon, opts.picture), el("span", "", p.label));
             b.addEventListener("click", () => onChange(insert(program, state, p.make())));
             pal.append(b);
         }
@@ -116,7 +132,7 @@ export function renderBlockEditor(root, program, state, onChange, opts) {
         list.append(el("p", "prog-empty", opts.locked ? "No blocks." : "Tap a block above to start the program."));
     root.append(list);
     // Debugging: keep the block the robot is running in view.
-    list.querySelector(".running")?.scrollIntoView({ block: "nearest" });
+    (_b = list.querySelector(".running")) === null || _b === void 0 ? void 0 : _b.scrollIntoView({ block: "nearest" });
 }
 /** Add a block after the selected block, or at the end of a selected slot, or at the end of the program. */
 function insert(program, state, block) {

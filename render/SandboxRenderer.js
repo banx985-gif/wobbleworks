@@ -4,8 +4,9 @@ const INK = "#203040";
 export function isSandboxPart(def) { return def.id.startsWith("sandbox.") || def.id === "magnetic.reed-switch"; }
 export function sandboxLayer(def) { return def.id === "sandbox.water-area" || def.id === "sandbox.wind-zone" || def.id === "sandbox.sign" ? -2 : def.id === "sandbox.ice-floor" || def.id === "sandbox.moving-platform" ? 0 : def.id === "sandbox.rain" ? 4 : 3; }
 export function drawSandboxPart(c, part, def, selected, ctx) {
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q;
     const st = ctx.states.get(part.id);
-    const x = (st?.x ?? part.position.x) * 100, y = (st?.y ?? part.position.y) * 100, a = st?.angle ?? part.rotation;
+    const x = ((_a = st === null || st === void 0 ? void 0 : st.x) !== null && _a !== void 0 ? _a : part.position.x) * 100, y = ((_b = st === null || st === void 0 ? void 0 : st.y) !== null && _b !== void 0 ? _b : part.position.y) * 100, a = (_c = st === null || st === void 0 ? void 0 : st.angle) !== null && _c !== void 0 ? _c : part.rotation;
     c.save();
     c.translate(x, y);
     c.lineJoin = "round";
@@ -17,7 +18,7 @@ export function drawSandboxPart(c, part, def, selected, ctx) {
         c.shadowBlur = 20;
     }
     // Painted objects (part-art map): the balloon keeps its string, the moving platform its picture.
-    if (def.id === "sandbox.balloon" && ctx.art?.("air.balloon")) {
+    if (def.id === "sandbox.balloon" && ((_d = ctx.art) === null || _d === void 0 ? void 0 : _d.call(ctx, "air.balloon"))) {
         c.rotate(a);
         c.strokeStyle = "#495057";
         c.lineWidth = 2;
@@ -116,7 +117,7 @@ export function drawSandboxPart(c, part, def, selected, ctx) {
             c.stroke();
             break;
         case "sandbox.egg": {
-            const broken = ctx.runtime?.sandbox.isBroken(part.id) ?? false;
+            const broken = (_f = (_e = ctx.runtime) === null || _e === void 0 ? void 0 : _e.sandbox.isBroken(part.id)) !== null && _f !== void 0 ? _f : false;
             c.rotate(a);
             c.fillStyle = "#fff9db";
             if (broken) {
@@ -191,7 +192,7 @@ export function drawSandboxPart(c, part, def, selected, ctx) {
             break;
         case "sandbox.wind-zone": {
             c.shadowBlur = 0;
-            const w = Number(part.parameters.width ?? 6) * 100, h = Number(part.parameters.height ?? 4) * 100, ang = Number(part.parameters.angle ?? 0);
+            const w = Number((_g = part.parameters.width) !== null && _g !== void 0 ? _g : 6) * 100, h = Number((_h = part.parameters.height) !== null && _h !== void 0 ? _h : 4) * 100, ang = Number((_j = part.parameters.angle) !== null && _j !== void 0 ? _j : 0);
             c.strokeStyle = "#a5d8ffaa";
             c.lineWidth = 3;
             const off = (ctx.time * 160) % 120;
@@ -221,7 +222,7 @@ export function drawSandboxPart(c, part, def, selected, ctx) {
             break;
         case "sandbox.water-area": {
             c.shadowBlur = 0;
-            const w = Number(part.parameters.width ?? 4) * 100, h = Number(part.parameters.height ?? 1.5) * 100;
+            const w = Number((_k = part.parameters.width) !== null && _k !== void 0 ? _k : 4) * 100, h = Number((_l = part.parameters.height) !== null && _l !== void 0 ? _l : 1.5) * 100;
             c.fillStyle = "#4dabf766";
             c.fillRect(-w / 2, -h / 2, w, h);
             c.strokeStyle = "#e7f5ff";
@@ -249,7 +250,7 @@ export function drawSandboxPart(c, part, def, selected, ctx) {
         }
         case "sandbox.sign": {
             c.shadowBlur = 0;
-            const text = String(part.parameters.text ?? "");
+            const text = String((_m = part.parameters.text) !== null && _m !== void 0 ? _m : "");
             c.font = "800 16px system-ui";
             const w = c.measureText(text).width + 20;
             c.fillStyle = "#fff9db";
@@ -274,10 +275,10 @@ export function drawSandboxPart(c, part, def, selected, ctx) {
             c.font = "800 13px system-ui";
             c.textAlign = "center";
             c.textBaseline = "middle";
-            c.fillText(`🪫 ${Number(part.parameters.capacity ?? 40)}`, 0, 1);
+            c.fillText(`🪫 ${Number((_o = part.parameters.capacity) !== null && _o !== void 0 ? _o : 40)}`, 0, 1);
             break;
         case "magnetic.reed-switch": {
-            const on = ctx.runtime?.buttonPressed(part.id) ?? false;
+            const on = (_q = (_p = ctx.runtime) === null || _p === void 0 ? void 0 : _p.buttonPressed(part.id)) !== null && _q !== void 0 ? _q : false;
             c.fillStyle = "#e7f5ffcc";
             c.beginPath();
             c.roundRect(-42, -10, 84, 20, 10);

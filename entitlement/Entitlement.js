@@ -32,7 +32,7 @@ export const PLAY_LICENSE_KEY = "";
 export function trustedKeys() { return PLAY_LICENSE_KEY ? [...TRUSTED_KEYS, { keyId: PLAY_KEY_ID, playSpki: PLAY_LICENSE_KEY }] : TRUSTED_KEYS; }
 const ALGO = { name: "ECDSA", namedCurve: "P-256" };
 const SIGN = { name: "ECDSA", hash: "SHA-256" };
-function subtle() { const c = globalThis.crypto?.subtle; if (!c)
+function subtle() { var _a; const c = (_a = globalThis.crypto) === null || _a === void 0 ? void 0 : _a.subtle; if (!c)
     throw new Error("Web Crypto is not available"); return c; }
 /** The exact bytes that are signed: fields in a fixed order. */
 export function canonicalPayload(p) { return JSON.stringify([p.v, p.product, p.platform, p.owner, p.issuedAtMs, p.keyId]); }
@@ -57,6 +57,7 @@ function readPlayPurchase(json) {
 const unb64 = (s) => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 /** Google Play: check Google's RSA signature (SHA-1, as Play signs purchases) with the app's licence key. Never throws. */
 async function verifyPlayProof(proof, keys, nowMs) {
+    var _a, _b;
     const p = readPlayPurchase(proof.purchase);
     if (!p)
         return { ok: false, reason: "NOT_A_PROOF" };
@@ -81,12 +82,12 @@ async function verifyPlayProof(proof, keys, nowMs) {
     catch {
         return { ok: false, reason: "BAD_SIGNATURE" };
     }
-    const ref = String(p.orderId ?? p.purchaseToken ?? "play").replace(/[^A-Za-z0-9._:-]/g, "").slice(0, 128).padEnd(4, "0");
+    const ref = String((_b = (_a = p.orderId) !== null && _a !== void 0 ? _a : p.purchaseToken) !== null && _b !== void 0 ? _b : "play").replace(/[^A-Za-z0-9._:-]/g, "").slice(0, 128).padEnd(4, "0");
     return { ok: true, payload: { v: 1, product: FULL_GAME_PRODUCT, platform: "ANDROID", owner: ref, issuedAtMs: time || 1, keyId: PLAY_KEY_ID } };
 }
 export function isProofShape(v) {
     const p = v;
-    const q = p?.payload;
+    const q = p === null || p === void 0 ? void 0 : p.payload;
     return Boolean(p) && typeof p.signature === "string" && p.signature.length > 20 && p.signature.length < 400 && Boolean(q) && q.v === 1 &&
         typeof q.product === "string" && ["IOS", "ANDROID", "WEB", "TEST"].includes(q.platform) && typeof q.owner === "string" && /^[A-Za-z0-9._:-]{4,128}$/.test(q.owner) &&
         Number.isFinite(q.issuedAtMs) && q.issuedAtMs > 0 && typeof q.keyId === "string" && /^[a-z0-9-]{1,40}$/.test(q.keyId);

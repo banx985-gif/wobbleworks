@@ -15,7 +15,7 @@ import { canonicalJson, payloadChecksum, utf8Length } from "../save/SaveManager.
  * All functions are pure: they take a save and return a new one. Saving stays in main.ts.
  */
 /** Space one inventor's inventions may use inside the save before the game asks for a tidy-up. */
-export const INVENTION_BUDGET_BYTES = 1_500_000;
+export const INVENTION_BUDGET_BYTES = 1500000;
 /** What "Tidy up" keeps by default: the first version and the newest few. */
 export const TIDY_KEEP_LATEST = 5;
 export function contentOf(build) {
@@ -43,15 +43,16 @@ export function diffContent(prev, next) {
 }
 /** Applies one version's changes to the build before it. */
 export function applyDelta(prev, d) {
+    var _a;
     const removed = new Set(d.remove);
     const changed = new Map(d.change.map(p => [p.id, p]));
-    let parts = prev.parts.filter(p => !removed.has(p.id)).map(p => changed.get(p.id) ?? p);
+    let parts = prev.parts.filter(p => !removed.has(p.id)).map(p => { var _a; return (_a = changed.get(p.id)) !== null && _a !== void 0 ? _a : p; });
     parts = [...parts, ...d.add];
     if (d.order) {
         const byId = new Map(parts.map(p => [p.id, p]));
         parts = d.order.map(id => byId.get(id)).filter((p) => Boolean(p));
     }
-    const connections = d.connections ?? prev.connections;
+    const connections = (_a = d.connections) !== null && _a !== void 0 ? _a : prev.connections;
     return JSON.parse(JSON.stringify({ parts, connections }));
 }
 /** Every version rebuilt in order (undefined where a version doesn't match its fingerprint, and for all after it). */
@@ -79,7 +80,7 @@ export function resolveVersion(inv, n) {
     return undefined;
 }
 export function latestVersion(inv) { return inv.versions[inv.versions.length - 1]; }
-export function inventionsOf(save) { return activeProfile(save)?.inventions ?? []; }
+export function inventionsOf(save) { var _a, _c; return (_c = (_a = activeProfile(save)) === null || _a === void 0 ? void 0 : _a.inventions) !== null && _c !== void 0 ? _c : []; }
 export function inventionById(save, id) { return inventionsOf(save).find(i => i.id === id); }
 export function cleanInventionName(raw) {
     return raw.replace(/[^\p{L}\p{N} '!?&()_-]/gu, "").replace(/\s+/g, " ").trim().slice(0, INVENTION_NAME_MAX) || "My Invention";
@@ -113,12 +114,13 @@ function withInventions(save, change) {
 function overBudget(save) { const p = activeProfile(save); return Boolean(p && profileInventionBytes(p) > INVENTION_BUDGET_BYTES); }
 /** Saves a new invention whose version 1 is this build. */
 export function saveNewInvention(save, input) {
+    var _a;
     const p = activeProfile(save);
     if (!p)
         return { save, reason: "NO_PROFILE" };
     if (p.inventions.length >= MAX_INVENTIONS)
         return { save, reason: "FULL" };
-    const nowMs = input.nowMs ?? Date.now();
+    const nowMs = (_a = input.nowMs) !== null && _a !== void 0 ? _a : Date.now();
     const invention = { id: newId("inv"), name: cleanInventionName(input.name), createdAtMs: nowMs, environment: /^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$/.test(input.environment) ? input.environment : "workshop", versions: [makeVersion(1, nowMs, input.content, undefined, input.metrics ? { metrics: input.metrics } : {})], ...(input.copiedFrom ? { copiedFrom: input.copiedFrom } : {}) };
     const next = withInventions(save, list => [...list, invention]);
     if (overBudget(next))
@@ -147,26 +149,28 @@ export function saveVersion(save, inventionId, content, nowMs = Date.now(), extr
 }
 /** Brings an old version back by saving it again as a NEW version. The old one stays exactly as it was. */
 export function restoreAsNewVersion(save, inventionId, n, nowMs = Date.now()) {
+    var _a;
     const inv = inventionById(save, inventionId);
     if (!inv)
         return { save, reason: "MISSING" };
     const old = resolveVersion(inv, n);
     if (!old)
         return { save, invention: inv, reason: "DAMAGED" };
-    const metrics = inv.versions.find(v => v.n === n)?.metrics;
+    const metrics = (_a = inv.versions.find(v => v.n === n)) === null || _a === void 0 ? void 0 : _a.metrics;
     return saveVersion(save, inventionId, old, nowMs, { restoredFrom: n, ...(metrics ? { metrics } : {}) });
 }
 /** A copy of one version (newest by default) as a brand-new invention with its own history. */
 export function duplicateInvention(save, inventionId, n, nowMs = Date.now()) {
+    var _a;
     const inv = inventionById(save, inventionId);
     if (!inv)
         return { save, reason: "MISSING" };
-    const pick = n ?? latestVersion(inv).n;
+    const pick = n !== null && n !== void 0 ? n : latestVersion(inv).n;
     const content = resolveVersion(inv, pick);
     if (!content)
         return { save, invention: inv, reason: "DAMAGED" };
     const base = `${inv.name.slice(0, INVENTION_NAME_MAX - 7)} (copy)`;
-    const metrics = inv.versions.find(v => v.n === pick)?.metrics;
+    const metrics = (_a = inv.versions.find(v => v.n === pick)) === null || _a === void 0 ? void 0 : _a.metrics;
     return saveNewInvention(save, { name: base, content, environment: inv.environment, nowMs, copiedFrom: inv.id, ...(metrics ? { metrics } : {}) });
 }
 export function renameInvention(save, inventionId, name) {
@@ -189,13 +193,13 @@ export function deleteInvention(save, inventionId) {
     return withInventions(next, list => list.filter(i => i.id !== inventionId));
 }
 // ------------------------------------------------------------------ shelf
-export function shelfItemFor(save, inventionId) { return activeProfile(save)?.shelf.find(s => s.inventionId === inventionId); }
+export function shelfItemFor(save, inventionId) { var _a; return (_a = activeProfile(save)) === null || _a === void 0 ? void 0 : _a.shelf.find(s => s.inventionId === inventionId); }
 /** Puts one version (newest by default) on the Workshop shelf. */
 export function showOnShelf(save, inventionId, n, nowMs = Date.now()) {
     const inv = inventionById(save, inventionId);
     if (!inv)
         return { save, full: false, reason: "MISSING" };
-    const pick = n ?? latestVersion(inv).n;
+    const pick = n !== null && n !== void 0 ? n : latestVersion(inv).n;
     const content = resolveVersion(inv, pick);
     if (!content)
         return { save, full: false, reason: "DAMAGED" };
@@ -223,6 +227,7 @@ export const VERSION_METRICS = {
 };
 /** What changed between two versions, and how their measured results compare (only where both were tested). */
 export function compareVersions(inv, a, b) {
+    var _a, _c, _e, _f, _g, _h;
     const all = resolveAll(inv);
     const ca = all.get(a), cb = all.get(b);
     if (!ca || !cb)
@@ -233,7 +238,7 @@ export function compareVersions(inv, a, b) {
     for (const p of cb.parts) {
         const o = byA.get(p.id);
         if (!o)
-            added[p.definitionId] = (added[p.definitionId] ?? 0) + 1;
+            added[p.definitionId] = ((_a = added[p.definitionId]) !== null && _a !== void 0 ? _a : 0) + 1;
         else {
             if (Math.hypot(o.position.x - p.position.x, o.position.y - p.position.y) > 0.01 || Math.abs(o.rotation - p.rotation) > 0.01)
                 moved++;
@@ -243,8 +248,8 @@ export function compareVersions(inv, a, b) {
     }
     for (const p of ca.parts)
         if (!byB.has(p.id))
-            removed[p.definitionId] = (removed[p.definitionId] ?? 0) + 1;
-    const ma = inv.versions.find(v => v.n === a)?.metrics ?? {}, mb = inv.versions.find(v => v.n === b)?.metrics ?? {};
+            removed[p.definitionId] = ((_c = removed[p.definitionId]) !== null && _c !== void 0 ? _c : 0) + 1;
+    const ma = (_f = (_e = inv.versions.find(v => v.n === a)) === null || _e === void 0 ? void 0 : _e.metrics) !== null && _f !== void 0 ? _f : {}, mb = (_h = (_g = inv.versions.find(v => v.n === b)) === null || _g === void 0 ? void 0 : _g.metrics) !== null && _h !== void 0 ? _h : {};
     const metrics = Object.keys(VERSION_METRICS).filter(k => ma[k] !== undefined && mb[k] !== undefined).map(key => {
         const x = ma[key], y = mb[key];
         const close = Math.abs(x - y) <= Math.max(0.05, Math.abs(x) * 0.02);
@@ -283,10 +288,11 @@ export function comparisonLines(c, partName) {
  * The kept versions are re-linked so each still rebuilds to exactly its own fingerprint; nothing about them changes.
  */
 export function tidyVersions(save, inventionId, removeNs) {
+    var _a;
     const inv = inventionById(save, inventionId);
     if (!inv)
         return { save, removed: 0, reason: "MISSING" };
-    const shelfN = shelfItemFor(save, inventionId)?.versionN;
+    const shelfN = (_a = shelfItemFor(save, inventionId)) === null || _a === void 0 ? void 0 : _a.versionN;
     const newest = latestVersion(inv).n;
     const drop = new Set(removeNs.filter(n => n !== newest && n !== shelfN && inv.versions.some(v => v.n === n)));
     if (!drop.size)
@@ -307,7 +313,8 @@ export function tidyVersions(save, inventionId, removeNs) {
 }
 /** Versions "Tidy up" offers to remove: everything except the first, the newest few and the one on the shelf. */
 export function tidySuggestion(save, inv, keepLatest = TIDY_KEEP_LATEST) {
-    const shelfN = shelfItemFor(save, inv.id)?.versionN;
+    var _a;
+    const shelfN = (_a = shelfItemFor(save, inv.id)) === null || _a === void 0 ? void 0 : _a.versionN;
     const latest = new Set(inv.versions.slice(-keepLatest).map(v => v.n));
     return inv.versions.slice(1).map(v => v.n).filter(n => !latest.has(n) && n !== shelfN);
 }

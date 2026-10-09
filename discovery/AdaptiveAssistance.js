@@ -4,15 +4,57 @@ export function isAdvanced(history) {
 }
 /** Watches one attempt at one challenge. Pure bookkeeping — nothing here touches the simulation. */
 export class AdaptiveObserver {
-    failures = 0;
-    unchangedFailures = 0;
-    lastFailedSignature;
-    selectMisses = 0;
-    dragErrors = 0;
-    hints = 0;
-    startedAtMs;
-    tipShownFor = new Set();
-    constructor(nowMs = 0) { this.startedAtMs = nowMs; }
+    constructor(nowMs = 0) {
+        Object.defineProperty(this, "failures", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "unchangedFailures", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "lastFailedSignature", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "selectMisses", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "dragErrors", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "hints", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "startedAtMs", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "tipShownFor", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Set()
+        });
+        this.startedAtMs = nowMs;
+    }
     reset(nowMs) { this.failures = this.unchangedFailures = this.selectMisses = this.dragErrors = this.hints = 0; this.lastFailedSignature = undefined; this.startedAtMs = nowMs; this.tipShownFor.clear(); }
     /** `signature` identifies the exact build that was tested (BuildSnapshot.signature). */
     noteFailure(signature) {
@@ -64,7 +106,7 @@ export class AdaptiveObserver {
 }
 /** Updates the saved history after a solve. Hints never change stars — this only tunes future prompts. */
 export function historyAfterSolve(history, hintsUsed, failedTests) {
-    const h = history ?? EMPTY_HISTORY;
+    const h = history !== null && history !== void 0 ? history : EMPTY_HISTORY;
     const helped = hintsUsed > 0 || failedTests >= 4;
     return { unaidedSolves: h.unaidedSolves + (helped ? 0 : 1), helpedSolves: h.helpedSolves + (helped ? 1 : 0), hintsUsed: h.hintsUsed + hintsUsed };
 }

@@ -7,8 +7,9 @@ import { drawPartPicture } from "./PartPictures.js";
 const INK = "#203040", NORTH = "#e03131", SOUTH = "#1c7ed6";
 export function isMagnetPart(def) { return Boolean(magnetBehaviour(def) || materialOf(def)) || def.id === "magnetic.guide"; }
 export function drawMagnetPart(c, part, def, selected, ctx) {
+    var _a, _b, _c, _d, _e, _f, _g;
     const st = ctx.states.get(part.id);
-    const x = (st?.x ?? part.position.x) * 100, y = (st?.y ?? part.position.y) * 100;
+    const x = ((_a = st === null || st === void 0 ? void 0 : st.x) !== null && _a !== void 0 ? _a : part.position.x) * 100, y = ((_b = st === null || st === void 0 ? void 0 : st.y) !== null && _b !== void 0 ? _b : part.position.y) * 100;
     const bar = magnetBehaviour(def);
     const mat = materialOf(def);
     c.save();
@@ -21,7 +22,7 @@ export function drawMagnetPart(c, part, def, selected, ctx) {
         c.shadowBlur = 22;
     }
     if (def.id === "magnetic.guide") {
-        const h = Number(part.parameters.height ?? 2.5) * 100;
+        const h = Number((_c = part.parameters.height) !== null && _c !== void 0 ? _c : 2.5) * 100;
         c.fillStyle = "#ced4da";
         c.beginPath();
         c.roundRect(x - 6, y - h / 2, 12, h, 6);
@@ -34,8 +35,8 @@ export function drawMagnetPart(c, part, def, selected, ctx) {
         c.stroke();
     }
     else if (bar) {
-        const live = ctx.magnets?.magnet(part.id);
-        const poleAngle = bar.poleAngle ?? 0;
+        const live = (_d = ctx.magnets) === null || _d === void 0 ? void 0 : _d.magnet(part.id);
+        const poleAngle = (_e = bar.poleAngle) !== null && _e !== void 0 ? _e : 0;
         // The pole axis: from the live state (it knows about flips and currents), else from the part's rotation.
         const axis = live ? live.angle : part.rotation + poleAngle;
         const on = live ? live.on : !bar.electric;
@@ -55,11 +56,11 @@ export function drawMagnetPart(c, part, def, selected, ctx) {
     }
     else if (mat) {
         c.translate(x, y);
-        c.rotate(st?.angle ?? part.rotation);
+        c.rotate((_f = st === null || st === void 0 ? void 0 : st.angle) !== null && _f !== void 0 ? _f : part.rotation);
         if (!drawPartPicture(c, ctx.art, def.id))
             drawMaterial(c, def, mat, ctx.art);
         if (ctx.scanner) {
-            c.rotate(-(st?.angle ?? part.rotation));
+            c.rotate(-((_g = st === null || st === void 0 ? void 0 : st.angle) !== null && _g !== void 0 ? _g : part.rotation));
             c.fillStyle = isMagnetic(def) ? "#2f9e44" : "#868e96";
             c.font = "800 12px system-ui";
             c.textAlign = "center";
@@ -120,7 +121,7 @@ function drawFieldGlow(c, on, time) {
 }
 function drawBar(c, def, axis, part) {
     const r = def.behaviours.find(b => b.kind === "RIGID_BODY");
-    const w = (r?.kind === "RIGID_BODY" ? r.width : 1) * 100, h = (r?.kind === "RIGID_BODY" ? r.height : 0.35) * 100;
+    const w = ((r === null || r === void 0 ? void 0 : r.kind) === "RIGID_BODY" ? r.width : 1) * 100, h = ((r === null || r === void 0 ? void 0 : r.kind) === "RIGID_BODY" ? r.height : 0.35) * 100;
     if (def.id === "magnetic.cart") {
         c.fillStyle = "#495057";
         for (const wx of [-w / 3, w / 3]) {
@@ -255,8 +256,9 @@ function drawFieldArcs(c, axis, len, time) {
     c.restore();
 }
 function drawMaterial(c, def, mat, art) {
+    var _a;
     const r = def.behaviours.find(b => b.kind === "RIGID_BODY");
-    const w = (r?.kind === "RIGID_BODY" ? r.width : 0.4) * 100, h = (r?.kind === "RIGID_BODY" ? r.height : 0.4) * 100;
+    const w = ((r === null || r === void 0 ? void 0 : r.kind) === "RIGID_BODY" ? r.width : 0.4) * 100, h = ((r === null || r === void 0 ? void 0 : r.kind) === "RIGID_BODY" ? r.height : 0.4) * 100;
     if (def.id === "scrap.rubber-duck") {
         const img = art("duck.plain");
         if (img) {
@@ -275,6 +277,8 @@ function drawMaterial(c, def, mat, art) {
         c.stroke();
         return;
     }
+    if (def.id === "scrap.glass-vase" && drawPartPicture(c, art, def.id))
+        return;
     if (def.id === "scrap.glass-vase") {
         c.fillStyle = "#a5d8ffaa";
         c.beginPath();
@@ -292,7 +296,7 @@ function drawMaterial(c, def, mat, art) {
         return;
     }
     const fill = { IRON: "#868e96", STEEL: "#adb5bd", NICKEL: "#ced4da", ALUMINIUM: "#e9ecef", COPPER: "#d9480f", WOOD: "#d9a066", PLASTIC: "#f783ac", GLASS: "#a5d8ff", RUBBER: "#ffd43b" };
-    c.fillStyle = fill[mat] ?? "#dee2e6";
+    c.fillStyle = (_a = fill[mat]) !== null && _a !== void 0 ? _a : "#dee2e6";
     c.beginPath();
     if (def.id === "scrap.aluminium-can") {
         c.roundRect(-w / 2, -h / 2, w, h, 6);

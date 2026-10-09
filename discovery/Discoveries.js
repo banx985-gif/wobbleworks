@@ -155,11 +155,12 @@ export function episodes(events, gap = 12) {
 }
 function other(event, partId) { return event.sourceId === partId ? event.targetId : event.targetId === partId ? event.sourceId : undefined; }
 function involves(event, partId) { return event.sourceId === partId || event.targetId === partId; }
-function defOf(build, id) { return id ? build.getPart(id)?.definitionId : undefined; }
-function name(part) { return (part?.definitionId ?? "thing").replace(/^[a-z]+\./, "").replaceAll("-", " "); }
+function defOf(build, id) { var _a; return id ? (_a = build.getPart(id)) === null || _a === void 0 ? void 0 : _a.definitionId : undefined; }
+function name(part) { var _a; return ((_a = part === null || part === void 0 ? void 0 : part.definitionId) !== null && _a !== void 0 ? _a : "thing").replace(/^[a-z]+\./, "").replaceAll("-", " "); }
 function seconds(tick) { return (tick / 60).toFixed(1); }
 /** Events of a kind that touch a moving part, grouped by that moving part. Contacts list [a, b]; spring launches list [spring, target]. */
 function byMover(build, runtime, kind, surfaceDef) {
+    var _a;
     const out = new Map();
     for (const e of runtime.causalEvents) {
         if (e.kind !== kind)
@@ -174,7 +175,7 @@ function byMover(build, runtime, kind, surfaceDef) {
                 continue;
             if (!isMover(runtime, mover))
                 continue;
-            const list = out.get(mover) ?? [];
+            const list = (_a = out.get(mover)) !== null && _a !== void 0 ? _a : [];
             list.push(e);
             out.set(mover, list);
         }
@@ -192,19 +193,20 @@ function isMover(runtime, id) {
 }
 /** Combination and secret discoveries, each tied to one object that really experienced both effects. */
 export function collectSpecialDiscoveries(build, runtime) {
+    var _a, _b, _c, _d;
     const awards = [];
     const springs = byMover(build, runtime, "SPRING_LAUNCH");
     const ramps = byMover(build, runtime, "RAMP_CONTACT");
     const bounces = byMover(build, runtime, "BOUNCE_PAD_CONTACT", "motion.bounce-pad");
     const grips = byMover(build, runtime, "FRICTION_SLOWED", "motion.friction-high");
-    const first = (list) => list?.length ? Math.min(...list.map(e => e.tick)) : undefined;
-    const last = (list) => list?.length ? Math.max(...list.map(e => e.tick)) : undefined;
+    const first = (list) => (list === null || list === void 0 ? void 0 : list.length) ? Math.min(...list.map(e => e.tick)) : undefined;
+    const last = (list) => (list === null || list === void 0 ? void 0 : list.length) ? Math.max(...list.map(e => e.tick)) : undefined;
     for (const [mover, launches] of springs) {
         const thing = name(build.getPart(mover));
-        const rampAfter = (ramps.get(mover) ?? []).filter(e => e.tick > (first(launches) ?? Infinity));
+        const rampAfter = ((_a = ramps.get(mover)) !== null && _a !== void 0 ? _a : []).filter(e => { var _a; return e.tick > ((_a = first(launches)) !== null && _a !== void 0 ? _a : Infinity); });
         if (rampAfter.length)
             awards.push({ id: "combo.spring-ramp", evidence: `The ${thing} was launched by a spring at ${seconds(first(launches))}s, then rolled on a ramp at ${seconds(first(rampAfter))}s.` });
-        const bounceAfter = (bounces.get(mover) ?? []).filter(e => e.tick > (first(launches) ?? Infinity));
+        const bounceAfter = ((_b = bounces.get(mover)) !== null && _b !== void 0 ? _b : []).filter(e => { var _a; return e.tick > ((_a = first(launches)) !== null && _a !== void 0 ? _a : Infinity); });
         if (bounceAfter.length)
             awards.push({ id: "combo.spring-bounce", evidence: `The ${thing} was launched by a spring, then bounced on a bounce pad at ${seconds(first(bounceAfter))}s.` });
         const springIds = new Set(launches.map(e => e.sourceId));
@@ -213,10 +215,10 @@ export function collectSpecialDiscoveries(build, runtime) {
     }
     for (const [mover, slowed] of grips) {
         const r = ramps.get(mover);
-        if (!r?.length)
+        if (!(r === null || r === void 0 ? void 0 : r.length))
             continue;
         // Order matters for the claim: the slope first (speeding up), then the grip (slowing down).
-        if ((first(r) ?? Infinity) < (last(slowed) ?? -Infinity) && slowed.length >= 3)
+        if (((_c = first(r)) !== null && _c !== void 0 ? _c : Infinity) < ((_d = last(slowed)) !== null && _d !== void 0 ? _d : -Infinity) && slowed.length >= 3)
             awards.push({ id: "combo.slope-grip", evidence: `The ${name(build.getPart(mover))} rolled down a ramp, then a grip pad slowed it for ${slowed.length} ticks.` });
     }
     for (const [mover, list] of bounces) {
@@ -234,7 +236,7 @@ export function collectSpecialDiscoveries(build, runtime) {
         if (c.config.kind !== "HINGE")
             continue;
         const pair = [build.getPart(c.fromPartId), build.getPart(c.toPartId)];
-        const cart = pair.find(p => p?.definitionId === "motion.cart"), wheel = pair.find(p => p?.definitionId === "motion.wheel");
+        const cart = pair.find(p => (p === null || p === void 0 ? void 0 : p.definitionId) === "motion.cart"), wheel = pair.find(p => (p === null || p === void 0 ? void 0 : p.definitionId) === "motion.wheel");
         if (!cart || !wheel)
             continue;
         try {
@@ -285,12 +287,13 @@ const CONCEPT_EVIDENCE = {
 };
 /** Every discovery this TEST run has real evidence for (concept + combination + secret). */
 export function evaluateRunDiscoveries(build, runtime, previous) {
-    const concepts = [...collectMotionDiscoveries(undefined, build, runtime), ...collectGearDiscoveries(build, runtime), ...collectStructureDiscoveries(build, runtime, previous)].map(id => ({ id, evidence: CONCEPT_EVIDENCE[id] ?? "Seen in a test." }));
+    var _a, _b;
+    const concepts = [...collectMotionDiscoveries(undefined, build, runtime), ...collectGearDiscoveries(build, runtime), ...collectStructureDiscoveries(build, runtime, previous)].map(id => { var _a; return ({ id, evidence: (_a = CONCEPT_EVIDENCE[id]) !== null && _a !== void 0 ? _a : "Seen in a test." }); });
     for (const m of LAB_MODULES)
         for (const id of m.collectDiscoveries(build, runtime))
-            concepts.push({ id, evidence: m.conceptEvidence[id] ?? "Seen in a test." });
+            concepts.push({ id, evidence: (_a = m.conceptEvidence[id]) !== null && _a !== void 0 ? _a : "Seen in a test." });
     for (const id of collectChainDiscoveries(build, runtime))
-        concepts.push({ id, evidence: CHAIN_CONCEPT_EVIDENCE[id] ?? "Seen in a test." });
+        concepts.push({ id, evidence: (_b = CHAIN_CONCEPT_EVIDENCE[id]) !== null && _b !== void 0 ? _b : "Seen in a test." });
     return [...concepts, ...collectSpecialDiscoveries(build, runtime)].filter(a => discoveryById(a.id));
 }
 export function eventsFor(runtime, partId, kind) {

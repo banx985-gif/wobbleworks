@@ -34,7 +34,7 @@ export function collectPowerDiscoveries(build, runtime) {
     if (loads.filter(l => steady(l.id, LEVEL_BRIGHT)).length >= 2)
         out.add("power.parallel");
     const electric = runtime.gears.nodes.filter(n => runtime.gears.isElectric(n.id));
-    if (electric.some(n => (runtime.gears.state(n.id)?.runTicks ?? 0) >= EVIDENCE_TICKS))
+    if (electric.some(n => { var _a, _b; return ((_b = (_a = runtime.gears.state(n.id)) === null || _a === void 0 ? void 0 : _a.runTicks) !== null && _b !== void 0 ? _b : 0) >= EVIDENCE_TICKS; }))
         out.add("power.motor");
     if (loads.some(l => steady(l.id, 1.8)))
         out.add("power.more-batteries");
@@ -43,10 +43,10 @@ export function collectPowerDiscoveries(build, runtime) {
     if (has("BATTERY_EMPTY") || c.sources().some(s => s.energyUsed >= s.capacity * 0.5))
         out.add("power.battery-drain");
     // Combinations: an electric motor's own gear train really did the work.
-    const electricTrain = (outputId) => { const d = runtime.gears.trainInfo(outputId)?.driverId; return d !== undefined && runtime.gears.isElectric(d); };
+    const electricTrain = (outputId) => { var _a; const d = (_a = runtime.gears.trainInfo(outputId)) === null || _a === void 0 ? void 0 : _a.driverId; return d !== undefined && runtime.gears.isElectric(d); };
     if (events.some(e => (e.kind === "WINCH_LIFT" || e.kind === "OUTPUT_TURN") && electricTrain(e.sourceId)))
         out.add("combo.power-gears");
-    if (events.some(e => e.kind === "CONVEYOR_CARRY") && runtime.gears.nodes.some(n => n.output?.kind === "CONVEYOR" && electricTrain(n.id) && (runtime.gears.state(n.id)?.runTicks ?? 0) >= EVIDENCE_TICKS))
+    if (events.some(e => e.kind === "CONVEYOR_CARRY") && runtime.gears.nodes.some(n => { var _a, _b, _c; return ((_a = n.output) === null || _a === void 0 ? void 0 : _a.kind) === "CONVEYOR" && electricTrain(n.id) && ((_c = (_b = runtime.gears.state(n.id)) === null || _b === void 0 ? void 0 : _b.runTicks) !== null && _c !== void 0 ? _c : 0) >= EVIDENCE_TICKS; }))
         out.add("combo.power-conveyor");
     // Secrets.
     if (has("BREAKER_TRIPPED"))

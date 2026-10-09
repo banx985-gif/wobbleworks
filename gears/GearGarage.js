@@ -1,7 +1,7 @@
-import { assertLevelDefinition } from "../data/validation.js";
 import { evaluateLevelOutcome } from "../core/OutcomeEvaluator.js";
 import { MAIN_LABS } from "../progression/CampaignData.js";
 import { GEAR_TRUTH_CONTRACT } from "./GearSystem.js";
+import { loadLevelSet } from "../data/LevelFiles.js";
 /**
  * Lab 2 — Gear Garage (M12). Missions, content loading, evidence-backed discoveries,
  * parent mappings and real-world connection moments. Every claim here maps to GEAR_TRUTH_CONTRACT
@@ -10,17 +10,7 @@ import { GEAR_TRUTH_CONTRACT } from "./GearSystem.js";
 export { GEAR_TRUTH_CONTRACT };
 export const GEAR_MISSIONS = MAIN_LABS.find(l => l.id === "gear-garage").missions;
 export async function loadGearGarageLevels(registry) {
-    const known = new Set(registry.all().map(part => part.id));
-    const levels = new Map();
-    for (const mission of GEAR_MISSIONS) {
-        const response = await fetch(`./content/gear/${mission.id}.json`, { cache: "no-store" });
-        if (!response.ok)
-            throw new Error(`Gear Garage content failed to load: ${mission.id}`);
-        const value = await response.json();
-        assertLevelDefinition(value, known);
-        levels.set(mission.id, value);
-    }
-    return levels;
+    return loadLevelSet(registry, "gear", GEAR_MISSIONS.map(m => m.id), "Gear Garage");
 }
 /** How long a relationship must really run before it counts as evidence (half a second). */
 export const EVIDENCE_TICKS = 30;
@@ -30,7 +20,7 @@ export function collectGearDiscoveries(build, runtime) {
     const out = new Set();
     const events = runtime.causalEvents;
     const has = (kind) => events.some(e => e.kind === kind);
-    const running = (id) => (gears.state(id)?.runTicks ?? 0) >= EVIDENCE_TICKS;
+    const running = (id) => { var _a, _b; return ((_b = (_a = gears.state(id)) === null || _a === void 0 ? void 0 : _a.runTicks) !== null && _b !== void 0 ? _b : 0) >= EVIDENCE_TICKS; };
     const links = gears.analysis.links;
     // Meshed pair both turning, opposite ways, for long enough.
     if (links.some(l => l.kind === "MESH" && running(l.a) && running(l.b) && Math.sign(gears.omega(l.a)) === -Math.sign(gears.omega(l.b))))
@@ -54,11 +44,11 @@ export function collectGearDiscoveries(build, runtime) {
         out.add("gear.belt-same-way");
     if (has("GEAR_STALLED"))
         out.add("gear.power-limit");
-    if (events.some(e => e.kind === "GEAR_JAMMED" && e.data?.reason === "LOOP"))
+    if (events.some(e => { var _a; return e.kind === "GEAR_JAMMED" && ((_a = e.data) === null || _a === void 0 ? void 0 : _a.reason) === "LOOP"; }))
         out.add("secret.gear-gridlock");
-    if (has("CONVEYOR_CARRY") && events.some(e => e.kind === "CONVEYOR_CARRY" && (() => { try {
+    if (has("CONVEYOR_CARRY") && events.some(e => e.kind === "CONVEYOR_CARRY" && (() => { var _a; try {
         const st = runtime.physics.state(e.targetId);
-        const start = build.getPart(e.targetId)?.position;
+        const start = (_a = build.getPart(e.targetId)) === null || _a === void 0 ? void 0 : _a.position;
         return start ? Math.abs(st.x - start.x) > 1 : false;
     }
     catch {

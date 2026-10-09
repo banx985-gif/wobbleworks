@@ -10,6 +10,7 @@ export function assertId(id, label = "id") {
         throw new ValidationError(`${label} must use lowercase stable-id naming: ${id}`);
 }
 export function assertPartDefinition(value) {
+    var _a;
     if (!value || typeof value !== "object")
         throw new ValidationError("Part definition must be an object");
     const p = value;
@@ -24,7 +25,7 @@ export function assertPartDefinition(value) {
         if (p.art.logicalSize.x <= 0 || p.art.logicalSize.y <= 0)
             throw new ValidationError("part art logical size must be positive");
     }
-    for (const preset of p.presets ?? []) {
+    for (const preset of (_a = p.presets) !== null && _a !== void 0 ? _a : []) {
         assertId(preset.id, `preset on ${p.id}`);
         if (!preset.displayName)
             throw new ValidationError(`preset ${preset.id} displayName required`);
@@ -46,6 +47,7 @@ export function assertSupportedMetric(metric) {
         throw new ValidationError(`Unsupported advertised metric: ${metric}`);
 }
 export function assertLevelDefinition(value, knownPartIds) {
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
     if (!value || typeof value !== "object")
         throw new ValidationError("Level must be an object");
     const l = value;
@@ -56,21 +58,21 @@ export function assertLevelDefinition(value, knownPartIds) {
         throw new ValidationError("level title/environmentId required");
     if (!Array.isArray(l.goals) || !Array.isArray(l.evidenceRules))
         throw new ValidationError("level goals/evidenceRules must be arrays");
-    for (const partId of l.availablePartIds ?? []) {
+    for (const partId of (_a = l.availablePartIds) !== null && _a !== void 0 ? _a : []) {
         if (knownPartIds && !knownPartIds.has(partId))
             throw new ValidationError(`Unknown available part: ${partId}`);
     }
-    const authoredInstances = [...(l.starterParts ?? []), ...(l.staticObjects ?? [])];
+    const authoredInstances = [...((_b = l.starterParts) !== null && _b !== void 0 ? _b : []), ...((_c = l.staticObjects) !== null && _c !== void 0 ? _c : [])];
     for (const instance of authoredInstances) {
         if (knownPartIds && !knownPartIds.has(instance.definitionId))
             throw new ValidationError(`Unknown level part definition: ${instance.definitionId}`);
-        for (const tag of instance.tags ?? [])
+        for (const tag of (_d = instance.tags) !== null && _d !== void 0 ? _d : [])
             assertId(tag, `tag on ${instance.id}`);
     }
-    for (const spawn of l.spawns ?? [])
+    for (const spawn of (_e = l.spawns) !== null && _e !== void 0 ? _e : [])
         if (knownPartIds && !knownPartIds.has(spawn.definitionId))
             throw new ValidationError(`Unknown spawn part definition: ${spawn.definitionId}`);
-    for (const constraint of l.constraints ?? []) {
+    for (const constraint of (_f = l.constraints) !== null && _f !== void 0 ? _f : []) {
         assertId(constraint.id, "constraint.id");
         if (constraint.kind === "MAX_PARTS" && (!Number.isFinite(constraint.value) || Number(constraint.value) < 1))
             throw new ValidationError(`MAX_PARTS ${constraint.id} requires positive value`);
@@ -78,8 +80,8 @@ export function assertLevelDefinition(value, knownPartIds) {
     for (const goal of l.goals)
         if (goal.metric)
             assertSupportedMetric(goal.metric);
-    const authoredTags = new Set(authoredInstances.flatMap(instance => [...(instance.tags ?? [])]));
-    for (const rule of l.outcomeRules ?? []) {
+    const authoredTags = new Set(authoredInstances.flatMap(instance => { var _a; return [...((_a = instance.tags) !== null && _a !== void 0 ? _a : [])]; }));
+    for (const rule of (_g = l.outcomeRules) !== null && _g !== void 0 ? _g : []) {
         if (rule.kind === "OBJECT_ENTERS_ZONE") {
             if (rule.radius <= 0)
                 throw new ValidationError(`OBJECT_ENTERS_ZONE requires positive radius`);
@@ -124,7 +126,7 @@ export function assertLevelDefinition(value, knownPartIds) {
         else if (rule.kind === "GEAR_OUTPUT") {
             if (!authoredTags.has(rule.targetTag))
                 throw new ValidationError(`GEAR_OUTPUT references unknown authored tag`);
-            if ((rule.minSpeed ?? 0) < 0 || (rule.maxSpeed !== undefined && rule.maxSpeed < (rule.minSpeed ?? 0)) || (rule.minTurns ?? 0) < 0 || (rule.sustainSeconds ?? 0) < 0)
+            if (((_h = rule.minSpeed) !== null && _h !== void 0 ? _h : 0) < 0 || (rule.maxSpeed !== undefined && rule.maxSpeed < ((_j = rule.minSpeed) !== null && _j !== void 0 ? _j : 0)) || ((_k = rule.minTurns) !== null && _k !== void 0 ? _k : 0) < 0 || ((_l = rule.sustainSeconds) !== null && _l !== void 0 ? _l : 0) < 0)
                 throw new ValidationError(`Invalid GEAR_OUTPUT rule`);
         }
         else if (rule.kind === "STRUCT_ARRIVES") {

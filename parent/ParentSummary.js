@@ -37,10 +37,11 @@ export const JUDGEMENT_WORDS = ["grade", "score", "iq", "gifted", "talented", "s
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 function completed(p) { return new Set(Object.entries(p.levels).filter(([, r]) => r.completed).map(([id]) => id)); }
 export function childSummary(save, p) {
+    var _a, _b;
     const found = new Set(p.discoveries);
     const done = completed(p);
     const groups = PARENT_CONCEPT_GROUPS.map(g => ({ concept: g.concept, evidence: g.mappings.filter(m => found.has(m.discoveryId)).map(m => m.evidence) })).filter(g => g.evidence.length);
-    const programming = groups.find(g => g.concept === PROGRAMMING_GROUP)?.evidence ?? [];
+    const programming = (_b = (_a = groups.find(g => g.concept === PROGRAMMING_GROUP)) === null || _a === void 0 ? void 0 : _a.evidence) !== null && _b !== void 0 ? _b : [];
     const labs = [];
     for (const lab of MAIN_LABS) {
         const n = lab.missions.filter(m => done.has(m.id)).length;
@@ -59,7 +60,7 @@ export function childSummary(save, p) {
         labs.push({ title: "WobbleWorks campus", line: "Ran the Great WobbleWorks Machine — the whole campus is restored" });
     const experiments = [];
     if (p.experiments.length) {
-        const questions = [...new Set(p.experiments.map(e => experimentTemplate(e.templateId)?.question).filter((q) => Boolean(q)))];
+        const questions = [...new Set(p.experiments.map(e => { var _a; return (_a = experimentTemplate(e.templateId)) === null || _a === void 0 ? void 0 : _a.question; }).filter((q) => Boolean(q)))];
         experiments.push(`Saved ${plural(p.experiments.length, "experiment")} with ${plural(p.experiments.reduce((n, e) => n + e.trials.length, 0), "measured test")}`);
         const guessed = p.experiments.filter(e => e.prediction).length;
         if (guessed)
@@ -78,7 +79,7 @@ export function childSummary(save, p) {
     const made = save.customChallenges.filter(c => c.creatorProfileId === p.id).length;
     if (made)
         making.push(`Made ${plural(made, "challenge")} for others to play — and solved each one first`);
-    const tryAtHome = groups.map(g => ({ concept: g.concept, ideas: ACTIVITY_IDEAS[g.concept] ?? [] })).filter(t => t.ideas.length);
+    const tryAtHome = groups.map(g => { var _a; return ({ concept: g.concept, ideas: (_a = ACTIVITY_IDEAS[g.concept]) !== null && _a !== void 0 ? _a : [] }); }).filter(t => t.ideas.length);
     return { name: p.name, lastPlayed: p.lastPlayedAtMs > 1e12 ? new Date(p.lastPlayedAtMs).toLocaleDateString() : "", concepts: groups, programming, labs, experiments, making, tryAtHome };
 }
 /** Plain-language information for grown-ups. Every statement here must stay true of the build (see tests). */

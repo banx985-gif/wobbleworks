@@ -6,6 +6,7 @@ import { WATER_TRUTH_CONTRACT } from "./FluidSystem.js";
 export { WATER_TRUTH_CONTRACT };
 export const WATER_MISSIONS = labMissions("water-works");
 export function collectWaterDiscoveries(build, runtime) {
+    var _a;
     const w = runtime.water;
     const out = new Set();
     const events = runtime.causalEvents;
@@ -17,7 +18,7 @@ export function collectWaterDiscoveries(build, runtime) {
     // Downhill: a tank that started with water gave some to another tank, with no pump helping.
     const pumping = has("PUMP_LIFT");
     for (const p of build.allParts()) {
-        const start = Number(p.parameters.startVolume ?? 0);
+        const start = Number((_a = p.parameters.startVolume) !== null && _a !== void 0 ? _a : 0);
         const t = w.tank(p.id);
         if (!t || start <= 0)
             continue;
@@ -42,9 +43,9 @@ export function collectWaterDiscoveries(build, runtime) {
     if (events.some(e => e.kind === "WATER_SPILL" && w.tank(e.sourceId) !== undefined) || w.spillStates().some(s => w.tank(s.id) !== undefined))
         out.add("water.overflow");
     const wheels = runtime.gears.nodes.filter(n => runtime.gears.isHydraulic(n.id));
-    if (wheels.some(n => (runtime.gears.state(n.id)?.runTicks ?? 0) >= 30))
+    if (wheels.some(n => { var _a, _b; return ((_b = (_a = runtime.gears.state(n.id)) === null || _a === void 0 ? void 0 : _a.runTicks) !== null && _b !== void 0 ? _b : 0) >= 30; }))
         out.add("water.wheel");
-    const hydraulicTrain = (id) => { const d = runtime.gears.trainInfo(id)?.driverId; return d !== undefined && runtime.gears.isHydraulic(d); };
+    const hydraulicTrain = (id) => { var _a; const d = (_a = runtime.gears.trainInfo(id)) === null || _a === void 0 ? void 0 : _a.driverId; return d !== undefined && runtime.gears.isHydraulic(d); };
     if (events.some(e => e.kind === "OUTPUT_TURN" && hydraulicTrain(e.sourceId)))
         out.add("combo.water-gears");
     if (has("PUMP_LIFT") && has("NOZZLE_HIT"))

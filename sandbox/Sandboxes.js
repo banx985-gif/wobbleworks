@@ -66,14 +66,14 @@ export const MODIFIER_LABELS = {
 /** Turn a modifier on or off: returns the parts with that modifier's room pieces added or removed. */
 export function withModifier(parts, id, on) {
     const tag = `modifier.${id.toLowerCase()}`;
-    const rest = parts.filter(p => !p.tags?.includes(tag));
+    const rest = parts.filter(p => { var _a; return !((_a = p.tags) === null || _a === void 0 ? void 0 : _a.includes(tag)); });
     if (!on)
         return rest;
     // Only one gravity at a time.
     const other = id === "LOW_GRAVITY" ? "modifier.strong_gravity" : id === "STRONG_GRAVITY" ? "modifier.low_gravity" : undefined;
-    return [...rest.filter(p => !other || !p.tags?.includes(other)), ...MODIFIER_PARTS[id].map((m, i) => ({ id: `${tag}-${i}`, definitionId: m.definitionId, position: { x: m.x, y: m.y }, rotation: m.rotation ?? 0, parameters: { locked: true, ...(m.parameters ?? {}) }, tags: [tag, "sandbox.room"] }))];
+    return [...rest.filter(p => { var _a; return !other || !((_a = p.tags) === null || _a === void 0 ? void 0 : _a.includes(other)); }), ...MODIFIER_PARTS[id].map((m, i) => { var _a, _b; return ({ id: `${tag}-${i}`, definitionId: m.definitionId, position: { x: m.x, y: m.y }, rotation: (_a = m.rotation) !== null && _a !== void 0 ? _a : 0, parameters: { locked: true, ...((_b = m.parameters) !== null && _b !== void 0 ? _b : {}) }, tags: [tag, "sandbox.room"] }); })];
 }
-export function activeModifiers(parts) { return Object.keys(MODIFIER_PARTS).filter(id => parts.some(p => p.tags?.includes(`modifier.${id.toLowerCase()}`))); }
+export function activeModifiers(parts) { return Object.keys(MODIFIER_PARTS).filter(id => parts.some(p => { var _a; return (_a = p.tags) === null || _a === void 0 ? void 0 : _a.includes(`modifier.${id.toLowerCase()}`); })); }
 /** Starter templates: small machines that drop in and work straight away (positions relative to where they land). */
 export const SANDBOX_TEMPLATES = [
     { id: "tpl.ramp-ball", title: "Ramp and ball", parts: [{ definitionId: "motion.ramp", x: 0, y: 0, rotation: 0.35 }, { definitionId: "motion.ball", x: -0.8, y: -1.2 }] },
@@ -89,11 +89,11 @@ export const SANDBOX_TEMPLATES = [
 export function templateById(id) { return SANDBOX_TEMPLATES.find(t => t.id === id); }
 /** The template's parts placed with their middle at (x, y). */
 export function placeTemplate(t, x, y) {
-    return t.parts.map(p => ({ definitionId: p.definitionId, position: { x: Math.round((x + p.x) * 1e6) / 1e6, y: Math.round((y + p.y) * 1e6) / 1e6 }, rotation: p.rotation ?? 0, parameters: p.parameters ?? {} }));
+    return t.parts.map(p => { var _a, _b; return ({ definitionId: p.definitionId, position: { x: Math.round((x + p.x) * 1e6) / 1e6, y: Math.round((y + p.y) * 1e6) / 1e6 }, rotation: (_a = p.rotation) !== null && _a !== void 0 ? _a : 0, parameters: (_b = p.parameters) !== null && _b !== void 0 ? _b : {} }); });
 }
 /** How full a build is: the parts the child added (room furniture doesn't count) against the room's cap. */
 export function capStatus(parts, cap) {
-    const count = parts.filter(p => !p.tags?.includes("sandbox.room") && p.parameters.locked !== true).length;
+    const count = parts.filter(p => { var _a; return !((_a = p.tags) === null || _a === void 0 ? void 0 : _a.includes("sandbox.room")) && p.parameters.locked !== true; }).length;
     return { count, cap, warn: count >= Math.floor(cap * CAP_WARNING), full: count >= cap };
 }
 /** Parts that come with an unlocked part in Free Build (a rocket comes with its boosters and fins; a rover with its wheels). */
@@ -103,4 +103,4 @@ export const COMPANION_PARTS = {
     "magnetic.bar": ["magnetic.reed-switch"]
 };
 /** The tray in a Free Build room: everything unlocked, plus the parts that come with it. */
-export function sandboxTrayParts(unlocked) { return [...new Set([...unlocked, ...unlocked.flatMap(id => COMPANION_PARTS[id] ?? [])])]; }
+export function sandboxTrayParts(unlocked) { return [...new Set([...unlocked, ...unlocked.flatMap(id => { var _a; return (_a = COMPANION_PARTS[id]) !== null && _a !== void 0 ? _a : []; })])]; }

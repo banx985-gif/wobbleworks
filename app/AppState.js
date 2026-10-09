@@ -257,7 +257,7 @@ export function validateCustomChallenge(c) {
         return false;
     if (!c.fixed.every(p => p && isSafeId(p.id) && isSafeId(p.definitionId) && p.position && Number.isFinite(p.position.x) && Number.isFinite(p.position.y) && p.position.x >= -1 && p.position.x <= 17 && p.position.y >= -1 && p.position.y <= 10 && Number.isFinite(p.rotation) && p.parameters && typeof p.parameters === "object" && p.parameters.locked === true && (p.tags === undefined || isStringArray(p.tags, true))))
         return false;
-    if (!c.fixed.some(p => p.tags?.includes("start")) || c.fixed.filter(p => p.tags?.includes("goal")).length !== 1)
+    if (!c.fixed.some(p => { var _b; return (_b = p.tags) === null || _b === void 0 ? void 0 : _b.includes("start"); }) || c.fixed.filter(p => { var _b; return (_b = p.tags) === null || _b === void 0 ? void 0 : _b.includes("goal"); }).length !== 1)
         return false;
     if (!isStringArray(c.allowedParts, true) || c.allowedParts.length < 1 || c.allowedParts.length > 40)
         return false;
@@ -271,7 +271,8 @@ export function activeProfile(save) {
     return save.activeProfileId ? save.profiles.find(p => p.id === save.activeProfileId) : undefined;
 }
 export function mostRecentProfile(save) {
-    return activeProfile(save) ?? [...save.profiles].sort((a, b) => b.lastPlayedAtMs - a.lastPlayedAtMs)[0];
+    var _b;
+    return (_b = activeProfile(save)) !== null && _b !== void 0 ? _b : [...save.profiles].sort((a, b) => b.lastPlayedAtMs - a.lastPlayedAtMs)[0];
 }
 export function updateProfile(save, id, change) {
     if (!save.profiles.some(p => p.id === id))
@@ -287,31 +288,36 @@ export function profileSummaries(save) {
 }
 /** Completed lab level ids for the active profile, or guest progress when none. */
 export function completedLevelIds(save) {
+    var _b;
     const p = activeProfile(save);
     if (!p)
-        return save.motionCompletedLevelIds ?? [];
+        return (_b = save.motionCompletedLevelIds) !== null && _b !== void 0 ? _b : [];
     return Object.entries(p.levels).filter(([, r]) => r.completed).map(([id]) => id);
 }
 export function currentOpening(save) {
+    var _b, _c;
     const p = activeProfile(save);
-    return p ? { step: p.openingStep, complete: p.openingComplete } : { step: save.openingStep ?? 1, complete: save.openingComplete ?? false };
+    return p ? { step: p.openingStep, complete: p.openingComplete } : { step: (_b = save.openingStep) !== null && _b !== void 0 ? _b : 1, complete: (_c = save.openingComplete) !== null && _c !== void 0 ? _c : false };
 }
 export function currentSettings(save) {
-    return activeProfile(save)?.settings ?? save.deviceSettings;
+    var _b, _c;
+    return (_c = (_b = activeProfile(save)) === null || _b === void 0 ? void 0 : _b.settings) !== null && _c !== void 0 ? _c : save.deviceSettings;
 }
 export function currentAssistance(save) {
-    return activeProfile(save)?.assistance ?? DEFAULT_ASSISTANCE;
+    var _b, _c;
+    return (_c = (_b = activeProfile(save)) === null || _b === void 0 ? void 0 : _b.assistance) !== null && _c !== void 0 ? _c : DEFAULT_ASSISTANCE;
 }
 export function currentLastBuild(save) {
     const p = activeProfile(save);
     return p ? p.lastBuild : save.lastBuild;
 }
 export function titleVisibility(save) {
+    var _b;
     const hasProfiles = save.profiles.length > 0;
     const recent = mostRecentProfile(save);
     // Guest progress that still exists (a build, or opening beats past the first). Deleting the last
     // inventor clears it, so the title correctly falls back to START BUILDING instead of an empty menu.
-    const guestStarted = save.lastBuild !== undefined || (save.openingStep ?? 1) > 1 || save.openingComplete === true;
+    const guestStarted = save.lastBuild !== undefined || ((_b = save.openingStep) !== null && _b !== void 0 ? _b : 1) > 1 || save.openingComplete === true;
     const returning = guestStarted || hasProfiles;
     return {
         startBuilding: !returning,
@@ -323,13 +329,15 @@ export function titleVisibility(save) {
 }
 // ------------------------------------------------------------------ mutations (pure)
 export function withBuild(save, lastBuild) {
+    var _b;
     const base = { ...save, firstLaunchCompleted: true };
-    return updateActive(base, p => ({ ...p, lastBuild })) ?? { ...base, lastBuild };
+    return (_b = updateActive(base, p => ({ ...p, lastBuild }))) !== null && _b !== void 0 ? _b : { ...base, lastBuild };
 }
 export function withFirstTest(save, lastBuild) {
     return withBuild({ ...save, firstTestCompleted: true }, lastBuild);
 }
 export function withOpeningProgress(save, openingStep, openingComplete = false) {
+    var _b;
     const updated = updateActive(save, p => {
         const complete = p.openingComplete || openingComplete;
         return {
@@ -338,17 +346,19 @@ export function withOpeningProgress(save, openingStep, openingComplete = false) 
             unlockedParts: complete ? [...new Set([...p.unlockedParts, ...OPENING_STARTER_PARTS])] : p.unlockedParts
         };
     });
-    return updated ?? ({ ...save, openingStep, openingComplete: (save.openingComplete ?? false) || openingComplete, freeBuildUnlocked: save.freeBuildUnlocked || openingComplete });
+    return updated !== null && updated !== void 0 ? updated : ({ ...save, openingStep, openingComplete: ((_b = save.openingComplete) !== null && _b !== void 0 ? _b : false) || openingComplete, freeBuildUnlocked: save.freeBuildUnlocked || openingComplete });
 }
 export function withOpeningMetrics(save, metrics) {
+    var _b;
     const copy = { ...metrics, completedSteps: [...metrics.completedSteps] };
-    return updateActive(save, p => ({ ...p, openingMetrics: copy })) ?? { ...save, openingMetrics: copy };
+    return (_b = updateActive(save, p => ({ ...p, openingMetrics: copy }))) !== null && _b !== void 0 ? _b : { ...save, openingMetrics: copy };
 }
 /**
  * Creates an inventor and makes it active. The very first inventor inherits the guest progress made
  * during the opening (Create Inventor appears after opening beat 3), and the guest slot is cleared.
  */
 export function withCreatedProfile(save, name, avatarStyle, nowMs = Date.now(), look) {
+    var _b, _c, _d, _e, _f;
     if (save.profiles.length >= MAX_PROFILES)
         throw new Error("Profile limit reached");
     if (look !== undefined && !validateLook(look))
@@ -359,19 +369,19 @@ export function withCreatedProfile(save, name, avatarStyle, nowMs = Date.now(), 
     const inheritsGuest = save.profiles.length === 0;
     if (inheritsGuest) {
         const levels = {};
-        for (const id of save.motionCompletedLevelIds ?? [])
+        for (const id of (_b = save.motionCompletedLevelIds) !== null && _b !== void 0 ? _b : [])
             levels[id] = { completed: true, stars: ["solve"], completions: 1 };
-        const complete = save.openingComplete ?? false;
+        const complete = (_c = save.openingComplete) !== null && _c !== void 0 ? _c : false;
         profile = {
             ...profile,
-            openingStep: save.openingStep ?? 1, openingComplete: complete,
+            openingStep: (_d = save.openingStep) !== null && _d !== void 0 ? _d : 1, openingComplete: complete,
             ...(save.openingMetrics ? { openingMetrics: save.openingMetrics } : {}),
             ...(save.lastBuild ? { lastBuild: save.lastBuild } : {}),
-            levels, discoveries: [...new Set(save.motionDiscoveries ?? [])], settings: { ...save.deviceSettings },
+            levels, discoveries: [...new Set((_e = save.motionDiscoveries) !== null && _e !== void 0 ? _e : [])], settings: { ...save.deviceSettings },
             freeBuildUnlocked: save.freeBuildUnlocked, location: complete ? "HUB" : "OPENING",
             unlockedParts: complete ? [...OPENING_STARTER_PARTS] : []
         };
-        profile = grantRewardsTo(profile, completionRewardIds(save.motionCompletedLevelIds ?? [])).profile;
+        profile = grantRewardsTo(profile, completionRewardIds((_f = save.motionCompletedLevelIds) !== null && _f !== void 0 ? _f : [])).profile;
     }
     const base = inheritsGuest
         ? (() => {
@@ -411,27 +421,31 @@ export function withDeletedProfile(save, id) {
     return save.activeProfileId === id ? withoutActiveProfile(next) : next;
 }
 export function withSettings(save, settings) {
+    var _b;
     if (!validateSettings(settings))
         throw new Error("Invalid settings");
-    return updateActive(save, p => ({ ...p, settings: { ...settings } })) ?? { ...save, deviceSettings: { ...settings } };
+    return (_b = updateActive(save, p => ({ ...p, settings: { ...settings } }))) !== null && _b !== void 0 ? _b : { ...save, deviceSettings: { ...settings } };
 }
 export function withAssistance(save, assistance) {
-    return updateActive(save, p => ({ ...p, assistance: { ...assistance } })) ?? save;
+    var _b;
+    return (_b = updateActive(save, p => ({ ...p, assistance: { ...assistance } }))) !== null && _b !== void 0 ? _b : save;
 }
 export function withLocation(save, location) {
-    return updateActive(save, p => ({ ...p, location })) ?? save;
+    var _b;
+    return (_b = updateActive(save, p => ({ ...p, location }))) !== null && _b !== void 0 ? _b : save;
 }
 /** Legacy M9 entry point: records completed Motion ids + discoveries on the active profile or guest. */
 export function withMotionProgress(save, completedLevelIds, discoveries) {
     const updated = updateActive(save, p => {
+        var _b;
         const levels = { ...p.levels };
         for (const id of completedLevelIds) {
             const prev = levels[id];
-            levels[id] = prev?.completed ? prev : { completed: true, stars: ["solve"], completions: Math.max(1, prev?.completions ?? 0) };
+            levels[id] = (prev === null || prev === void 0 ? void 0 : prev.completed) ? prev : { completed: true, stars: ["solve"], completions: Math.max(1, (_b = prev === null || prev === void 0 ? void 0 : prev.completions) !== null && _b !== void 0 ? _b : 0) };
         }
         return { ...p, levels, discoveries: [...new Set([...p.discoveries, ...discoveries])] };
     });
-    return updated ?? { ...save, motionCompletedLevelIds: [...new Set(completedLevelIds)], motionDiscoveries: [...new Set(discoveries)] };
+    return updated !== null && updated !== void 0 ? updated : { ...save, motionCompletedLevelIds: [...new Set(completedLevelIds)], motionDiscoveries: [...new Set(discoveries)] };
 }
 export function withEntitlement(save, entitlement) {
     return { ...save, entitlement };

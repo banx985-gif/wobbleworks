@@ -16,43 +16,92 @@ export const MUSIC_TRUTH_CONTRACT = Object.freeze({
     simplify: ["notes are simple synthesised tones", "no acoustics model: no echo, loudness or resonance"],
     neverImply: ["a machine can make a sound without anything making it happen"]
 });
-export function musicBehaviour(def) { const b = def?.behaviours.find(x => x.kind === "MUSIC"); return b?.kind === "MUSIC" ? b : undefined; }
+export function musicBehaviour(def) { const b = def === null || def === void 0 ? void 0 : def.behaviours.find(x => x.kind === "MUSIC"); return (b === null || b === void 0 ? void 0 : b.kind) === "MUSIC" ? b : undefined; }
 /** Which instrument family a part plays (the chain bell and the circuit buzzer count too). */
 export function familyOf(def) {
     const m = musicBehaviour(def);
     if (m && m.family !== "BEATER" && m.family !== "TIMER")
         return m.family;
-    if (def?.behaviours.some(b => b.kind === "CHAIN" && b.thing === "BELL"))
+    if (def === null || def === void 0 ? void 0 : def.behaviours.some(b => b.kind === "CHAIN" && b.thing === "BELL"))
         return "BELL";
-    if (def?.behaviours.some(b => b.kind === "CIRCUIT" && b.role === "LOAD" && b.load === "BUZZER"))
+    if (def === null || def === void 0 ? void 0 : def.behaviours.some(b => b.kind === "CIRCUIT" && b.role === "LOAD" && b.load === "BUZZER"))
         return "BUZZER";
     return undefined;
 }
 /** A note's pitch from the part's setting (1–8, a C major scale), as a frequency for the sound. */
 export const SCALE_HZ = [262, 294, 330, 349, 392, 440, 494, 523];
-export function pitchOf(p) { const n = Math.round(Number(p.parameters.note ?? 1)); return Math.max(1, Math.min(8, Number.isFinite(n) ? n : 1)); }
+export function pitchOf(p) { var _a; const n = Math.round(Number((_a = p.parameters.note) !== null && _a !== void 0 ? _a : 1)); return Math.max(1, Math.min(8, Number.isFinite(n) ? n : 1)); }
 const STRIKE_REACH = 0.45, COOLDOWN = 12;
 export class MusicSystem {
-    parts;
-    definition;
-    notes = [];
-    instruments = [];
-    beaters = [];
-    last = new Map();
-    hornOn = new Map();
-    water = new Map();
-    /** Which moving things are inside each instrument's reach (a note sounds when something arrives, not while it stays). */
-    inside = new Map();
-    pending = [];
     constructor(parts, definition) {
-        this.parts = parts;
-        this.definition = definition;
+        var _a;
+        Object.defineProperty(this, "parts", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: parts
+        });
+        Object.defineProperty(this, "definition", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: definition
+        });
+        Object.defineProperty(this, "notes", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "instruments", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "beaters", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "last", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "hornOn", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "water", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        /** Which moving things are inside each instrument's reach (a note sounds when something arrives, not while it stays). */
+        Object.defineProperty(this, "inside", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "pending", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
         for (const p of parts) {
             const def = definition(p.definitionId);
             const f = familyOf(def);
             if (f)
                 this.instruments.push({ part: p, family: f });
-            if (musicBehaviour(def)?.family === "BEATER")
+            if (((_a = musicBehaviour(def)) === null || _a === void 0 ? void 0 : _a.family) === "BEATER")
                 this.beaters.push({ part: p, turns: 0 });
         }
     }
@@ -64,17 +113,18 @@ export class MusicSystem {
         this.last.set(inst.part.id, tick);
         const note = { tick, instrumentId: inst.part.id, family: inst.family, pitch: pitchOf(inst.part), cause, ...(by ? { by } : {}) };
         this.notes.push(note);
-        this.pending.push({ kind: "NOTE_PLAYED", sourceId: by ?? inst.part.id, targetId: inst.part.id, data: { family: inst.family, pitch: note.pitch, cause } });
+        this.pending.push({ kind: "NOTE_PLAYED", sourceId: by !== null && by !== void 0 ? by : inst.part.id, targetId: inst.part.id, data: { family: inst.family, pitch: note.pitch, cause } });
     }
     /**
      * After the physics step and the other systems: strikes by moving things, beaters on turning shafts, water jets on
      * chimes, horns and buzzers switching on (and whether a robot's button press switched them), and bells the chain rang.
      */
     observe(tick, physics, shaftAngle, loadOn, robotPressing, events, skip, waterReceived = () => 0) {
+        var _a, _b;
         for (const inst of this.instruments) {
             // A chime under a steady water jet keeps ringing — every half second while water keeps arriving.
             if (inst.family === "CHIME") {
-                const w = waterReceived(inst.part.id), was = this.water.get(inst.part.id) ?? 0;
+                const w = waterReceived(inst.part.id), was = (_a = this.water.get(inst.part.id)) !== null && _a !== void 0 ? _a : 0;
                 this.water.set(inst.part.id, w);
                 const lastAt = this.last.get(inst.part.id);
                 if (w > was && (lastAt === undefined || tick - lastAt >= 30))
@@ -89,7 +139,7 @@ export class MusicSystem {
             }
             if (inst.family === "BELL")
                 continue; // the chain system rings bells (below)
-            const was = this.inside.get(inst.part.id) ?? new Set();
+            const was = (_b = this.inside.get(inst.part.id)) !== null && _b !== void 0 ? _b : new Set();
             const now = new Set();
             for (const s of physics.states()) {
                 if (!physics.isDynamic(s.id) || skip(s.id))
@@ -130,7 +180,7 @@ export class MusicSystem {
 // ------------------------------------------------------------------ what the music challenges check (pure, from the notes)
 /** Instruments tagged in order were each first played in that order. */
 export function playedInOrder(notes, order) {
-    const first = order.map(id => notes.find(n => n.instrumentId === id)?.tick);
+    const first = order.map(id => { var _a; return (_a = notes.find(n => n.instrumentId === id)) === null || _a === void 0 ? void 0 : _a.tick; });
     return first.every(t => t !== undefined) && first.every((t, i) => i === 0 || t > first[i - 1]);
 }
 /** A steady beat: at least `min` notes whose gaps all stay within `tolerance` of the middle gap. */

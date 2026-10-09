@@ -50,7 +50,9 @@ export const PART_ART_FIT = {
  * Picture rectangle in the part's own (rotated) frame, centred on the body. `w`/`h` are the physics
  * size in the same units. Returns undefined for parts that have no painted picture rule.
  */
-export function partArtRect(id, w, h, aspect = PART_ART_ASPECT[id] ?? 1) {
+export function partArtRect(id, w, h, aspect) {
+    var _a;
+    if (aspect === void 0) { aspect = (_a = PART_ART_ASPECT[id]) !== null && _a !== void 0 ? _a : 1; }
     const fit = PART_ART_FIT[id];
     if (!fit || id === "motion.ramp")
         return undefined;

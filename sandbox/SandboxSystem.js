@@ -4,20 +4,69 @@
  * doesn't float. A moving platform carries what rests on it. Fragile things break only from a hard hit.
  */
 const RHO = 1.2;
-function beh(def, kind) { return def?.behaviours.find(b => b.kind === kind); }
+function beh(def, kind) { return def === null || def === void 0 ? void 0 : def.behaviours.find(b => b.kind === kind); }
 export class SandboxSystem {
-    parts;
-    drag = [];
-    buoyant = [];
-    fragile = [];
-    platforms = [];
-    broken = new Set();
-    carried = new Set();
-    pending = [];
-    elapsed = 0;
-    active;
     constructor(parts, definition) {
-        this.parts = parts;
+        Object.defineProperty(this, "parts", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: parts
+        });
+        Object.defineProperty(this, "drag", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "buoyant", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "fragile", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "platforms", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "broken", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Set()
+        });
+        Object.defineProperty(this, "carried", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Set()
+        });
+        Object.defineProperty(this, "pending", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "elapsed", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "active", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
         for (const p of parts) {
             const d = definition(p.definitionId);
             const dr = beh(d, "AIR_DRAG"), bu = beh(d, "BUOYANT"), fr = beh(d, "FRAGILE"), r = beh(d, "RIGID_BODY");
@@ -34,6 +83,7 @@ export class SandboxSystem {
     }
     /** Force phase. `airAt(x)`: is there air here (the Space Centre's zones decide; elsewhere yes). */
     step(dt, physics, airAt) {
+        var _a, _b, _c;
         if (!this.active)
             return;
         this.elapsed += dt;
@@ -71,9 +121,9 @@ export class SandboxSystem {
         }
         for (const pl of this.platforms) {
             const p = pl.part;
-            const period = Math.max(1, Number(p.parameters.period ?? 4));
+            const period = Math.max(1, Number((_a = p.parameters.period) !== null && _a !== void 0 ? _a : 4));
             const k = Math.sin(this.elapsed / period * Math.PI * 2);
-            const x = p.position.x + Number(p.parameters.dx ?? 3) * 0.5 * k, y = p.position.y + Number(p.parameters.dy ?? 0) * 0.5 * k;
+            const x = p.position.x + Number((_b = p.parameters.dx) !== null && _b !== void 0 ? _b : 3) * 0.5 * k, y = p.position.y + Number((_c = p.parameters.dy) !== null && _c !== void 0 ? _c : 0) * 0.5 * k;
             let before;
             try {
                 before = physics.state(p.id);

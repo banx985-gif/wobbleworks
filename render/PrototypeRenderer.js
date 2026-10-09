@@ -30,6 +30,7 @@ function stripes(c, x, y, w, h) {
     c.strokeRect(x, y, w, h);
 }
 export function drawPrototypePart(c, part, def, selected, ctx) {
+    var _a, _b;
     const x = part.position.x * 100, y = part.position.y * 100;
     c.save();
     c.translate(x, y);
@@ -151,22 +152,24 @@ export function drawPrototypePart(c, part, def, selected, ctx) {
         case "proto.bubble-blower": {
             // A wand on a little motor box, pointing the way it blows, with bubbles drifting out while it runs.
             c.rotate(part.rotation);
-            c.fillStyle = "#f783ac";
-            c.beginPath();
-            c.roundRect(-34, -18, 40, 36, 8);
-            c.fill();
-            c.stroke();
-            c.strokeStyle = INK;
-            c.lineWidth = 4;
-            c.beginPath();
-            c.moveTo(6, 0);
-            c.lineTo(24, 0);
-            c.stroke();
-            c.fillStyle = "#e7f5ff";
-            c.beginPath();
-            c.arc(34, 0, 11, 0, Math.PI * 2);
-            c.fill();
-            c.stroke();
+            if (!drawPartPicture(c, ctx.art, def.id)) {
+                c.fillStyle = "#f783ac";
+                c.beginPath();
+                c.roundRect(-34, -18, 40, 36, 8);
+                c.fill();
+                c.stroke();
+                c.strokeStyle = INK;
+                c.lineWidth = 4;
+                c.beginPath();
+                c.moveTo(6, 0);
+                c.lineTo(24, 0);
+                c.stroke();
+                c.fillStyle = "#e7f5ff";
+                c.beginPath();
+                c.arc(34, 0, 11, 0, Math.PI * 2);
+                c.fill();
+                c.stroke();
+            }
             if (ctx.runtime) {
                 c.lineWidth = 2;
                 c.strokeStyle = "#74c0fc";
@@ -184,7 +187,7 @@ export function drawPrototypePart(c, part, def, selected, ctx) {
         }
         case "proto.memory-chip": {
             // A chip with gold legs. It glows once the chain reaches it.
-            const lit = ctx.runtime?.chain.mechState(part.id)?.fired === true;
+            const lit = ((_b = (_a = ctx.runtime) === null || _a === void 0 ? void 0 : _a.chain.mechState(part.id)) === null || _b === void 0 ? void 0 : _b.fired) === true;
             if (lit) {
                 c.shadowColor = "#63e6be";
                 c.shadowBlur = 30;

@@ -508,7 +508,7 @@ export const MISSION_REWARDS = Object.freeze({
 });
 /** Rewards owed for missions already completed (used when old saves or guest progress move into a profile). */
 export function completionRewardIds(levelIds) {
-    return [...new Set(levelIds.flatMap(id => MISSION_REWARDS[id]?.onComplete ?? []))].filter(id => rewardById(id) !== undefined);
+    return [...new Set(levelIds.flatMap(id => { var _a, _b; return (_b = (_a = MISSION_REWARDS[id]) === null || _a === void 0 ? void 0 : _a.onComplete) !== null && _b !== void 0 ? _b : []; }))].filter(id => rewardById(id) !== undefined);
 }
 /** Pure reward grant: adds owned + unseen ids and unlocks the matching parts/tools. Returns only the newly added ids. */
 export function grantRewardsTo(p, rewardIds) {

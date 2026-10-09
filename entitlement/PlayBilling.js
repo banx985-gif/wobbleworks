@@ -19,7 +19,7 @@ export function proofFromTransaction(t) {
     if (!t.products.some(p => p.id === PLAY_PRODUCT_ID))
         return undefined;
     const n = t.nativePurchase;
-    if (!n?.receipt || !n.signature)
+    if (!(n === null || n === void 0 ? void 0 : n.receipt) || !n.signature)
         return undefined;
     if (n.getPurchaseState !== undefined && n.getPurchaseState !== 1)
         return undefined; // 1 = PURCHASED, 2 = PENDING
@@ -30,9 +30,9 @@ export function playAdapter(win) {
     let starting;
     let waiting;
     let lastError;
-    const answer = (r) => { const w = waiting; waiting = undefined; w?.(r); };
+    const answer = (r) => { const w = waiting; waiting = undefined; w === null || w === void 0 ? void 0 : w(r); };
     /** The plugin arrives with Cordova's "deviceready"; then Play starts once and stays ready. */
-    const start = () => starting ??= (async () => {
+    const start = () => starting !== null && starting !== void 0 ? starting : (starting = (async () => {
         if (!win.CdvPurchase && win.document)
             await within(START_MS, new Promise(done => win.document.addEventListener("deviceready", () => done(), { once: true })), undefined);
         const C = win.CdvPurchase;
@@ -57,7 +57,7 @@ export function playAdapter(win) {
             return errors.some(e => /billing.*unavailable|not supported/i.test(e.message)) ? "NO_PLAY" : "UNREACHABLE";
         }
         return C;
-    })();
+    })());
     const failure = (s) => ({ kind: "FAILED", message: s === "NO_PLAY" ? PLAY_MESSAGES.noPlay : PLAY_MESSAGES.unreachable });
     const ownedProof = (C) => { for (const t of C.store.localTransactions) {
         const p = proofFromTransaction(t);
@@ -67,13 +67,14 @@ export function playAdapter(win) {
     return {
         kind: "NATIVE", platform: "ANDROID", available: true, deferRevalidate: true, silentRestore: true,
         async purchase() {
+            var _a;
             const C = await start();
             if (typeof C === "string")
                 return failure(C);
             const already = ownedProof(C);
             if (already)
                 return { kind: "OWNED", proof: already };
-            const offer = C.store.get(PLAY_PRODUCT_ID, C.Platform.GOOGLE_PLAY)?.getOffer();
+            const offer = (_a = C.store.get(PLAY_PRODUCT_ID, C.Platform.GOOGLE_PLAY)) === null || _a === void 0 ? void 0 : _a.getOffer();
             if (!offer)
                 return { kind: "FAILED", message: PLAY_MESSAGES.notOnSale };
             const result = new Promise(resolve => { waiting = resolve; });
@@ -113,5 +114,6 @@ export function playAdapter(win) {
 }
 /** Is this the Android app (as opposed to a web browser)? */
 export function isAndroidApp(win) {
-    return Boolean(win?.Capacitor?.isNativePlatform?.() && win.Capacitor.getPlatform?.() === "android");
+    var _a, _b, _c, _d;
+    return Boolean(((_b = (_a = win === null || win === void 0 ? void 0 : win.Capacitor) === null || _a === void 0 ? void 0 : _a.isNativePlatform) === null || _b === void 0 ? void 0 : _b.call(_a)) && ((_d = (_c = win.Capacitor).getPlatform) === null || _d === void 0 ? void 0 : _d.call(_c)) === "android");
 }

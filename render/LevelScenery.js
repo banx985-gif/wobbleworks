@@ -70,17 +70,19 @@ export const SCENERY_ASPECT = {
     "level.prototype-machine": 1.01
 };
 export function sceneryRect(p) {
-    const h = p.w / (SCENERY_ASPECT[p.art] ?? 1);
+    var _a;
+    const h = p.w / ((_a = SCENERY_ASPECT[p.art]) !== null && _a !== void 0 ? _a : 1);
     return { x: p.x - p.w / 2, y: p.bottom - h, width: p.w, height: h };
 }
 export function drawLevelScenery(c, levelId, art) {
-    for (const p of (levelId ? LEVEL_SCENERY[levelId] : undefined) ?? []) {
+    var _a, _b;
+    for (const p of (_a = (levelId ? LEVEL_SCENERY[levelId] : undefined)) !== null && _a !== void 0 ? _a : []) {
         const img = art(p.art);
         if (!img)
             continue;
         const r = sceneryRect(p);
         c.save();
-        c.globalAlpha = p.alpha ?? 0.92;
+        c.globalAlpha = (_b = p.alpha) !== null && _b !== void 0 ? _b : 0.92;
         c.drawImage(img, r.x * 100, r.y * 100, r.width * 100, r.height * 100);
         c.restore();
     }

@@ -24,10 +24,11 @@ export function keepsScreenAwake(screen) { return screen === "WORKSHOP"; }
  * pausing sound and saving (`wobbleworks:native-background` / `-foreground`).
  */
 export function hookNativeApp(win, onBack) {
+    var _a, _b, _c;
     const cap = win.Capacitor;
-    const native = Boolean(cap?.isNativePlatform?.());
-    const app = native ? cap?.Plugins?.App : undefined;
-    const awake = native ? cap?.Plugins?.KeepAwake : undefined;
+    const native = Boolean((_a = cap === null || cap === void 0 ? void 0 : cap.isNativePlatform) === null || _a === void 0 ? void 0 : _a.call(cap));
+    const app = native ? (_b = cap === null || cap === void 0 ? void 0 : cap.Plugins) === null || _b === void 0 ? void 0 : _b.App : undefined;
+    const awake = native ? (_c = cap === null || cap === void 0 ? void 0 : cap.Plugins) === null || _c === void 0 ? void 0 : _c.KeepAwake : undefined;
     if (app) {
         app.addListener("backButton", onBack);
         app.addListener("pause", () => win.dispatchEvent(new Event("wobbleworks:native-background")));

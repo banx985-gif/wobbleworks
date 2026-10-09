@@ -66,7 +66,7 @@ function identifiersOk(save) {
     const profiles = Array.isArray(save.profiles) ? save.profiles : [];
     const ids = new Set();
     for (const p of profiles) {
-        if (typeof p?.id !== "string" || !SAFE_ID.test(p.id) || ids.has(p.id))
+        if (typeof (p === null || p === void 0 ? void 0 : p.id) !== "string" || !SAFE_ID.test(p.id) || ids.has(p.id))
             return false;
         ids.add(p.id);
         if (typeof p.name !== "string" || /[<>{}\\]/.test(p.name))

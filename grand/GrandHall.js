@@ -82,8 +82,9 @@ export function grandStageOf(levelId) {
 const stageKey = (id) => `${id}.stage`;
 /** The stage this inventor is on (0 = the first). Kept in their records, so leaving and coming back carries on. */
 export function grandStage(save, id) {
+    var _a, _b;
     const c = grandChallengeById(id);
-    const v = activeProfile(save)?.records[stageKey(id)] ?? 0;
+    const v = (_b = (_a = activeProfile(save)) === null || _a === void 0 ? void 0 : _a.records[stageKey(id)]) !== null && _b !== void 0 ? _b : 0;
     return c ? Math.max(0, Math.min(c.stages.length - 1, Math.floor(v))) : 0;
 }
 export function withGrandStage(save, id, n) {

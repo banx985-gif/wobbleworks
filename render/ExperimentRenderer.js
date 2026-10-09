@@ -2,13 +2,14 @@
 const INK = "#203040";
 export function isExperimentPart(def) { return def.id.startsWith("experiment."); }
 export function drawExperimentPart(c, part, def, selected) {
+    var _a, _b, _c;
     c.save();
     c.translate(part.position.x * 100, part.position.y * 100);
     c.strokeStyle = INK;
     c.lineWidth = selected ? 7 : 4;
     c.lineJoin = "round";
     if (def.id === "experiment.lane-sign") {
-        const a = String(part.parameters.letter ?? "A") === "A";
+        const a = String((_a = part.parameters.letter) !== null && _a !== void 0 ? _a : "A") === "A";
         c.fillStyle = a ? "#4dabf7" : "#ff922b";
         c.beginPath();
         c.arc(0, 0, 34, 0, Math.PI * 2);
@@ -18,7 +19,7 @@ export function drawExperimentPart(c, part, def, selected) {
         c.font = "900 38px system-ui";
         c.textAlign = "center";
         c.textBaseline = "middle";
-        c.fillText(String(part.parameters.letter ?? "A"), 0, 2);
+        c.fillText(String((_b = part.parameters.letter) !== null && _b !== void 0 ? _b : "A"), 0, 2);
     }
     else if (def.id === "experiment.finish") {
         c.beginPath();
@@ -33,7 +34,7 @@ export function drawExperimentPart(c, part, def, selected) {
         c.strokeRect(0, -40, 48, 36);
     }
     else if (def.id === "experiment.test-surface") {
-        const f = Number(part.parameters.friction ?? 0.35);
+        const f = Number((_c = part.parameters.friction) !== null && _c !== void 0 ? _c : 0.35);
         c.fillStyle = f >= 0.8 ? "#69db7c" : f <= 0.1 ? "#a5d8ff" : "#ced4da";
         c.beginPath();
         c.roundRect(-280, -10, 560, 20, 6);

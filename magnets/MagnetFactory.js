@@ -13,19 +13,19 @@ export function collectMagnetDiscoveries(build, runtime) {
         return [];
     const of = (kind) => events.filter(e => e.kind === kind);
     const attract = of("MAGNET_ATTRACT"), repel = of("MAGNET_REPEL");
-    if (attract.some(e => e.data?.poles === "N-S" || e.data?.poles === "S-N"))
+    if (attract.some(e => { var _a, _b; return ((_a = e.data) === null || _a === void 0 ? void 0 : _a.poles) === "N-S" || ((_b = e.data) === null || _b === void 0 ? void 0 : _b.poles) === "S-N"; }))
         out.add("magnet.unlike-attract");
-    if (repel.some(e => e.data?.poles === "N-N" || e.data?.poles === "S-S"))
+    if (repel.some(e => { var _a, _b; return ((_a = e.data) === null || _a === void 0 ? void 0 : _a.poles) === "N-N" || ((_b = e.data) === null || _b === void 0 ? void 0 : _b.poles) === "S-S"; }))
         out.add("magnet.like-repel");
     // One and the same magnet pulled with one end and pushed with the other: every magnet has both poles.
-    const ids = (list) => new Set(list.flatMap(e => [e.sourceId, e.targetId ?? ""]));
+    const ids = (list) => new Set(list.flatMap(e => { var _a; return [e.sourceId, (_a = e.targetId) !== null && _a !== void 0 ? _a : ""]; }));
     const a = ids(attract), r = ids(repel);
     if ([...a].some(id => id && r.has(id)))
         out.add("magnet.two-poles");
     const pulled = of("MAGNET_PULL_MATERIAL"), ignored = of("MAGNET_NO_EFFECT");
     if (pulled.length && ignored.length)
         out.add("magnet.materials");
-    if (ignored.some(e => e.data?.material === "ALUMINIUM" || e.data?.material === "COPPER"))
+    if (ignored.some(e => { var _a, _b; return ((_a = e.data) === null || _a === void 0 ? void 0 : _a.material) === "ALUMINIUM" || ((_b = e.data) === null || _b === void 0 ? void 0 : _b.material) === "COPPER"; }))
         out.add("magnet.not-all-metal");
     const electro = new Set(of("ELECTROMAGNET_ON").map(e => e.sourceId));
     if ([...pulled, ...of("MAGNET_HOLD")].some(e => electro.has(e.sourceId)))

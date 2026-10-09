@@ -20,9 +20,9 @@ export const WATER_TRUTH_CONTRACT = Object.freeze({
 export const FLOOR = 8.4, NODE_EPS = 0.06, G = 9.81;
 /** Elevation above the floor (m) of a world y. */
 export const elevation = (y) => FLOOR - y;
-export function fluidBehaviour(def) { const b = def?.behaviours.find(x => x.kind === "FLUID"); return b?.kind === "FLUID" ? b : undefined; }
-export function pipeBehaviour(def) { const b = def?.behaviours.find(x => x.kind === "PIPE"); return b?.kind === "PIPE" ? b : undefined; }
-export function targetBehaviour(def) { const b = def?.behaviours.find(x => x.kind === "WATER_TARGET"); return b?.kind === "WATER_TARGET" ? b : undefined; }
+export function fluidBehaviour(def) { const b = def === null || def === void 0 ? void 0 : def.behaviours.find(x => x.kind === "FLUID"); return (b === null || b === void 0 ? void 0 : b.kind) === "FLUID" ? b : undefined; }
+export function pipeBehaviour(def) { const b = def === null || def === void 0 ? void 0 : def.behaviours.find(x => x.kind === "PIPE"); return (b === null || b === void 0 ? void 0 : b.kind) === "PIPE" ? b : undefined; }
+export function targetBehaviour(def) { const b = def === null || def === void 0 ? void 0 : def.behaviours.find(x => x.kind === "WATER_TARGET"); return (b === null || b === void 0 ? void 0 : b.kind) === "WATER_TARGET" ? b : undefined; }
 export function fluidPorts(part, def) {
     const b = fluidBehaviour(def);
     if (!b)
@@ -33,10 +33,11 @@ export function fluidPorts(part, def) {
     return b.ports.map(t => upright ? { x: part.position.x + t.x, y: part.position.y + t.y } : { x: part.position.x + t.x * c - t.y * s, y: part.position.y + t.x * s + t.y * c });
 }
 export function pipeEnds(part, def) {
+    var _a;
     const p = pipeBehaviour(def);
     if (!p)
         return undefined;
-    const length = Number(part.parameters.length ?? p.length);
+    const length = Number((_a = part.parameters.length) !== null && _a !== void 0 ? _a : p.length);
     const c = Math.cos(part.rotation), s = Math.sin(part.rotation);
     return { x1: part.position.x - c * length / 2, y1: part.position.y - s * length / 2, x2: part.position.x + c * length / 2, y2: part.position.y + s * length / 2, length };
 }
@@ -85,27 +86,134 @@ export function pipeEndSnap(x, y, layout, reach = 0.35) {
 }
 const C_PIPE = 2.5, G_VALVE = 2, G_PUMP = 3, G_OUTLET = 1.2, G_NOZZLE = 0.35, PUMP_HEAD = 10;
 export class FluidSystem {
-    definition;
-    layout;
-    elems = [];
-    bounds = [];
-    tanks = new Map();
-    targets = [];
-    parts = new Map();
-    received = new Map();
-    open = new Map();
-    flow = new Map();
-    fillTimes = new Map();
-    heads = [];
-    jets = [];
-    spills = [];
-    puddles = new Map();
-    pending = [];
-    once = new Set();
-    elapsed = 0;
-    ticks = 0;
     constructor(parts, definition) {
-        this.definition = definition;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
+        Object.defineProperty(this, "definition", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: definition
+        });
+        Object.defineProperty(this, "layout", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "elems", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "bounds", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "tanks", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "targets", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "parts", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "received", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "open", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "flow", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "fillTimes", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "heads", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "jets", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "spills", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "puddles", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "pending", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "once", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Set()
+        });
+        Object.defineProperty(this, "elapsed", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "ticks", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "nodeCount", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "allNodes", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
         this.layout = analyzeFluid(parts, definition);
         for (const p of parts)
             this.parts.set(p.id, p);
@@ -119,13 +227,13 @@ export class FluidSystem {
             const f = fluidBehaviour(def);
             const t = targetBehaviour(def);
             if (t) {
-                const w = Number(p.parameters.width ?? t.width), h = Number(p.parameters.height ?? t.height);
+                const w = Number((_a = p.parameters.width) !== null && _a !== void 0 ? _a : t.width), h = Number((_b = p.parameters.height) !== null && _b !== void 0 ? _b : t.height);
                 this.targets.push({ id: p.id, x1: p.position.x - w / 2, x2: p.position.x + w / 2, top: p.position.y - h / 2, bottom: p.position.y + h / 2 });
                 this.received.set(p.id, 0);
             }
             const ps = portsOf(p.id);
             if (pipe && ps.length === 2) {
-                const len = Math.max(0.2, Number(p.parameters.length ?? pipe.length));
+                const len = Math.max(0.2, Number((_c = p.parameters.length) !== null && _c !== void 0 ? _c : pipe.length));
                 const g = pipe.conductance * C_PIPE / len;
                 if (p.parameters.broken === true) {
                     const e = pipeEnds(p, def);
@@ -142,15 +250,15 @@ export class FluidSystem {
                 continue;
             const port = ps[0];
             if (f.role === "SOURCE")
-                this.bounds.push({ node: port.node, head: elevation(port.y) + Number(p.parameters.head ?? f.head ?? 2), inOnly: false, outOnly: true, owner: p.id, kind: "SOURCE", x: port.x, y: port.y });
+                this.bounds.push({ node: port.node, head: elevation(port.y) + Number((_e = (_d = p.parameters.head) !== null && _d !== void 0 ? _d : f.head) !== null && _e !== void 0 ? _e : 2), inOnly: false, outOnly: true, owner: p.id, kind: "SOURCE", x: port.x, y: port.y });
             else if (f.role === "TANK") {
-                const height = f.height ?? 1.2, cap = Number(p.parameters.capacity ?? f.capacity ?? 10), bottomY = p.position.y + height / 2;
+                const height = (_f = f.height) !== null && _f !== void 0 ? _f : 1.2, cap = Number((_h = (_g = p.parameters.capacity) !== null && _g !== void 0 ? _g : f.capacity) !== null && _h !== void 0 ? _h : 10), bottomY = p.position.y + height / 2;
                 const base = { node: port.node, head: elevation(bottomY), inOnly: false, outOnly: false, owner: p.id, kind: "TANK_BASE", x: port.x, y: port.y };
                 this.bounds.push(base);
                 const top = ps[1] ? { node: ps[1].node, head: elevation(ps[1].y), inOnly: true, outOnly: false, owner: p.id, kind: "TANK_TOP", x: ps[1].x, y: ps[1].y } : undefined;
                 if (top)
                     this.bounds.push(top);
-                this.tanks.set(p.id, { volume: Number(p.parameters.startVolume ?? 0), capacity: cap, bottomY, height, baseNode: port.node, ...(top ? { topBoundary: top } : {}), baseBoundary: base, part: p });
+                this.tanks.set(p.id, { volume: Number((_j = p.parameters.startVolume) !== null && _j !== void 0 ? _j : 0), capacity: cap, bottomY, height, baseNode: port.node, ...(top ? { topBoundary: top } : {}), baseBoundary: base, part: p });
             }
             else if (f.role === "VALVE" && ps.length === 2) {
                 this.open.set(p.id, p.parameters.open === true);
@@ -167,21 +275,20 @@ export class FluidSystem {
         // Pipe ends joined to nothing else spill water.
         const count = new Map();
         for (const p of L.ports)
-            count.set(p.node, (count.get(p.node) ?? 0) + 1);
+            count.set(p.node, ((_k = count.get(p.node)) !== null && _k !== void 0 ? _k : 0) + 1);
         for (const p of L.ports)
             if (p.isPipe && count.get(p.node) === 1 && !this.bounds.some(b => b.node === p.node))
                 this.bounds.push({ node: p.node, head: elevation(p.y), inOnly: true, outOnly: false, owner: p.partId, kind: "SPILL", x: p.x, y: p.y });
         this.nodeCount = L.nodes.length + extra.length;
         this.allNodes = [...L.nodes, ...extra];
     }
-    nodeCount;
-    allNodes;
     hasWater() { return this.bounds.some(b => b.kind === "SOURCE") || [...this.tanks.values()].some(t => t.volume > 0); }
     /**
      * One tick. `pumpDrive(id)` is how hard the circuit drives a pump (0…2); `gearAngle(id)` turns rotating nozzles;
      * `flips` toggles valves tapped during the TEST.
      */
     step(dt, pumpDrive, gearAngle, flips = new Set()) {
+        var _a, _b, _c, _d, _e;
         this.elapsed += dt;
         for (const id of flips)
             if (this.open.has(id)) {
@@ -207,7 +314,7 @@ export class FluidSystem {
             for (const b of this.bounds) {
                 if (blockedB.has(b))
                     continue;
-                const q = bflow.get(b) ?? 0; // + = water entering the network from b
+                const q = (_a = bflow.get(b)) !== null && _a !== void 0 ? _a : 0; // + = water entering the network from b
                 const tank = b.kind === "TANK_BASE" ? this.tanks.get(b.owner) : undefined;
                 if ((b.inOnly && q > 1e-6) || (b.outOnly && q < -1e-6) || (tank && tank.volume <= 1e-6 && q > 1e-6)) {
                     blockedB.add(b);
@@ -215,13 +322,13 @@ export class FluidSystem {
                 }
             }
             for (const e of this.elems)
-                if (e.kind === "PUMP" && !blockedE.has(e.id) && (flows.get(e.id) ?? 0) < -1e-6) {
+                if (e.kind === "PUMP" && !blockedE.has(e.id) && ((_b = flows.get(e.id)) !== null && _b !== void 0 ? _b : 0) < -1e-6) {
                     blockedE.add(e.id);
                     changed = true;
                 }
             // Air locks: water can't rise above the highest water feeding it (source level or tank surface) plus whatever live pumps add.
             const fixed = new Set(this.bounds.filter(b => !blockedB.has(b)).map(b => b.node));
-            const supply = Math.max(-Infinity, ...this.bounds.filter(b => !blockedB.has(b) && (b.kind === "SOURCE" || (b.kind === "TANK_BASE" && (this.tanks.get(b.owner)?.volume ?? 0) > 1e-6))).map(b => b.head))
+            const supply = Math.max(-Infinity, ...this.bounds.filter(b => { var _a, _b; return !blockedB.has(b) && (b.kind === "SOURCE" || (b.kind === "TANK_BASE" && ((_b = (_a = this.tanks.get(b.owner)) === null || _a === void 0 ? void 0 : _a.volume) !== null && _b !== void 0 ? _b : 0) > 1e-6)); }).map(b => b.head))
                 + this.elems.filter(e => e.kind === "PUMP" && !blockedE.has(e.id)).reduce((sum, e) => sum + PUMP_HEAD * Math.max(0, Math.min(2, pumpDrive(e.partId))), 0);
             for (let n = 0; n < this.nodeCount; n++)
                 if (!fixed.has(n) && !dry.has(n) && this.touchesFlow(n, flows) && elevation(this.allNodes[n].y) > supply + 0.01) {
@@ -230,7 +337,7 @@ export class FluidSystem {
                     const src = this.bounds.find(b => b.kind === "SOURCE");
                     if (!this.once.has(`airlock:${n}`)) {
                         this.once.add(`airlock:${n}`);
-                        this.pending.push({ kind: "WATER_AIRLOCK", sourceId: src?.owner ?? "water", data: { y: round(this.allNodes[n].y) } });
+                        this.pending.push({ kind: "WATER_AIRLOCK", sourceId: (_c = src === null || src === void 0 ? void 0 : src.owner) !== null && _c !== void 0 ? _c : "water", data: { y: round(this.allNodes[n].y) } });
                     }
                 }
             if (!changed)
@@ -243,7 +350,7 @@ export class FluidSystem {
         this.jets = [];
         this.spills = [];
         for (const b of this.bounds) {
-            const q = blockedB.has(b) ? 0 : (bflow.get(b) ?? 0);
+            const q = blockedB.has(b) ? 0 : ((_d = bflow.get(b)) !== null && _d !== void 0 ? _d : 0);
             const out = -q; // water leaving the network into b
             if (b.kind === "TANK_BASE" || b.kind === "TANK_TOP") {
                 const t = this.tanks.get(b.owner);
@@ -295,13 +402,13 @@ export class FluidSystem {
                 this.spray(b, out, gearAngle, dt);
         }
         for (const e of this.elems)
-            if (e.kind === "PUMP" && (this.flow.get(e.id) ?? 0) > 0.05 && pumpDrive(e.partId) > 0.1 && !this.once.has(`pump:${e.id}`)) {
+            if (e.kind === "PUMP" && ((_e = this.flow.get(e.id)) !== null && _e !== void 0 ? _e : 0) > 0.05 && pumpDrive(e.partId) > 0.1 && !this.once.has(`pump:${e.id}`)) {
                 this.once.add(`pump:${e.id}`);
                 this.pending.push({ kind: "PUMP_LIFT", sourceId: e.partId, data: { flow: round(this.flow.get(e.id)) } });
             }
         this.ticks += 1;
     }
-    touchesFlow(n, flows) { return this.elems.some(e => (e.a === n || e.b === n) && Math.abs(flows.get(e.id) ?? 0) > 1e-5); }
+    touchesFlow(n, flows) { return this.elems.some(e => { var _a; return (e.a === n || e.b === n) && Math.abs((_a = flows.get(e.id)) !== null && _a !== void 0 ? _a : 0) > 1e-5; }); }
     /** Nodal heads with fixed-head boundaries. Returns element flows (a→b) and how much enters the network at each boundary. */
     solve(blockedB, blockedE, dry, pumpDrive) {
         const n = this.nodeCount;
@@ -350,11 +457,12 @@ export class FluidSystem {
     }
     /** A nozzle jet: speed from the pressure left at the nozzle, flown as an arc until it hits a target or the floor. */
     spray(b, flow, gearAngle, dt) {
+        var _a;
         const elem = this.elems.find(e => e.id === b.owner);
         const pressure = Math.max(0, this.heads[elem.a] - elevation(b.y));
         const speed = Math.min(9, Math.sqrt(2 * G * pressure));
         const part = this.partOf(b.owner);
-        const angle = (part?.rotation ?? 0) + gearAngle(b.owner);
+        const angle = ((_a = part === null || part === void 0 ? void 0 : part.rotation) !== null && _a !== void 0 ? _a : 0) + gearAngle(b.owner);
         const pts = [];
         let x = b.x + Math.cos(angle) * 0.3, y = b.y + Math.sin(angle) * 0.3, vx = Math.cos(angle) * speed, vy = Math.sin(angle) * speed;
         let hit;
@@ -387,22 +495,25 @@ export class FluidSystem {
     partOf(id) { return this.parts.get(id); }
     /** Water falling from (x, y) lands on the first target below it, else on the floor (a puddle). */
     deposit(x, y, amount) {
+        var _a;
         const t = this.targets.filter(q => x >= q.x1 && x <= q.x2 && q.bottom >= y - 0.05).sort((p, q) => p.top - q.top)[0];
         if (t)
             this.addReceived(t.id, amount);
         else {
             const k = Math.round(x * 2) / 2;
-            this.puddles.set(k, (this.puddles.get(k) ?? 0) + amount);
+            this.puddles.set(k, ((_a = this.puddles.get(k)) !== null && _a !== void 0 ? _a : 0) + amount);
         }
     }
     addReceived(id, amount) {
-        const before = this.received.get(id) ?? 0;
+        var _a;
+        const before = (_a = this.received.get(id)) !== null && _a !== void 0 ? _a : 0;
         this.received.set(id, before + amount);
         if (before === 0 && amount > 0)
             this.pending.push({ kind: "WATER_TARGET_WET", sourceId: "water", targetId: id });
     }
     trackFill(id, before, after, cap) {
-        const m = this.fillTimes.get(id) ?? new Map();
+        var _a;
+        const m = (_a = this.fillTimes.get(id)) !== null && _a !== void 0 ? _a : new Map();
         this.fillTimes.set(id, m);
         for (const f of [0.25, 0.5, 0.75, 0.95])
             if (before < f * cap && after >= f * cap && !m.has(f)) {
@@ -419,10 +530,10 @@ export class FluidSystem {
     tank(id) { const t = this.tanks.get(id); return t ? { id, volume: t.volume, capacity: t.capacity, fraction: t.volume / t.capacity, bottomY: t.bottomY, height: t.height } : undefined; }
     tankStates() { return [...this.tanks.keys()].map(id => this.tank(id)); }
     /** Seconds when a tank first reached a fill fraction (0.25, 0.5, 0.75 or 0.95). */
-    fillTime(id, fraction) { return this.fillTimes.get(id)?.get(fraction); }
-    received_(id) { return this.received.get(id) ?? 0; }
-    waterReceived(id) { return this.received.get(id) ?? 0; }
-    flowThrough(id) { return this.flow.get(id) ?? [...this.flow.entries()].filter(([k]) => k.startsWith(`${id}:`)).reduce((s, [, v]) => s + Math.abs(v), 0); }
+    fillTime(id, fraction) { var _a; return (_a = this.fillTimes.get(id)) === null || _a === void 0 ? void 0 : _a.get(fraction); }
+    received_(id) { var _a; return (_a = this.received.get(id)) !== null && _a !== void 0 ? _a : 0; }
+    waterReceived(id) { var _a; return (_a = this.received.get(id)) !== null && _a !== void 0 ? _a : 0; }
+    flowThrough(id) { var _a; return (_a = this.flow.get(id)) !== null && _a !== void 0 ? _a : [...this.flow.entries()].filter(([k]) => k.startsWith(`${id}:`)).reduce((s, [, v]) => s + Math.abs(v), 0); }
     isOpen(id) { return this.open.get(id) === true; }
     jetStates() { return this.jets; }
     spillStates() { return this.spills; }
@@ -430,9 +541,9 @@ export class FluidSystem {
     totalSpilled() { let t = 0; for (const v of this.puddles.values())
         t += v; return t; }
     /** Pressure head (m) at a pipe joint: how high the water there could rise. */
-    headAt(node) { return this.heads[node] ?? 0; }
+    headAt(node) { var _a; return (_a = this.heads[node]) !== null && _a !== void 0 ? _a : 0; }
     /** How hard the water over a wheel drives it (1 ≈ a good steady flow). */
-    wheelDrive(id) { const q = this.flow.get(id) ?? 0; return q < 0.03 ? 0 : Math.min(2, q / 0.5); }
+    wheelDrive(id) { var _a; const q = (_a = this.flow.get(id)) !== null && _a !== void 0 ? _a : 0; return q < 0.03 ? 0 : Math.min(2, q / 0.5); }
     drainEvents() { const out = this.pending; this.pending = []; return out; }
 }
 function round(v) { return Math.round(v * 1000) / 1000; }

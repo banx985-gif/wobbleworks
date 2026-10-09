@@ -1,18 +1,20 @@
 import { chainThing } from "../chain/ChainSystem.js";
 import { drawPartPicture } from "./PartPictures.js";
 /**
- * Chain Reaction Workshop drawing (M21). Code-drawn behind each part id until the chain art arrives
+ * Chain Reaction Workshop drawing (M21). The seesaw, bell and duck cannon are painted (PartPictures.ts); the rest is code-drawn
+ * behind each part id until the chain art arrives
  * (docs/ART_NEEDED.md, Batch C). Drawing only. 100 px per metre.
  */
 const INK = "#203040";
 export function isChainPart(def) { return chainThing(def) !== undefined; }
 export function chainLayer(def) { const t = chainThing(def); return t === "DOMINO" || t === "CANNON" ? 3.5 : t === "SEESAW" ? 0.5 : -1; }
 export function drawChainPart(c, part, def, selected, ctx) {
+    var _a, _b, _c, _d, _e, _f, _g;
     const thing = chainThing(def);
     if (!thing)
         return false;
     const x = part.position.x * 100, y = part.position.y * 100;
-    const mech = ctx.chain?.mechState(part.id);
+    const mech = (_a = ctx.chain) === null || _a === void 0 ? void 0 : _a.mechState(part.id);
     c.save();
     c.translate(x, y);
     c.lineJoin = "round";
@@ -25,9 +27,9 @@ export function drawChainPart(c, part, def, selected, ctx) {
     }
     switch (thing) {
         case "DOMINO": {
-            const d = ctx.chain?.dominoState(part.id);
-            const dir = d?.dir ?? (Number(part.parameters.dir ?? 1) < 0 ? -1 : 1);
-            const fall = (d?.progress ?? 0) * 1.42 * dir;
+            const d = (_b = ctx.chain) === null || _b === void 0 ? void 0 : _b.dominoState(part.id);
+            const dir = (_c = d === null || d === void 0 ? void 0 : d.dir) !== null && _c !== void 0 ? _c : (Number((_d = part.parameters.dir) !== null && _d !== void 0 ? _d : 1) < 0 ? -1 : 1);
+            const fall = ((_e = d === null || d === void 0 ? void 0 : d.progress) !== null && _e !== void 0 ? _e : 0) * 1.42 * dir;
             c.translate(dir * 8, 45);
             c.rotate(fall);
             c.fillStyle = "#f8f9fa";
@@ -56,7 +58,24 @@ export function drawChainPart(c, part, def, selected, ctx) {
             break;
         }
         case "BELL": {
-            const ring = mech?.fired && mech.ago < 1.2 ? Math.sin(ctx.time * 30) * 0.35 * (1.2 - mech.ago) : 0;
+            const ring = (mech === null || mech === void 0 ? void 0 : mech.fired) && mech.ago < 1.2 ? Math.sin(ctx.time * 30) * 0.35 * (1.2 - mech.ago) : 0;
+            // Painted bell in its frame: it shakes while it rings, with the same ringing lines.
+            c.save();
+            c.rotate(ring * 0.3);
+            const paintedBell = drawPartPicture(c, ctx.art, def.id);
+            c.restore();
+            if (paintedBell) {
+                if (ring) {
+                    c.strokeStyle = "#fab005";
+                    c.lineWidth = 3;
+                    for (const s of [-1, 1]) {
+                        c.beginPath();
+                        c.arc(0, -4, 42, s > 0 ? -0.5 : Math.PI - 0.5, s > 0 ? 0.5 : Math.PI + 0.5);
+                        c.stroke();
+                    }
+                }
+                break;
+            }
             c.strokeStyle = INK;
             c.beginPath();
             c.moveTo(0, -36);
@@ -89,8 +108,8 @@ export function drawChainPart(c, part, def, selected, ctx) {
             break;
         }
         case "SEESAW": {
-            const side = String(part.parameters.launch ?? "right") === "left" ? -1 : 1;
-            const tilt = mech?.fired ? -0.22 * side : 0.22 * side;
+            const side = String((_f = part.parameters.launch) !== null && _f !== void 0 ? _f : "right") === "left" ? -1 : 1;
+            const tilt = (mech === null || mech === void 0 ? void 0 : mech.fired) ? -0.22 * side : 0.22 * side;
             // The painted seesaw leans left-end-down; it is flipped whenever the right end should be down (and so tips when fired).
             c.save();
             if (tilt > 0)
@@ -116,7 +135,7 @@ export function drawChainPart(c, part, def, selected, ctx) {
             break;
         }
         case "TRAPDOOR": {
-            const open = mech?.fired ?? false;
+            const open = (_g = mech === null || mech === void 0 ? void 0 : mech.fired) !== null && _g !== void 0 ? _g : false;
             c.fillStyle = "#adb5bd";
             c.fillRect(-52, -6, 10, 18);
             c.strokeRect(-52, -6, 10, 18);
@@ -138,6 +157,26 @@ export function drawChainPart(c, part, def, selected, ctx) {
         }
         case "CANNON": {
             const a = part.rotation - Math.PI / 4;
+            // The painted cannon already aims up and to the right (its aim with no turn), so it turns with the part.
+            c.save();
+            c.rotate(part.rotation);
+            const paintedCannon = drawPartPicture(c, ctx.art, def.id);
+            c.restore();
+            if (paintedCannon) {
+                if ((mech === null || mech === void 0 ? void 0 : mech.fired) && mech.ago < 0.6) {
+                    c.fillStyle = "#ffe066";
+                    c.beginPath();
+                    c.arc(Math.cos(a) * 46, Math.sin(a) * 46 - 8, 22 * (1 - mech.ago), 0, Math.PI * 2);
+                    c.fill();
+                }
+                if (typeof part.parameters.link === "string" && !ctx.chain) {
+                    c.fillStyle = INK;
+                    c.font = "800 11px system-ui";
+                    c.textAlign = "center";
+                    c.fillText("linked", 0, 60);
+                }
+                break;
+            }
             c.fillStyle = "#495057";
             c.beginPath();
             c.arc(0, 20, 26, Math.PI, 0);
@@ -152,7 +191,7 @@ export function drawChainPart(c, part, def, selected, ctx) {
             c.fill();
             c.stroke();
             c.restore();
-            if (mech?.fired && mech.ago < 0.6) {
+            if ((mech === null || mech === void 0 ? void 0 : mech.fired) && mech.ago < 0.6) {
                 c.fillStyle = "#ffe066";
                 c.beginPath();
                 c.arc(Math.cos(a) * 60, Math.sin(a) * 60, 22 * (1 - mech.ago), 0, Math.PI * 2);
@@ -174,7 +213,7 @@ export function drawChainPart(c, part, def, selected, ctx) {
             c.arc(0, 0, 38, 0, Math.PI * 2);
             c.stroke();
             c.setLineDash([]);
-            if (mech?.fired && mech.ago < 2.5) {
+            if ((mech === null || mech === void 0 ? void 0 : mech.fired) && mech.ago < 2.5) {
                 const k = mech.ago;
                 const colours = ["#ff6b6b", "#ffd43b", "#69db7c", "#4dabf7", "#da77f2"];
                 for (let i = 0; i < 40; i++) {
@@ -211,12 +250,12 @@ export function drawChainEdges(c, runtime, parts) {
     const chain = runtime.chain;
     if (!chain.active || !chain.edges.length)
         return;
-    const at = (id) => { try {
+    const at = (id) => { var _a; try {
         const s = runtime.physics.state(id);
         return { x: s.x, y: s.y };
     }
     catch {
-        return parts.find(p => p.id === id)?.position;
+        return (_a = parts.find(p => p.id === id)) === null || _a === void 0 ? void 0 : _a.position;
     } };
     const now = runtime.tick;
     c.save();

@@ -7,22 +7,69 @@ export const OPENING_CHALLENGES = [
     { step: 6, levelId: "opening.free-build", title: "Empty Workshop", prompt: "Build anything. TEST it. Change it. TEST again.", boltLine: "This bit of workshop is yours. Make something weird!" }
 ];
 export class OpeningDirector {
-    step;
-    startedAtMs = 0;
-    firstInteractionAtMs;
-    firstTestAtMs;
-    tests = 0;
-    stops = 0;
-    retries = 0;
-    completed = new Set();
-    testsThisStep = 0;
-    constructor(step = 1) { this.step = step; }
+    constructor(step = 1) {
+        Object.defineProperty(this, "step", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "startedAtMs", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "firstInteractionAtMs", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "firstTestAtMs", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "tests", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "stops", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "retries", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "completed", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Set()
+        });
+        Object.defineProperty(this, "testsThisStep", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        this.step = step;
+    }
     startSession(nowMs) { if (this.startedAtMs === 0)
         this.startedAtMs = nowMs; }
     currentStep() { return this.step; }
     current() { return OPENING_CHALLENGES[this.step - 1]; }
-    noteInteraction(nowMs) { this.firstInteractionAtMs ??= nowMs; }
-    noteTest(nowMs) { this.firstTestAtMs ??= nowMs; this.tests += 1; this.testsThisStep += 1; if (this.testsThisStep > 1)
+    noteInteraction(nowMs) { var _a; (_a = this.firstInteractionAtMs) !== null && _a !== void 0 ? _a : (this.firstInteractionAtMs = nowMs); }
+    noteTest(nowMs) { var _a; (_a = this.firstTestAtMs) !== null && _a !== void 0 ? _a : (this.firstTestAtMs = nowMs); this.tests += 1; this.testsThisStep += 1; if (this.testsThisStep > 1)
         this.retries += 1; }
     noteStop() { this.stops += 1; }
     completeCurrent() {

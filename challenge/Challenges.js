@@ -56,31 +56,93 @@ export const CHALLENGE_MISSIONS = CHALLENGE_LAB.missions;
 const round = (v, d) => Math.round(v * 10 ** d) / 10 ** d;
 /** Parts the player added: not room parts (locked) and not the parts the challenge starts with (`seeded`). */
 export function playerParts(build, seeded = new Set()) { return build.allParts().filter(p => p.parameters.locked !== true && !seeded.has(p.id)); }
-export function buildCost(build, prices, seeded = new Set()) { return playerParts(build, seeded).reduce((t, p) => t + (prices[p.definitionId] ?? 0), 0); }
-function batteryEnergy(build, runtime) { return build.allParts().reduce((t, p) => t + (runtime.circuits.source(p.id)?.energyUsed ?? 0), 0); }
+export function buildCost(build, prices, seeded = new Set()) { return playerParts(build, seeded).reduce((t, p) => { var _a; return t + ((_a = prices[p.definitionId]) !== null && _a !== void 0 ? _a : 0); }, 0); }
+function batteryEnergy(build, runtime) { return build.allParts().reduce((t, p) => { var _a, _b; return t + ((_b = (_a = runtime.circuits.source(p.id)) === null || _a === void 0 ? void 0 : _a.energyUsed) !== null && _b !== void 0 ? _b : 0); }, 0); }
 /**
  * Watches one TEST and takes the score at the exact tick the challenge says. Call `tick` after every simulation step
  * with whether the challenge's rules are met right now. `result` is set once, and never changes afterwards.
  */
 export class ChallengeRun {
-    def;
-    build;
-    seeded;
-    result;
-    everMet = false;
-    metTick = -1;
-    jumped = false;
-    lastVy = 0;
-    landedX;
-    crossTick;
-    startX;
-    lastGrowth = 0;
-    lastValue = -Infinity;
     /** `seeded`: ids of the parts the challenge starts with (they never count as parts added). */
     constructor(def, build, seeded = new Set()) {
-        this.def = def;
-        this.build = build;
-        this.seeded = seeded;
+        Object.defineProperty(this, "def", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: def
+        });
+        Object.defineProperty(this, "build", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: build
+        });
+        Object.defineProperty(this, "seeded", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: seeded
+        });
+        Object.defineProperty(this, "result", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "everMet", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: false
+        });
+        Object.defineProperty(this, "metTick", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: -1
+        });
+        Object.defineProperty(this, "jumped", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: false
+        });
+        Object.defineProperty(this, "lastVy", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "landedX", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "crossTick", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "startX", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "lastGrowth", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "lastValue", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: -Infinity
+        });
     }
     get done() { return this.result !== undefined; }
     tick(runtime, rulesMet) {
@@ -155,6 +217,7 @@ export class ChallengeRun {
         return Math.max(0, craft.maxX - this.startX);
     }
     valueNow(runtime) {
+        var _a, _b, _c, _d;
         const c = this.def.capture;
         switch (c.kind) {
             case "FINISH_LINE": return this.crossTick !== undefined ? this.crossTick / 60 : this.metTick / 60;
@@ -162,23 +225,24 @@ export class ChallengeRun {
                 const top = runtime.structures.topY();
                 return top === undefined ? undefined : Math.max(0, FLOOR_Y - top);
             }
-            case "CARGO": return Number(this.build.getPart(c.subject)?.parameters.weight ?? c.choices[0]);
+            case "CARGO": return Number((_b = (_a = this.build.getPart(c.subject)) === null || _a === void 0 ? void 0 : _a.parameters.weight) !== null && _b !== void 0 ? _b : c.choices[0]);
             case "ENERGY": return batteryEnergy(this.build, runtime);
             case "PARTS": return playerParts(this.build, this.seeded).length;
             case "COST": return buildCost(this.build, c.prices, this.seeded);
-            case "EGG": return runtime.structures.egg(c.subject)?.impact;
-            case "ROBOT": return runtime.robots.robot(c.subject)?.blocks;
+            case "EGG": return (_c = runtime.structures.egg(c.subject)) === null || _c === void 0 ? void 0 : _c.impact;
+            case "ROBOT": return (_d = runtime.robots.robot(c.subject)) === null || _d === void 0 ? void 0 : _d.blocks;
             case "WOBBLE": return runtime.structures.maxWobble();
             default: return undefined;
         }
     }
     tieNow(runtime, tick) {
+        var _a;
         switch (this.def.tieBreak.metric) {
             case "partCount": return playerParts(this.build, this.seeded).length;
             case "elapsedTime": {
                 const c = this.def.capture;
                 if (c.kind === "ROBOT") {
-                    const d = runtime.robots.robot(c.subject)?.doneAt;
+                    const d = (_a = runtime.robots.robot(c.subject)) === null || _a === void 0 ? void 0 : _a.doneAt;
                     if (d !== undefined)
                         return d;
                 }
@@ -199,7 +263,8 @@ export class ChallengeRun {
 }
 const key = (id, k) => `${id}.${k}`;
 export function challengeBest(save, id) {
-    const r = activeProfile(save)?.records ?? {};
+    var _a, _b;
+    const r = (_b = (_a = activeProfile(save)) === null || _a === void 0 ? void 0 : _a.records) !== null && _b !== void 0 ? _b : {};
     const v = r[key(id, "best")];
     if (v === undefined)
         return undefined;
@@ -223,10 +288,11 @@ export function compareWithBest(def, result, best) {
 }
 /** Saves a successful run's score if it is a personal record (and counts the try). */
 export function withChallengeResult(save, def, result) {
+    var _a;
     const p = activeProfile(save);
     if (!p)
         return { save };
-    const tries = (p.records[key(def.id, "tries")] ?? 0) + 1;
+    const tries = ((_a = p.records[key(def.id, "tries")]) !== null && _a !== void 0 ? _a : 0) + 1;
     if (!result.success || result.value === undefined)
         return { save: updateProfile(save, p.id, q => ({ ...q, records: { ...q.records, [key(def.id, "tries")]: tries } })) };
     const previous = challengeBest(save, def.id);

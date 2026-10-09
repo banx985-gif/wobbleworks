@@ -64,6 +64,7 @@ function layer(urls, box, heightUnits, cls) {
  * Unknown or missing pictures are simply left out, so a newer save never breaks an older build.
  */
 export function renderLook(look, manifest = {}, headOnly = false) {
+    var _a;
     const root = document.createElement("span");
     root.className = headOnly ? "look-head-only" : "look-card";
     root.setAttribute("aria-hidden", "true");
@@ -71,9 +72,10 @@ export function renderLook(look, manifest = {}, headOnly = false) {
     const head = headOnly ? { x: 16, y: 26, w: 68, z: 5 } : LOOK_LAYOUT.skin;
     const headHeight = head.w / HEAD_ASPECT;
     const urlsFor = (category) => {
+        var _a;
         const id = look[category];
         const piece = pieceById(id);
-        const art = piece?.art ?? (id ? [id] : []);
+        const art = (_a = piece === null || piece === void 0 ? void 0 : piece.art) !== null && _a !== void 0 ? _a : (id ? [id] : []);
         return art.map(a => pictureUrl(a, manifest)).filter((u) => Boolean(u));
     };
     const skin = urlsFor("skin");
@@ -85,7 +87,7 @@ export function renderLook(look, manifest = {}, headOnly = false) {
             continue;
         const base = LOOK_LAYOUT[category];
         const id = look[category];
-        const nudge = PIECE_NUDGE[id] ?? {};
+        const nudge = (_a = PIECE_NUDGE[id]) !== null && _a !== void 0 ? _a : {};
         const rel = { ...base, ...nudge };
         // Relative units are percentages of the head box.
         root.append(layer(urls, { x: head.x + rel.x * head.w / 100, y: head.y + rel.y * headHeight / 100, w: rel.w * head.w / 100, z: rel.z }, heightUnits, `look-${category}`));

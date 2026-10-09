@@ -5,18 +5,32 @@ export const SIMULATION_PHASES = [
     "REPLAY_SAMPLE", "PRESENTATION_QUEUE"
 ];
 export class SimulationPipeline {
-    trace = [];
-    handlers = new Map();
+    constructor() {
+        Object.defineProperty(this, "trace", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "handlers", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+    }
     on(phase, handler) {
-        const list = this.handlers.get(phase) ?? [];
+        var _a;
+        const list = (_a = this.handlers.get(phase)) !== null && _a !== void 0 ? _a : [];
         list.push(handler);
         this.handlers.set(phase, list);
     }
     step(tick, dt) {
+        var _a;
         this.trace.length = 0;
         for (const phase of SIMULATION_PHASES) {
             this.trace.push(phase);
-            for (const handler of this.handlers.get(phase) ?? [])
+            for (const handler of (_a = this.handlers.get(phase)) !== null && _a !== void 0 ? _a : [])
                 handler({ tick, dt, phase });
         }
     }

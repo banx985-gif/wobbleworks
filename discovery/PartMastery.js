@@ -56,6 +56,7 @@ catch {
 function partner(e, id) { return e.sourceId === id ? e.targetId : e.targetId === id ? e.sourceId : undefined; }
 /** Every part use this TEST really showed. Pure read of the run; changes nothing. */
 export function observePartUses(build, runtime) {
+    var _a, _b, _c;
     const uses = [];
     const add = (partId, useId) => { if (!uses.some(u => u.partId === partId && u.useId === useId))
         uses.push({ partId, useId }); };
@@ -74,7 +75,7 @@ export function observePartUses(build, runtime) {
     }
     const partsById = new Map(build.allParts().map(q => [q.id, q]));
     const getPart = (id) => partsById.get(id);
-    const ofPart = (id) => byPart.get(id) ?? [];
+    const ofPart = (id) => { var _a; return (_a = byPart.get(id)) !== null && _a !== void 0 ? _a : []; };
     for (const part of build.allParts()) {
         const mine = ofPart(part.id);
         switch (part.definitionId) {
@@ -82,7 +83,7 @@ export function observePartUses(build, runtime) {
                 const launches = mine.filter(e => e.kind === "SPRING_LAUNCH" && e.sourceId === part.id);
                 if (launches.length)
                     add(part.definitionId, "launch");
-                if (launches.some(e => HEAVY.has(getPart(e.targetId ?? "")?.definitionId ?? "")))
+                if (launches.some(e => { var _a, _b, _c; return HEAVY.has((_c = (_b = getPart((_a = e.targetId) !== null && _a !== void 0 ? _a : "")) === null || _b === void 0 ? void 0 : _b.definitionId) !== null && _c !== void 0 ? _c : ""); }))
                     add(part.definitionId, "launch-heavy");
                 break;
             }
@@ -92,7 +93,7 @@ export function observePartUses(build, runtime) {
                     add(part.definitionId, "roll");
                 // Ramp to ramp: one moving thing touched this ramp and another ramp.
                 for (const m of movers)
-                    if (ofPart(m).some(e => e.kind === "RAMP_CONTACT" && partner(e, m) && partner(e, m) !== part.id && getPart(partner(e, m))?.definitionId === "motion.ramp")) {
+                    if (ofPart(m).some(e => { var _a; return e.kind === "RAMP_CONTACT" && partner(e, m) && partner(e, m) !== part.id && ((_a = getPart(partner(e, m))) === null || _a === void 0 ? void 0 : _a.definitionId) === "motion.ramp"; })) {
                         add(part.definitionId, "chain");
                         break;
                     }
@@ -119,7 +120,7 @@ export function observePartUses(build, runtime) {
                 for (const e of hits) {
                     const m = partner(e, part.id);
                     if (m && dynamic(runtime, m))
-                        byMover.set(m, [...(byMover.get(m) ?? []), e]);
+                        byMover.set(m, [...((_a = byMover.get(m)) !== null && _a !== void 0 ? _a : []), e]);
                 }
                 if (byMover.size)
                     add(part.definitionId, "bounce");
@@ -136,7 +137,7 @@ export function observePartUses(build, runtime) {
                 if (travelled(build, runtime, part.id) > 1 && turned > Math.PI)
                     add(part.definitionId, "roll");
                 const cart = build.allConnections().filter(c => c.config.kind === "HINGE" && (c.fromPartId === part.id || c.toPartId === part.id))
-                    .map(c => getPart(c.fromPartId === part.id ? c.toPartId : c.fromPartId)).find(p => p?.definitionId === "motion.cart");
+                    .map(c => getPart(c.fromPartId === part.id ? c.toPartId : c.fromPartId)).find(p => (p === null || p === void 0 ? void 0 : p.definitionId) === "motion.cart");
                 if (cart && travelled(build, runtime, cart.id) > 1 && turned > Math.PI)
                     add(part.definitionId, "carry");
                 break;
@@ -171,7 +172,7 @@ export function observePartUses(build, runtime) {
     }
     // Gears: uses come from what the GearSystem measured (half a second of real turning).
     const gears = runtime.gears;
-    const running = (id) => (gears.state(id)?.runTicks ?? 0) >= 30;
+    const running = (id) => { var _a, _b; return ((_b = (_a = gears.state(id)) === null || _a === void 0 ? void 0 : _a.runTicks) !== null && _b !== void 0 ? _b : 0) >= 30; };
     for (const part of build.allParts()) {
         const st = gears.state(part.id);
         if (!st || !running(part.id))
@@ -253,7 +254,7 @@ export function observePartUses(build, runtime) {
         const mag = getPart(e.sourceId);
         const other = e.targetId ? getPart(e.targetId) : undefined;
         for (const [p, q] of [[mag, other], [other, mag]]) {
-            if (p?.definitionId !== "magnetic.bar")
+            if ((p === null || p === void 0 ? void 0 : p.definitionId) !== "magnetic.bar")
                 continue;
             if (e.kind === "MAGNET_ATTRACT" || e.kind === "MAGNET_PULL_MATERIAL") {
                 add(p.definitionId, "pull");
@@ -283,7 +284,7 @@ export function observePartUses(build, runtime) {
             }
             if (part.definitionId === "circuit.switch" && runtime.causalEvents.some(ev => ev.kind === "SWITCH_CHANGED" && ev.sourceId === part.id) && runtime.causalEvents.some(ev => ev.kind === "LOAD_ON" || ev.kind === "LOAD_OFF"))
                 add(part.definitionId, "control");
-            if (part.definitionId === "circuit.motor" && (runtime.gears.state(part.id)?.runTicks ?? 0) >= 30)
+            if (part.definitionId === "circuit.motor" && ((_c = (_b = runtime.gears.state(part.id)) === null || _b === void 0 ? void 0 : _b.runTicks) !== null && _c !== void 0 ? _c : 0) >= 30)
                 add(part.definitionId, "turn");
         }
     }
@@ -304,5 +305,5 @@ export function observePartUses(build, runtime) {
 function eventsSince(events, a, b, fromTick) {
     return events.some(e => e.tick >= fromTick && e.kind === "PHYSICS_CONTACT" && ((e.sourceId === a && e.targetId === b) || (e.sourceId === b && e.targetId === a)));
 }
-export function useLabel(partId, useId) { return PART_CARDS.find(c => c.partId === partId)?.uses.find(u => u.id === useId)?.label ?? useId; }
-export function partTitle(partId) { return PART_CARDS.find(c => c.partId === partId)?.title ?? partId; }
+export function useLabel(partId, useId) { var _a, _b, _c; return (_c = (_b = (_a = PART_CARDS.find(c => c.partId === partId)) === null || _a === void 0 ? void 0 : _a.uses.find(u => u.id === useId)) === null || _b === void 0 ? void 0 : _b.label) !== null && _c !== void 0 ? _c : useId; }
+export function partTitle(partId) { var _a, _b; return (_b = (_a = PART_CARDS.find(c => c.partId === partId)) === null || _a === void 0 ? void 0 : _a.title) !== null && _b !== void 0 ? _b : partId; }

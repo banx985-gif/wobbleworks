@@ -28,13 +28,14 @@ export function withChainRecords(save, stats) {
     const p = activeProfile(save);
     if (!p || stats.steps === 0)
         return { save, beaten: [] };
-    const beaten = Object.keys(CHAIN_RECORD_KEYS).filter(k => stats[k] > (p.records[CHAIN_RECORD_KEYS[k]] ?? 0));
+    const beaten = Object.keys(CHAIN_RECORD_KEYS).filter(k => { var _a; return stats[k] > ((_a = p.records[CHAIN_RECORD_KEYS[k]]) !== null && _a !== void 0 ? _a : 0); });
     if (!beaten.length)
         return { save, beaten };
     return { save: updateProfile(save, p.id, q => ({ ...q, records: { ...q.records, ...Object.fromEntries(beaten.map(k => [CHAIN_RECORD_KEYS[k], stats[k]])) } })), beaten };
 }
 export function chainRecords(save) {
-    const r = activeProfile(save)?.records ?? {};
+    var _a, _b;
+    const r = (_b = (_a = activeProfile(save)) === null || _a === void 0 ? void 0 : _a.records) !== null && _b !== void 0 ? _b : {};
     return Object.fromEntries(Object.entries(CHAIN_RECORD_KEYS).filter(([, k]) => r[k] !== undefined).map(([name, k]) => [name, r[k]]));
 }
 /** A chain saved to the Invention Shelf keeps its chain numbers alongside it (also in `records`, keyed by the shelf item). */
@@ -46,9 +47,10 @@ export function withChainShelfMeta(save, shelfId, stats) {
     return updateProfile(save, p.id, q => ({ ...q, records: { ...q.records, ...Object.fromEntries(META.map(k => [`chain.shelf.${shelfId}.${k}`, stats[k]])) } }));
 }
 export function chainShelfMeta(save, shelfId) {
-    const r = activeProfile(save)?.records ?? {};
+    var _a, _b, _c, _d, _e;
+    const r = (_b = (_a = activeProfile(save)) === null || _a === void 0 ? void 0 : _a.records) !== null && _b !== void 0 ? _b : {};
     const key = (k) => `chain.shelf.${shelfId}.${k}`;
-    return r[key("longest")] === undefined ? undefined : { longest: r[key("longest")], steps: r[key("steps")] ?? 0, domains: r[key("domains")] ?? 0, seconds: r[key("seconds")] ?? 0 };
+    return r[key("longest")] === undefined ? undefined : { longest: r[key("longest")], steps: (_c = r[key("steps")]) !== null && _c !== void 0 ? _c : 0, domains: (_d = r[key("domains")]) !== null && _d !== void 0 ? _d : 0, seconds: (_e = r[key("seconds")]) !== null && _e !== void 0 ? _e : 0 };
 }
 /** Tidy: chain numbers for shelf items that no longer exist are dropped. */
 export function withoutStaleChainMeta(save) {
@@ -77,7 +79,7 @@ export function collectChainDiscoveries(build, runtime) {
         out.add("chain.many-systems");
     if (c.longest() >= 15)
         out.add("chain.long-chain");
-    if (nodes.some(n => build.getPart(n.id)?.definitionId === "chain.confetti" && n.parent !== undefined && build.getPart(n.parent)?.definitionId === "silly.duck"))
+    if (nodes.some(n => { var _a, _b; return ((_a = build.getPart(n.id)) === null || _a === void 0 ? void 0 : _a.definitionId) === "chain.confetti" && n.parent !== undefined && ((_b = build.getPart(n.parent)) === null || _b === void 0 ? void 0 : _b.definitionId) === "silly.duck"; }))
         out.add("secret.chain-duck");
     if (nodes.some(n => { const p = path(n.id); return p.length > 1 && (n.firstTick - p[0].firstTick) / 60 >= 20; }))
         out.add("secret.chain-marathon");

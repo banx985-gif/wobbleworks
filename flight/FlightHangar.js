@@ -17,7 +17,7 @@ export function collectFlightDiscoveries(build, runtime) {
     if (has("WING_LIFT"))
         out.add("flight.lift");
     for (const c of crafts) {
-        const parts = c.attached.map(id => build.getPart(id)?.definitionId);
+        const parts = c.attached.map(id => { var _a; return (_a = build.getPart(id)) === null || _a === void 0 ? void 0 : _a.definitionId; });
         const start = build.getPart(c.id).position;
         const pos = (() => { try {
             return runtime.physics.state(c.id);
@@ -59,7 +59,7 @@ export function collectFlightDiscoveries(build, runtime) {
         out.add("combo.flight-battery");
     if (has("CRAFT_TUMBLE"))
         out.add("secret.flight-loop");
-    if (of("GATE_PASSED").some(e => build.getPart(e.sourceId)?.definitionId === "flight.basket"))
+    if (of("GATE_PASSED").some(e => { var _a; return ((_a = build.getPart(e.sourceId)) === null || _a === void 0 ? void 0 : _a.definitionId) === "flight.basket"; }))
         out.add("secret.flight-sprocket");
     return [...out];
 }

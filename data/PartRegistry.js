@@ -1,6 +1,13 @@
 import { assertPartDefinition } from "./validation.js";
 export class PartRegistry {
-    definitions = new Map();
+    constructor() {
+        Object.defineProperty(this, "definitions", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+    }
     register(definition) {
         assertPartDefinition(definition);
         if (this.definitions.has(definition.id))

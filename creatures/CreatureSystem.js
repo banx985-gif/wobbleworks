@@ -18,18 +18,19 @@ export const CREATURE_TRUTH_CONTRACT = Object.freeze({
     simplify: ["legs, wings and body segments are drawn swinging rather than simulated joint by joint", "creatures walk along a flat floor", "segments follow the head like a train"],
     neverImply: ["real animals move exactly like these toys"]
 });
-export function creatureBehaviour(def) { const b = def?.behaviours.find(x => x.kind === "CREATURE"); return b?.kind === "CREATURE" ? b : undefined; }
-const isBattery = (def) => Boolean(def?.behaviours.some(b => b.kind === "CIRCUIT" && b.role === "BATTERY") && !def?.behaviours.some(b => b.kind === "GENERATOR" || b.kind === "SOLAR_PANEL"));
+export function creatureBehaviour(def) { const b = def === null || def === void 0 ? void 0 : def.behaviours.find(x => x.kind === "CREATURE"); return (b === null || b === void 0 ? void 0 : b.kind) === "CREATURE" ? b : undefined; }
+const isBattery = (def) => Boolean((def === null || def === void 0 ? void 0 : def.behaviours.some(b => b.kind === "CIRCUIT" && b.role === "BATTERY")) && !(def === null || def === void 0 ? void 0 : def.behaviours.some(b => b.kind === "GENERATOR" || b.kind === "SOLAR_PANEL")));
 const FLOOR = 8.4, G = 9.81, REACH = 1.4;
 export const LEG_CAPACITY = { LEG: 1.2, BIG_LEG: 4, SPRING_LEG: 1 };
 export const LEG_LENGTH = { LEG: 0.55, BIG_LEG: 0.9, SPRING_LEG: 0.45 };
 /** Which creature body each clip-on part belongs to (nearest body in reach; segments may hang off other segments). Pure — used in BUILD mode too. */
 export function creatureOwners(parts, definition) {
-    const bodies = parts.filter(p => creatureBehaviour(definition(p.definitionId))?.part === "BODY");
+    var _a, _b;
+    const bodies = parts.filter(p => { var _a; return ((_a = creatureBehaviour(definition(p.definitionId))) === null || _a === void 0 ? void 0 : _a.part) === "BODY"; });
     const owner = new Map();
     const clips = parts.filter(p => { const c = creatureBehaviour(definition(p.definitionId)); return (c && c.part !== "BODY") || isBattery(definition(p.definitionId)); });
     for (const q of clips) {
-        if (creatureBehaviour(definition(q.definitionId))?.part === "SEGMENT")
+        if (((_a = creatureBehaviour(definition(q.definitionId))) === null || _a === void 0 ? void 0 : _a.part) === "SEGMENT")
             continue;
         let best;
         for (const b of bodies) {
@@ -42,7 +43,7 @@ export function creatureOwners(parts, definition) {
     }
     // Segments chain on: each joins a body, or a segment that has already joined, within reach.
     let grew = true;
-    const segs = clips.filter(q => creatureBehaviour(definition(q.definitionId))?.part === "SEGMENT");
+    const segs = clips.filter(q => { var _a; return ((_a = creatureBehaviour(definition(q.definitionId))) === null || _a === void 0 ? void 0 : _a.part) === "SEGMENT"; });
     while (grew) {
         grew = false;
         for (const s of segs) {
@@ -50,7 +51,7 @@ export function creatureOwners(parts, definition) {
                 continue;
             for (const o of [...bodies, ...segs.filter(x => owner.has(x.id))]) {
                 if (Math.hypot(s.position.x - o.position.x, s.position.y - o.position.y) <= 1.0) {
-                    owner.set(s.id, owner.get(o.id) ?? o.id);
+                    owner.set(s.id, (_b = owner.get(o.id)) !== null && _b !== void 0 ? _b : o.id);
                     grew = true;
                     break;
                 }
@@ -60,22 +61,56 @@ export function creatureOwners(parts, definition) {
     return owner;
 }
 export class CreatureSystem {
-    parts;
-    definition;
-    creatures = [];
-    pending = [];
-    once = new Set();
-    owners;
-    ticks = 0;
     constructor(parts, definition) {
-        this.parts = parts;
-        this.definition = definition;
+        var _a, _b;
+        Object.defineProperty(this, "parts", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: parts
+        });
+        Object.defineProperty(this, "definition", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: definition
+        });
+        Object.defineProperty(this, "creatures", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "pending", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "once", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Set()
+        });
+        Object.defineProperty(this, "owners", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "ticks", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
         this.owners = creatureOwners(parts, definition);
-        for (const body of parts.filter(p => creatureBehaviour(definition(p.definitionId))?.part === "BODY")) {
-            const clips = parts.filter(q => this.owners.get(q.id) === body.id).map(q => { const c = creatureBehaviour(definition(q.definitionId)); return { part: q, kind: c ? c.part : "BATTERY", lx: q.position.x - body.position.x, ly: q.position.y - body.position.y, mass: c?.mass ?? 0.25 }; });
+        for (const body of parts.filter(p => { var _a; return ((_a = creatureBehaviour(definition(p.definitionId))) === null || _a === void 0 ? void 0 : _a.part) === "BODY"; })) {
+            const clips = parts.filter(q => this.owners.get(q.id) === body.id).map(q => { var _a; const c = creatureBehaviour(definition(q.definitionId)); return { part: q, kind: c ? c.part : "BATTERY", lx: q.position.x - body.position.x, ly: q.position.y - body.position.y, mass: (_a = c === null || c === void 0 ? void 0 : c.mass) !== null && _a !== void 0 ? _a : 0.25 }; });
             const own = creatureBehaviour(definition(body.definitionId));
             const springs = clips.filter(c => c.kind === "SPRING_LEG").length;
-            this.creatures.push({ id: body.id, body, clips, mass: (own.mass ?? 0.5) + clips.reduce((t, c) => t + c.mass, 0), dir: String(body.parameters.facing ?? "right") === "left" ? -1 : 1,
+            this.creatures.push({ id: body.id, body, clips, mass: ((_a = own.mass) !== null && _a !== void 0 ? _a : 0.5) + clips.reduce((t, c) => t + c.mass, 0), dir: String((_b = body.parameters.facing) !== null && _b !== void 0 ? _b : "right") === "left" ? -1 : 1,
                 phase: 0, tilt: 0, maxTilt: 0, tipped: false, flaps: 0, hopsLeft: 3 * Math.min(3, springs), restTicks: 0, airborne: false, grabLift: 0, riders: new Map(), path: CreatureSystem.startPath(body, clips), walking: false, startX: body.position.x, heavy: false });
         }
     }
@@ -91,6 +126,7 @@ export class CreatureSystem {
         catch { /* no body */ }
     } }
     step(dt, physics) {
+        var _a;
         this.ticks++;
         for (const c of this.creatures) {
             let st;
@@ -102,7 +138,7 @@ export class CreatureSystem {
             }
             const half = this.halfHeight(c.body);
             const legs = c.clips.filter(k => k.kind === "LEG" || k.kind === "BIG_LEG" || k.kind === "SPRING_LEG");
-            const reach = legs.length ? Math.max(...legs.map(k => LEG_LENGTH[k.kind] ?? 0.5)) : 0;
+            const reach = legs.length ? Math.max(...legs.map(k => { var _a; return (_a = LEG_LENGTH[k.kind]) !== null && _a !== void 0 ? _a : 0.5; })) : 0;
             const gap = FLOOR - (st.y + half);
             // What it carries: anything resting on its back.
             const halfW = this.halfWidth(c.body);
@@ -130,7 +166,7 @@ export class CreatureSystem {
             catch {
                 return t;
             } }, 0);
-            const capacity = legs.reduce((t, k) => t + (LEG_CAPACITY[k.kind] ?? 1), 0);
+            const capacity = legs.reduce((t, k) => { var _a; return t + ((_a = LEG_CAPACITY[k.kind]) !== null && _a !== void 0 ? _a : 1); }, 0);
             const onLegs = legs.length > 0 && gap <= reach + 0.06 && !c.airborne;
             // Legs hold the body up — but only as much weight as they can carry.
             if (onLegs && !c.tipped) {
@@ -157,7 +193,7 @@ export class CreatureSystem {
                 const walkers = legs.filter(k => k.kind !== "SPRING_LEG");
                 if (walkers.length && onLegs) {
                     if (front && back) {
-                        const len = walkers.reduce((t, k) => t + (LEG_LENGTH[k.kind] ?? 0.5), 0) / walkers.length;
+                        const len = walkers.reduce((t, k) => { var _a; return t + ((_a = LEG_LENGTH[k.kind]) !== null && _a !== void 0 ? _a : 0.5); }, 0) / walkers.length;
                         const pairs = Math.floor(walkers.length / 2);
                         this.push(c, st.vx, 1.6 * len * (1 + 0.12 * Math.min(Math.max(0, pairs - 1), 3)), 0.8 * load * G, physics, "CREATURE_WALKING", { legs: walkers.length });
                     }
@@ -238,7 +274,7 @@ export class CreatureSystem {
                 const cx = st.x + claw.lx, cy = st.y + claw.ly;
                 if (!c.grabbed) {
                     for (const p of this.parts) {
-                        if (p.id === c.id || this.owners.has(p.id) || (p.parameters.locked === true && !p.tags?.includes("target")))
+                        if (p.id === c.id || this.owners.has(p.id) || (p.parameters.locked === true && !((_a = p.tags) === null || _a === void 0 ? void 0 : _a.includes("target"))))
                             continue;
                         let ps;
                         try {
@@ -291,20 +327,21 @@ export class CreatureSystem {
             this.pending.push({ kind, sourceId: c.id, data });
         }
     }
-    halfWidth(p) { const r = this.definition(p.definitionId)?.behaviours.find(b => b.kind === "RIGID_BODY"); return r?.kind === "RIGID_BODY" ? r.width / 2 : 0.3; }
-    halfHeight(p) { const r = this.definition(p.definitionId)?.behaviours.find(b => b.kind === "RIGID_BODY"); return r?.kind === "RIGID_BODY" ? r.height / 2 : 0.25; }
+    halfWidth(p) { var _a; const r = (_a = this.definition(p.definitionId)) === null || _a === void 0 ? void 0 : _a.behaviours.find(b => b.kind === "RIGID_BODY"); return (r === null || r === void 0 ? void 0 : r.kind) === "RIGID_BODY" ? r.width / 2 : 0.3; }
+    halfHeight(p) { var _a; const r = (_a = this.definition(p.definitionId)) === null || _a === void 0 ? void 0 : _a.behaviours.find(b => b.kind === "RIGID_BODY"); return (r === null || r === void 0 ? void 0 : r.kind) === "RIGID_BODY" ? r.height / 2 : 0.25; }
     view(id, physics) {
+        var _a, _b;
         const c = this.creatures.find(x => x.id === id);
         if (!c)
             return undefined;
         let st;
         try {
-            st = physics?.state(id);
+            st = physics === null || physics === void 0 ? void 0 : physics.state(id);
         }
         catch {
             st = undefined;
         }
-        return { id, x: st?.x ?? c.body.position.x, y: st?.y ?? c.body.position.y, tilt: c.tilt, phase: c.phase, walking: c.walking, tipped: c.tipped, flaps: c.flaps, legs: c.clips.filter(k => k.kind === "LEG" || k.kind === "BIG_LEG").length, segments: c.clips.filter(k => k.kind === "SEGMENT").length, ...(c.grabbed ? { grabbed: c.grabbed } : {}), heavy: c.heavy };
+        return { id, x: (_a = st === null || st === void 0 ? void 0 : st.x) !== null && _a !== void 0 ? _a : c.body.position.x, y: (_b = st === null || st === void 0 ? void 0 : st.y) !== null && _b !== void 0 ? _b : c.body.position.y, tilt: c.tilt, phase: c.phase, walking: c.walking, tipped: c.tipped, flaps: c.flaps, legs: c.clips.filter(k => k.kind === "LEG" || k.kind === "BIG_LEG").length, segments: c.clips.filter(k => k.kind === "SEGMENT").length, ...(c.grabbed ? { grabbed: c.grabbed } : {}), heavy: c.heavy };
     }
     /** Where a clip-on part is right now (it rides on its creature). Segments follow the creature's trail. */
     clipPose(partId, physics) {
@@ -317,7 +354,7 @@ export class CreatureSystem {
             return undefined;
         let st;
         try {
-            st = physics?.state(c.id);
+            st = physics === null || physics === void 0 ? void 0 : physics.state(c.id);
         }
         catch {
             st = undefined;

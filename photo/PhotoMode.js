@@ -104,19 +104,73 @@ export function drawPhotoBackground(c, kind, time) {
     c.restore();
 }
 export class PhotoMode {
-    host;
-    background = "room";
-    open = false;
-    picked;
-    bolt = "none";
-    withSprocket = false;
-    overlay;
-    layer;
-    bar;
-    drawer;
-    showBtn;
     constructor(host) {
-        this.host = host;
+        Object.defineProperty(this, "host", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: host
+        });
+        Object.defineProperty(this, "background", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: "room"
+        });
+        Object.defineProperty(this, "open", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: false
+        });
+        Object.defineProperty(this, "picked", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "bolt", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: "none"
+        });
+        Object.defineProperty(this, "withSprocket", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: false
+        });
+        Object.defineProperty(this, "overlay", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "layer", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "bar", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "drawer", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "showBtn", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
         this.overlay = document.createElement("div");
         this.overlay.id = "photo-mode";
         this.overlay.className = "photo-mode hidden";
@@ -204,11 +258,11 @@ export class PhotoMode {
         this.pick(item);
         return item;
     }
-    setBolt(pose) { this.bolt = pose; this.layer.querySelector(".photo-bolt")?.remove(); if (pose !== "none")
+    setBolt(pose) { var _a; this.bolt = pose; (_a = this.layer.querySelector(".photo-bolt")) === null || _a === void 0 ? void 0 : _a.remove(); if (pose !== "none")
         this.addItem("bolt", this.host.boltUrl(pose), 0.14, 0.62); }
-    setSprocket(on) { this.withSprocket = on; this.layer.querySelector(".photo-sprocket")?.remove(); if (on)
+    setSprocket(on) { var _a; this.withSprocket = on; (_a = this.layer.querySelector(".photo-sprocket")) === null || _a === void 0 ? void 0 : _a.remove(); if (on)
         this.addItem("sprocket", this.host.sprocket(), 0.84, 0.7); }
-    pick(item) { this.picked?.classList.remove("picked"); this.picked = item; item?.classList.add("picked"); }
+    pick(item) { var _a; (_a = this.picked) === null || _a === void 0 ? void 0 : _a.classList.remove("picked"); this.picked = item; item === null || item === void 0 ? void 0 : item.classList.add("picked"); }
     removePicked() {
         const p = this.picked;
         if (!p) {
@@ -248,6 +302,7 @@ export class PhotoMode {
     }
     /** The picture exactly as shown: the playfield plus stickers and characters (never the buttons). */
     async compose() {
+        var _a;
         const src = this.host.canvas;
         const out = document.createElement("canvas");
         out.width = src.width;
@@ -272,12 +327,13 @@ export class PhotoMode {
                 c.font = `${Math.round(h * 0.85)}px system-ui, "Segoe UI Emoji", "Apple Color Emoji", sans-serif`;
                 c.textAlign = "center";
                 c.textBaseline = "middle";
-                c.fillText(g.textContent ?? "", x + w / 2, y + h / 2);
+                c.fillText((_a = g.textContent) !== null && _a !== void 0 ? _a : "", x + w / 2, y + h / 2);
             }
         }
         return out;
     }
     async savePicture() {
+        var _a, _b;
         const pic = await this.compose();
         const name = photoFileName(this.host.title());
         const blob = await new Promise(res => { try {
@@ -312,7 +368,7 @@ export class PhotoMode {
                 saved = false;
             }
         }
-        const cover = this.host.useAsCover?.();
+        const cover = (_b = (_a = this.host).useAsCover) === null || _b === void 0 ? void 0 : _b.call(_a);
         if (cover) {
             const thumb = thumbnailFrom(pic);
             if (thumb && await cover(thumb)) {

@@ -57,8 +57,8 @@ export function contractOpen(save, id) {
     return p.visitorsMet.includes(c.visitorId) && clearedLabIds(save).includes(c.labId);
 }
 /** The Job Board appears once you've met any contract visitor. */
-export function jobBoardOpen(save) { const p = activeProfile(save); return contractsAvailable(save) && Boolean(p?.visitorsMet.some(id => VISITORS.some(v => v.id === id))); }
-export function contractDone(save, id) { return activeProfile(save)?.levels[id]?.completed === true; }
+export function jobBoardOpen(save) { const p = activeProfile(save); return contractsAvailable(save) && Boolean(p === null || p === void 0 ? void 0 : p.visitorsMet.some(id => VISITORS.some(v => v.id === id))); }
+export function contractDone(save, id) { var _a, _b; return ((_b = (_a = activeProfile(save)) === null || _a === void 0 ? void 0 : _a.levels[id]) === null || _b === void 0 ? void 0 : _b.completed) === true; }
 /** Jobs waiting on the board (met, open, not finished yet). */
 export function openJobs(save) { return CONTRACTS.filter(c => contractOpen(save, c.id) && !contractDone(save, c.id)); }
 // ------------------------------------------------------------------ arrivals and acceptance

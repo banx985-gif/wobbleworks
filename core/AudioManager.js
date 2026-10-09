@@ -6,19 +6,73 @@ import { MIN_REPEAT_SECONDS, MUSIC_DUCK, SOUND_FAMILIES, musicFor, stepHz } from
  * library recipe. Music for each place is generated live from its theme. Everything pauses when the game is hidden.
  */
 export class AudioManager {
-    makeContext;
-    context;
-    sfxBus;
-    musicBus;
-    noise;
-    levels = { sfx: 1, music: 0.8, voice: 1 };
-    ducked = false;
-    urls = new Map();
-    buffers = new Map();
-    lastPlayed = new Map();
-    music = undefined;
     constructor(makeContext = () => new AudioContext()) {
-        this.makeContext = makeContext;
+        Object.defineProperty(this, "makeContext", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: makeContext
+        });
+        Object.defineProperty(this, "context", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "sfxBus", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "musicBus", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "noise", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "levels", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: { sfx: 1, music: 0.8, voice: 1 }
+        });
+        Object.defineProperty(this, "ducked", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: false
+        });
+        Object.defineProperty(this, "urls", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "buffers", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "lastPlayed", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "music", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: undefined
+        });
     }
     /** Volumes for the two channels (0 = silent … 1 = full). Each slider only changes its own channel. */
     setMix(levels) { this.levels = levels; this.applyGains(); if (levels.music <= 0)
@@ -29,11 +83,12 @@ export class AudioManager {
     /** Music dips while Bolt is talking. */
     duck(on) { this.ducked = on; this.applyGains(); }
     applyGains() {
+        var _a, _b;
         if (!this.context)
             return;
         const t = this.context.currentTime;
-        this.sfxBus?.gain.setTargetAtTime(0.35 * this.levels.sfx, t, 0.02);
-        this.musicBus?.gain.setTargetAtTime(0.18 * this.levels.music * (this.ducked ? MUSIC_DUCK : 1), t, 0.08);
+        (_a = this.sfxBus) === null || _a === void 0 ? void 0 : _a.gain.setTargetAtTime(0.35 * this.levels.sfx, t, 0.02);
+        (_b = this.musicBus) === null || _b === void 0 ? void 0 : _b.gain.setTargetAtTime(0.18 * this.levels.music * (this.ducked ? MUSIC_DUCK : 1), t, 0.08);
     }
     /** Recordings that have arrived: sound id → url. */
     setRecordings(urls) { for (const [id, url] of Object.entries(urls))
@@ -55,15 +110,16 @@ export class AudioManager {
         await this.context.suspend(); }
     async resume() { if (this.context && this.context.state === "suspended")
         await this.context.resume(); }
-    isRunning() { return this.context?.state === "running"; }
+    isRunning() { var _a; return ((_a = this.context) === null || _a === void 0 ? void 0 : _a.state) === "running"; }
     /** A short tone (kept for small UI blips). */
     beep(frequency = 440, duration = 0.05) { this.layer({ wave: "sine", freq: frequency, dur: duration, gain: 0.8 }, this.sfxBus); }
     /** Play a sound family by id. Repeats closer than MIN_REPEAT_SECONDS are skipped. Returns whether it played. */
     play(id, gainScale = 1) {
+        var _a;
         const c = this.context;
         if (!c || !this.sfxBus || this.levels.sfx <= 0)
             return false;
-        const last = this.lastPlayed.get(id) ?? -1;
+        const last = (_a = this.lastPlayed.get(id)) !== null && _a !== void 0 ? _a : -1;
         if (last >= 0 && c.currentTime - last < MIN_REPEAT_SECONDS)
             return false;
         this.lastPlayed.set(id, c.currentTime);
@@ -114,12 +170,13 @@ export class AudioManager {
     }
     /** One synthesised layer: an oscillator (or noise) with a quick attack and a smooth fade. */
     layer(l, bus, at) {
+        var _a, _b;
         const c = this.context;
         if (!c || !bus)
             return;
-        const start = (at ?? c.currentTime) + (l.delay ?? 0);
+        const start = (at !== null && at !== void 0 ? at : c.currentTime) + ((_a = l.delay) !== null && _a !== void 0 ? _a : 0);
         const end = start + Math.max(0.02, l.dur);
-        const attack = Math.min(l.attack ?? 0.005, l.dur / 2);
+        const attack = Math.min((_b = l.attack) !== null && _b !== void 0 ? _b : 0.005, l.dur / 2);
         const g = c.createGain();
         g.gain.setValueAtTime(0.0001, start);
         g.gain.linearRampToValueAtTime(Math.max(0.0002, l.gain), start + attack);
@@ -154,7 +211,8 @@ export class AudioManager {
     // ---------------------------------------------------------------- music
     /** Start (or keep) the music for a place. Nothing plays until the player has touched the screen once. */
     playMusic(placeId) {
-        if (this.music?.id === placeId)
+        var _a;
+        if (((_a = this.music) === null || _a === void 0 ? void 0 : _a.id) === placeId)
             return;
         this.stopMusic();
         const c = this.context;
@@ -165,9 +223,9 @@ export class AudioManager {
         this.music.timer = setInterval(() => this.schedule(), 40);
         this.schedule();
     }
-    stopMusic() { if (this.music?.timer)
+    stopMusic() { var _a; if ((_a = this.music) === null || _a === void 0 ? void 0 : _a.timer)
         clearInterval(this.music.timer); this.music = undefined; }
-    currentMusic() { return this.music?.id; }
+    currentMusic() { var _a; return (_a = this.music) === null || _a === void 0 ? void 0 : _a.id; }
     schedule() {
         const c = this.context, m = this.music;
         if (!c || !m || !this.musicBus)

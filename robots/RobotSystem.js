@@ -16,39 +16,131 @@ export const ROBOTICS_TRUTH_CONTRACT = Object.freeze({
     simplify: ["visual blocks", "deterministic controller timing", "a top-down grid of 1 m cells"],
     neverImply: ["the robot understands intent without programmed rules"]
 });
-export function arenaThing(def) { const b = def?.behaviours.find(x => x.kind === "ARENA"); return b?.kind === "ARENA" ? b.thing : undefined; }
-export function isRobot(def) { return Boolean(def?.behaviours.some(b => b.kind === "ROBOT")); }
+export function arenaThing(def) { const b = def === null || def === void 0 ? void 0 : def.behaviours.find(x => x.kind === "ARENA"); return (b === null || b === void 0 ? void 0 : b.kind) === "ARENA" ? b.thing : undefined; }
+export function isRobot(def) { return Boolean(def === null || def === void 0 ? void 0 : def.behaviours.some(b => b.kind === "ROBOT")); }
 const DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]];
 const key = (x, y) => `${x},${y}`;
 const cellOf = (p) => ({ x: Math.round(p.x), y: Math.round(p.y) });
 const MOVE_TIME = 1 / 1.5, TURN_TIME = 0.4, ACT_TIME = 0.3, MAX_INSTANT = 64;
 export class RobotSystem {
-    parts;
-    robots = [];
-    walls = new Set();
-    tiles = new Map();
-    boxes = [];
-    buttons = [];
-    doors = [];
-    /** Sweeper bots patrol back and forth along one row (axis "x") or one column (axis "y"). */
-    sweepers = [];
-    conveyors = [];
-    machines = [];
-    lamps = [];
-    pads = [];
-    pending = [];
-    once = new Set();
-    elapsed = 0;
-    products = 0;
-    danceSteps = 0;
     constructor(parts, definition) {
-        this.parts = parts;
+        var _a, _b, _c, _d, _e, _f, _g, _h;
+        Object.defineProperty(this, "parts", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: parts
+        });
+        Object.defineProperty(this, "robots", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "walls", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Set()
+        });
+        Object.defineProperty(this, "tiles", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "boxes", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "buttons", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "doors", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        /** Sweeper bots patrol back and forth along one row (axis "x") or one column (axis "y"). */
+        Object.defineProperty(this, "sweepers", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "conveyors", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "machines", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "lamps", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "pads", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "pending", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "once", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Set()
+        });
+        Object.defineProperty(this, "elapsed", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "products", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "danceSteps", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        /** Sensors: what the robot can find out about the world right now. */
+        Object.defineProperty(this, "signal", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: () => false
+        });
         for (const p of parts) {
             const def = definition(p.definitionId);
             const c = cellOf(p.position);
             if (isRobot(def)) {
                 const program = parseProgram(p.parameters.program);
-                const h = ((Math.round(Number(p.parameters.heading ?? 0)) % 4) + 4) % 4;
+                const h = ((Math.round(Number((_a = p.parameters.heading) !== null && _a !== void 0 ? _a : 0)) % 4) + 4) % 4;
                 this.robots.push({ id: p.id, x: c.x, y: c.y, heading: h, angle: h * Math.PI / 2, program, stack: [{ blocks: program, index: 0, kind: "MAIN", path: [] }], bumps: 0, crashed: false, done: false, blocks: blockCount(program) });
                 continue;
             }
@@ -59,7 +151,7 @@ export class RobotSystem {
             if (thing === "WALL")
                 this.walls.add(key(c.x, c.y));
             else if (thing === "TILE")
-                this.tiles.set(key(c.x, c.y), String(p.parameters.colour ?? "RED"));
+                this.tiles.set(key(c.x, c.y), String((_b = p.parameters.colour) !== null && _b !== void 0 ? _b : "RED"));
             else if (thing === "BOX")
                 this.boxes.push({ id: p.id, x: c.x, y: c.y, product: false });
             else if (thing === "BUTTON")
@@ -68,16 +160,16 @@ export class RobotSystem {
                 this.doors.push({ id: p.id, ...c, open: p.parameters.open === true });
             else if (thing === "SWEEPER") {
                 const axis = p.parameters.axis === "y" ? "y" : "x";
-                this.sweepers.push({ id: p.id, x0: c.x, y0: c.y, axis, from: Number(p.parameters.from ?? (axis === "x" ? c.x : c.y)), to: Number(p.parameters.to ?? (axis === "x" ? c.x + 3 : c.y + 3)), speed: Number(p.parameters.speed ?? 1), phase: Number(p.parameters.phase ?? 0) });
+                this.sweepers.push({ id: p.id, x0: c.x, y0: c.y, axis, from: Number((_c = p.parameters.from) !== null && _c !== void 0 ? _c : (axis === "x" ? c.x : c.y)), to: Number((_d = p.parameters.to) !== null && _d !== void 0 ? _d : (axis === "x" ? c.x + 3 : c.y + 3)), speed: Number((_e = p.parameters.speed) !== null && _e !== void 0 ? _e : 1), phase: Number((_f = p.parameters.phase) !== null && _f !== void 0 ? _f : 0) });
             }
             else if (thing === "CONVEYOR")
-                this.conveyors.push({ id: p.id, ...c, dir: ((Math.round(Number(p.parameters.heading ?? 0)) % 4) + 4) % 4, on: p.parameters.on === true, timer: 0, ...(typeof p.parameters.poweredBy === "string" ? { poweredBy: p.parameters.poweredBy } : {}) });
+                this.conveyors.push({ id: p.id, ...c, dir: ((Math.round(Number((_g = p.parameters.heading) !== null && _g !== void 0 ? _g : 0)) % 4) + 4) % 4, on: p.parameters.on === true, timer: 0, ...(typeof p.parameters.poweredBy === "string" ? { poweredBy: p.parameters.poweredBy } : {}) });
             else if (thing === "MACHINE")
                 this.machines.push({ id: p.id, ...c, on: p.parameters.on === true, timer: 0 });
             else if (thing === "LAMP")
                 this.lamps.push({ id: p.id, ...c, on: false });
             else if (thing === "PAD")
-                this.pads.push({ id: p.id, ...c, beats: String(p.parameters.beats ?? "").split(",").map(Number).filter(Number.isFinite), hits: new Set() });
+                this.pads.push({ id: p.id, ...c, beats: String((_h = p.parameters.beats) !== null && _h !== void 0 ? _h : "").split(",").map(Number).filter(Number.isFinite), hits: new Set() });
         }
     }
     hasRobots() { return this.robots.length > 0 || this.sweepers.length > 0 || this.conveyors.length > 0; }
@@ -137,6 +229,7 @@ export class RobotSystem {
             this.nextBlock(r);
     }
     continueAction(r, dt) {
+        var _a;
         const a = r.action;
         a.t += dt;
         const k = Math.min(1, a.t / a.total);
@@ -157,7 +250,7 @@ export class RobotSystem {
             r.x = a.toX;
             r.y = a.toY;
             this.pending.push({ kind: "ROBOT_MOVED", sourceId: r.id, data: { x: r.x, y: r.y } });
-            if ((a.cellsLeft ?? 0) > 0) {
+            if (((_a = a.cellsLeft) !== null && _a !== void 0 ? _a : 0) > 0) {
                 r.action = undefined;
                 this.startMove(r, a.cellsLeft);
                 return;
@@ -168,6 +261,7 @@ export class RobotSystem {
         r.action = undefined;
     }
     nextBlock(r) {
+        var _a, _b;
         const f = r.stack[r.stack.length - 1];
         if (!f) {
             this.finish(r);
@@ -175,8 +269,8 @@ export class RobotSystem {
         }
         if (f.index >= f.blocks.length) {
             // End of a list: loops go round again; branches return to their parent.
-            if (f.kind === "REPEAT" && (f.left ?? 0) > 1) {
-                f.left = (f.left ?? 1) - 1;
+            if (f.kind === "REPEAT" && ((_a = f.left) !== null && _a !== void 0 ? _a : 0) > 1) {
+                f.left = ((_b = f.left) !== null && _b !== void 0 ? _b : 1) - 1;
                 f.index = 0;
                 this.pending.push({ kind: "LOOP_REPEAT", sourceId: r.id });
                 return;
@@ -299,7 +393,7 @@ export class RobotSystem {
             return true;
         if (this.doors.some(d => !d.open && d.x === x && d.y === y))
             return true;
-        if (this.robots.some(o => o.id !== selfId && !o.crashed && ((Math.round(o.x) === x && Math.round(o.y) === y) || (o.action?.kind === "MOVE" && o.action.toX === x && o.action.toY === y))))
+        if (this.robots.some(o => { var _a; return o.id !== selfId && !o.crashed && ((Math.round(o.x) === x && Math.round(o.y) === y) || (((_a = o.action) === null || _a === void 0 ? void 0 : _a.kind) === "MOVE" && o.action.toX === x && o.action.toY === y)); }))
             return true;
         if (this.sweepers.some(s => { const sp = this.sweeperPos(s); return Math.abs(sp.x - x) < 0.8 && Math.abs(sp.y - y) < 0.8; }))
             return true;
@@ -309,8 +403,6 @@ export class RobotSystem {
             return true;
         return false;
     }
-    /** Sensors: what the robot can find out about the world right now. */
-    signal = () => false;
     sense(r, s) {
         if (s === "SIGNAL")
             return this.signal(r.id);
@@ -410,7 +502,7 @@ export class RobotSystem {
     isOn(id) { return this.conveyors.some(c => c.id === id && c.on) || this.machines.some(m => m.id === id && m.on) || this.lamps.some(l => l.id === id && l.on); }
     sweeperPosition(id) { const s = this.sweepers.find(q => q.id === id); return s ? this.sweeperPos(s) : undefined; }
     /** The program a robot is running (for goals that ask how it was written). */
-    programOf(id) { return this.robots.find(r => r.id === id)?.program ?? []; }
+    programOf(id) { var _a, _b; return (_b = (_a = this.robots.find(r => r.id === id)) === null || _a === void 0 ? void 0 : _a.program) !== null && _b !== void 0 ? _b : []; }
     productCount() { return this.products; }
     danceScore() { return this.danceSteps; }
     drainEvents() { const out = this.pending; this.pending = []; return out; }

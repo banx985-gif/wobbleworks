@@ -26,8 +26,8 @@ export const LEVEL_ON = 0.15;
 /** A generator's push (volts) for each radian per second its shaft turns: the faster it is turned, the harder it pushes (M27). */
 export const GENERATOR_VOLTS_PER_RAD = 0.45;
 export const LEVEL_BRIGHT = 0.6;
-export function circuitBehaviour(def) { const b = def?.behaviours.find(x => x.kind === "CIRCUIT"); return b?.kind === "CIRCUIT" ? b : undefined; }
-export function wireBehaviour(def) { const b = def?.behaviours.find(x => x.kind === "WIRE"); return b?.kind === "WIRE" ? b : undefined; }
+export function circuitBehaviour(def) { const b = def === null || def === void 0 ? void 0 : def.behaviours.find(x => x.kind === "CIRCUIT"); return (b === null || b === void 0 ? void 0 : b.kind) === "CIRCUIT" ? b : undefined; }
+export function wireBehaviour(def) { const b = def === null || def === void 0 ? void 0 : def.behaviours.find(x => x.kind === "WIRE"); return (b === null || b === void 0 ? void 0 : b.kind) === "WIRE" ? b : undefined; }
 /** World positions of a component's terminals (rotation applied). */
 export function circuitTerminals(part, def) {
     const b = circuitBehaviour(def);
@@ -40,15 +40,17 @@ export function circuitTerminals(part, def) {
 }
 /** A wire's two end points. */
 export function wireEnds(part, def) {
+    var _a;
     const w = wireBehaviour(def);
     if (!w)
         return undefined;
-    const length = Number(part.parameters.length ?? w.length);
+    const length = Number((_a = part.parameters.length) !== null && _a !== void 0 ? _a : w.length);
     const c = Math.cos(part.rotation), s = Math.sin(part.rotation);
     return { x1: part.position.x - c * length / 2, y1: part.position.y - s * length / 2, x2: part.position.x + c * length / 2, y2: part.position.y + s * length / 2, length };
 }
 /** Geometry → nodes and elements. Pure; used in BUILD mode too (terminal dots). */
 export function analyzeCircuit(parts, definition) {
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
     const points = [];
     for (const p of parts) {
         const def = definition(p.definitionId);
@@ -86,10 +88,10 @@ export function analyzeCircuit(parts, definition) {
         return { ...pt, node: nodeOf.get(root) };
     });
     const elements = [];
-    const suns = parts.filter(p => definition(p.definitionId)?.behaviours.some(b => b.kind === "SUN"));
+    const suns = parts.filter(p => { var _a; return (_a = definition(p.definitionId)) === null || _a === void 0 ? void 0 : _a.behaviours.some(b => b.kind === "SUN"); });
     // Sandbox "limited power": a power limit in the room caps every battery's store of energy.
     const limit = parts.find(p => p.definitionId === "sandbox.power-limit");
-    const cap = limit ? Number(limit.parameters.capacity ?? 40) : Infinity;
+    const cap = limit ? Number((_a = limit.parameters.capacity) !== null && _a !== void 0 ? _a : 40) : Infinity;
     for (const p of parts) {
         const def = definition(p.definitionId);
         if (!def)
@@ -109,19 +111,19 @@ export function analyzeCircuit(parts, definition) {
         // Solar panels push only as hard as the sunlight on them (facing the sun squarely = full push) and never run down.
         if (c.role === "BATTERY" && def.behaviours.some(b => b.kind === "SOLAR_PANEL")) {
             const sun = sunFactor(suns, p.position.x, p.position.y, p.rotation);
-            elements.push({ ...base, kind: "BATTERY", ohms: c.ohms ?? 0.5, volts: Math.round(Number(c.volts ?? ONE_BATTERY_VOLTS) * sun * 1000) / 1000, capacity: 1e9, maxPower: Infinity });
+            elements.push({ ...base, kind: "BATTERY", ohms: (_b = c.ohms) !== null && _b !== void 0 ? _b : 0.5, volts: Math.round(Number((_c = c.volts) !== null && _c !== void 0 ? _c : ONE_BATTERY_VOLTS) * sun * 1000) / 1000, capacity: 1e9, maxPower: Infinity });
             continue;
         }
         if (c.role === "BATTERY" && def.behaviours.some(b => b.kind === "GENERATOR")) {
-            elements.push({ ...base, kind: "BATTERY", ohms: c.ohms ?? 0.5, volts: 0, capacity: 1e9, maxPower: Infinity, generator: true });
+            elements.push({ ...base, kind: "BATTERY", ohms: (_d = c.ohms) !== null && _d !== void 0 ? _d : 0.5, volts: 0, capacity: 1e9, maxPower: Infinity, generator: true });
             continue;
         }
         if (c.role === "BATTERY")
-            elements.push({ ...base, kind: "BATTERY", ohms: c.ohms ?? 0.5, volts: Number(p.parameters.volts ?? c.volts ?? ONE_BATTERY_VOLTS), capacity: Math.min(cap, Number(p.parameters.capacity ?? c.capacity ?? 400)), maxPower: Number(p.parameters.maxPower ?? c.maxPower ?? Infinity) });
+            elements.push({ ...base, kind: "BATTERY", ohms: (_e = c.ohms) !== null && _e !== void 0 ? _e : 0.5, volts: Number((_g = (_f = p.parameters.volts) !== null && _f !== void 0 ? _f : c.volts) !== null && _g !== void 0 ? _g : ONE_BATTERY_VOLTS), capacity: Math.min(cap, Number((_j = (_h = p.parameters.capacity) !== null && _h !== void 0 ? _h : c.capacity) !== null && _j !== void 0 ? _j : 400)), maxPower: Number((_l = (_k = p.parameters.maxPower) !== null && _k !== void 0 ? _k : c.maxPower) !== null && _l !== void 0 ? _l : Infinity) });
         else if (c.role === "SWITCH" || c.role === "BUTTON")
             elements.push({ ...base, kind: c.role, ohms: 0.01, volts: 0, capacity: 0, maxPower: Infinity });
         else
-            elements.push({ ...base, kind: "LOAD", ohms: Number(p.parameters.ohms ?? c.ohms ?? 6), volts: 0, capacity: 0, maxPower: Infinity, ...(c.load ? { load: c.load } : {}) });
+            elements.push({ ...base, kind: "LOAD", ohms: Number((_o = (_m = p.parameters.ohms) !== null && _m !== void 0 ? _m : c.ohms) !== null && _o !== void 0 ? _o : 6), volts: 0, capacity: 0, maxPower: Infinity, ...(c.load ? { load: c.load } : {}) });
     }
     return { nodes, terminals, elements };
 }
@@ -138,25 +140,112 @@ export function wireEndSnap(x, y, layout, ignorePart, reach = 0.35) {
     return best ? { x: best.x, y: best.y } : undefined;
 }
 export class CircuitSystem {
-    layout;
-    charge = new Map();
-    energy = new Map();
-    tripped = new Set();
-    overTicks = new Map();
-    elementCurrent = new Map();
-    loads = new Map();
-    closed = new Map();
-    tallies = new Map();
-    /** Recent levels of each load (last 10 s) so goals can ask "bright for the last 2 seconds, all together". */
-    history = new Map();
-    voltages = [];
-    pending = [];
-    once = new Set();
-    ticks = 0;
-    /** Timer switches (part id → ticks between closes). */
-    timers = new Map();
-    timerTicks = 0;
     constructor(parts, definition) {
+        var _a, _b, _c, _d, _e, _f;
+        Object.defineProperty(this, "layout", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "charge", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "energy", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "tripped", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Set()
+        });
+        Object.defineProperty(this, "overTicks", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "elementCurrent", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "loads", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "closed", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "tallies", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        /** Recent levels of each load (last 10 s) so goals can ask "bright for the last 2 seconds, all together". */
+        Object.defineProperty(this, "history", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "voltages", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "pending", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "once", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Set()
+        });
+        Object.defineProperty(this, "ticks", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        /** Timer switches (part id → ticks between closes). */
+        Object.defineProperty(this, "timers", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "timerTicks", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "genVolts", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
         this.layout = analyzeCircuit(parts, definition);
         for (const e of this.layout.elements) {
             if (e.kind === "BATTERY") {
@@ -164,14 +253,14 @@ export class CircuitSystem {
                 this.energy.set(e.partId, 0);
             }
             if (e.kind === "LOAD")
-                this.loads.set(e.partId, { id: e.partId, kind: e.load ?? "DEVICE", power: 0, level: 0, current: 0, on: false, onTicks: 0, peakLevel: 0, everOn: false });
+                this.loads.set(e.partId, { id: e.partId, kind: (_a = e.load) !== null && _a !== void 0 ? _a : "DEVICE", power: 0, level: 0, current: 0, on: false, onTicks: 0, peakLevel: 0, everOn: false });
             if (e.kind === "SWITCH")
-                this.closed.set(e.partId, parts.find(p => p.id === e.partId)?.parameters.closed === true);
+                this.closed.set(e.partId, ((_b = parts.find(p => p.id === e.partId)) === null || _b === void 0 ? void 0 : _b.parameters.closed) === true);
             // M29: a timer switch closes for a moment (1/6 s) at a steady rate.
             const p = parts.find(q => q.id === e.partId);
-            const timer = definition(p?.definitionId ?? "")?.behaviours.find(b => b.kind === "MUSIC" && b.family === "TIMER");
-            if (e.kind === "SWITCH" && p && timer?.kind === "MUSIC")
-                this.timers.set(e.partId, Math.max(15, Math.round(Number(p.parameters.every ?? timer.every ?? 1) * 60)));
+            const timer = (_d = definition((_c = p === null || p === void 0 ? void 0 : p.definitionId) !== null && _c !== void 0 ? _c : "")) === null || _d === void 0 ? void 0 : _d.behaviours.find(b => b.kind === "MUSIC" && b.family === "TIMER");
+            if (e.kind === "SWITCH" && p && (timer === null || timer === void 0 ? void 0 : timer.kind) === "MUSIC")
+                this.timers.set(e.partId, Math.max(15, Math.round(Number((_f = (_e = p.parameters.every) !== null && _e !== void 0 ? _e : timer.every) !== null && _f !== void 0 ? _f : 1) * 60)));
             if (e.kind === "BUTTON")
                 this.closed.set(e.partId, false);
         }
@@ -181,6 +270,7 @@ export class CircuitSystem {
     /** One tick. `pressed` says whether each button is held down right now (by a body, Bolt's schedule or a finger). */
     /** `shaftSpeed`: how fast a generator's shaft is turning (radians per second), from the gear system. */
     step(dt, pressed, flipped = new Set(), shaftSpeed = () => 0) {
+        var _a, _b, _c, _d, _e, _f;
         const els = this.layout.elements;
         this.timerTicks++;
         for (const [id, period] of this.timers)
@@ -212,7 +302,7 @@ export class CircuitSystem {
         // Energy, overloads and load states.
         for (const e of els)
             if (e.kind === "BATTERY") {
-                const i = this.elementCurrent.get(e.partId) ?? 0;
+                const i = (_a = this.elementCurrent.get(e.partId)) !== null && _a !== void 0 ? _a : 0;
                 const emf = this.emf(e);
                 const p = Math.max(0, emf * i);
                 if (p > 0) {
@@ -229,7 +319,7 @@ export class CircuitSystem {
                     this.pending.push({ kind: "SHORT_CIRCUIT", sourceId: e.partId, data: { current: round(i) } });
                 }
                 if (Number.isFinite(e.maxPower) && !this.tripped.has(e.partId)) {
-                    const over = p > e.maxPower ? (this.overTicks.get(e.partId) ?? 0) + 1 : 0;
+                    const over = p > e.maxPower ? ((_b = this.overTicks.get(e.partId)) !== null && _b !== void 0 ? _b : 0) + 1 : 0;
                     this.overTicks.set(e.partId, over);
                     if (over >= 6) {
                         this.tripped.add(e.partId);
@@ -237,10 +327,10 @@ export class CircuitSystem {
                     }
                 }
             }
-        const anySourceCurrent = els.some(e => e.kind === "BATTERY" && Math.abs(this.elementCurrent.get(e.partId) ?? 0) > 0.3);
+        const anySourceCurrent = els.some(e => { var _a; return e.kind === "BATTERY" && Math.abs((_a = this.elementCurrent.get(e.partId)) !== null && _a !== void 0 ? _a : 0) > 0.3; });
         for (const e of els)
             if (e.kind === "LOAD") {
-                const v = (this.voltages[e.a] ?? 0) - (this.voltages[e.b] ?? 0);
+                const v = ((_c = this.voltages[e.a]) !== null && _c !== void 0 ? _c : 0) - ((_d = this.voltages[e.b]) !== null && _d !== void 0 ? _d : 0);
                 const i = e.broken ? 0 : v / e.ohms;
                 const power = e.broken ? 0 : v * v / e.ohms;
                 const level = power / (ONE_BATTERY_VOLTS * ONE_BATTERY_VOLTS / e.ohms);
@@ -254,7 +344,7 @@ export class CircuitSystem {
                     this.once.add(`bypass:${e.partId}`);
                     this.pending.push({ kind: "LOAD_BYPASSED", sourceId: e.partId });
                 }
-                const h = this.history.get(e.partId) ?? [];
+                const h = (_e = this.history.get(e.partId)) !== null && _e !== void 0 ? _e : [];
                 h.push(level);
                 if (h.length > 600)
                     h.shift();
@@ -262,7 +352,7 @@ export class CircuitSystem {
                 this.loads.set(e.partId, { id: e.partId, kind: prev.kind, power, level, current: i, on, onTicks: on ? prev.onTicks + 1 : 0, peakLevel: Math.max(prev.peakLevel, level), everOn: prev.everOn || on });
                 for (const [control, isClosed] of this.closed) {
                     const key = `${control}|${e.partId}`;
-                    const t = this.tallies.get(key) ?? { closedOn: 0, closedOff: 0, openOn: 0, openOff: 0 };
+                    const t = (_f = this.tallies.get(key)) !== null && _f !== void 0 ? _f : { closedOn: 0, closedOff: 0, openOn: 0, openOff: 0 };
                     if (isClosed) {
                         if (on)
                             t.closedOn++;
@@ -280,13 +370,13 @@ export class CircuitSystem {
             }
         this.ticks += 1;
     }
-    genVolts = new Map();
-    emf(e) { if (e.generator)
-        return this.tripped.has(e.partId) ? 0 : this.genVolts.get(e.partId) ?? 0; return this.tripped.has(e.partId) || (this.charge.get(e.partId) ?? 0) <= 0 ? 0 : e.volts; }
+    emf(e) { var _a, _b; if (e.generator)
+        return this.tripped.has(e.partId) ? 0 : (_a = this.genVolts.get(e.partId)) !== null && _a !== void 0 ? _a : 0; return this.tripped.has(e.partId) || ((_b = this.charge.get(e.partId)) !== null && _b !== void 0 ? _b : 0) <= 0 ? 0 : e.volts; }
     /** Is this load's network joined (through closed paths) to any battery at all? */
     connectedToSource(load) {
+        var _a;
         const adj = new Map();
-        const add = (a, b) => { (adj.get(a) ?? adj.set(a, []).get(a)).push(b); (adj.get(b) ?? adj.set(b, []).get(b)).push(a); };
+        const add = (a, b) => { var _a, _b; ((_a = adj.get(a)) !== null && _a !== void 0 ? _a : adj.set(a, []).get(a)).push(b); ((_b = adj.get(b)) !== null && _b !== void 0 ? _b : adj.set(b, []).get(b)).push(a); };
         for (const e of this.layout.elements)
             if (this.conducts(e) && e.partId !== load.partId)
                 add(e.a, e.b);
@@ -294,7 +384,7 @@ export class CircuitSystem {
         const q = [load.a];
         while (q.length) {
             const n = q.shift();
-            for (const m of adj.get(n) ?? [])
+            for (const m of (_a = adj.get(n)) !== null && _a !== void 0 ? _a : [])
                 if (!seen.has(m)) {
                     seen.add(m);
                     q.push(m);
@@ -305,6 +395,7 @@ export class CircuitSystem {
     conducts(e) { return !e.broken && ((e.kind !== "SWITCH" && e.kind !== "BUTTON") || this.closed.get(e.partId) === true); }
     /** Modified nodal analysis: node voltages + one current per battery. Floating parts settle at 0 V (tiny leak to ground). */
     solve() {
+        var _a, _b;
         const els = this.layout.elements;
         const n = this.layout.nodes.length;
         const sources = els.filter(e => e.kind === "BATTERY");
@@ -343,29 +434,30 @@ export class CircuitSystem {
         });
         const x = gaussSolve(A, z);
         this.voltages = x.slice(0, n);
-        sources.forEach((e, k) => this.elementCurrent.set(e.partId, x[n + k] ?? 0));
+        sources.forEach((e, k) => { var _a; return this.elementCurrent.set(e.partId, (_a = x[n + k]) !== null && _a !== void 0 ? _a : 0); });
         for (const e of els)
             if (e.kind !== "BATTERY")
-                this.elementCurrent.set(e.partId, this.conducts(e) ? ((this.voltages[e.a] ?? 0) - (this.voltages[e.b] ?? 0)) / e.ohms : 0);
+                this.elementCurrent.set(e.partId, this.conducts(e) ? (((_a = this.voltages[e.a]) !== null && _a !== void 0 ? _a : 0) - ((_b = this.voltages[e.b]) !== null && _b !== void 0 ? _b : 0)) / e.ohms : 0);
     }
     // ---------------------------------------------------------------- read-only views (renderer, goals, evidence)
     load(id) { return this.loads.get(id); }
     loadStates() { return [...this.loads.values()]; }
     source(id) {
+        var _a, _b;
         const e = this.layout.elements.find(x => x.partId === id && x.kind === "BATTERY");
         if (!e)
             return undefined;
-        const i = this.elementCurrent.get(id) ?? 0;
-        return { id, charge: this.charge.get(id), capacity: e.capacity, energyUsed: this.energy.get(id), current: i, power: Math.max(0, this.emf(e) * i), tripped: this.tripped.has(id), empty: (this.charge.get(id) ?? 0) <= 0 };
+        const i = (_a = this.elementCurrent.get(id)) !== null && _a !== void 0 ? _a : 0;
+        return { id, charge: this.charge.get(id), capacity: e.capacity, energyUsed: this.energy.get(id), current: i, power: Math.max(0, this.emf(e) * i), tripped: this.tripped.has(id), empty: ((_b = this.charge.get(id)) !== null && _b !== void 0 ? _b : 0) <= 0 };
     }
     sources() { return this.layout.elements.filter(e => e.kind === "BATTERY").map(e => this.source(e.partId)); }
     /** Total energy taken from every battery so far (the energyUsed metric). */
     energyUsed() { let t = 0; for (const v of this.energy.values())
         t += v; return t; }
     /** Current through any element (A, + = from its first terminal to its second). */
-    current(id) { return this.elementCurrent.get(id) ?? 0; }
+    current(id) { var _a; return (_a = this.elementCurrent.get(id)) !== null && _a !== void 0 ? _a : 0; }
     isClosed(id) { return this.closed.get(id) === true; }
-    nodeVoltage(node) { return this.voltages[node] ?? 0; }
+    nodeVoltage(node) { var _a; return (_a = this.voltages[node]) !== null && _a !== void 0 ? _a : 0; }
     /** How hard an electric motor is driven, as a multiple of one battery straight across it (signed = direction). */
     motorDrive(id) {
         const e = this.layout.elements.find(x => x.partId === id && x.kind === "LOAD");
@@ -377,9 +469,9 @@ export class CircuitSystem {
         return Math.abs(s) < LEVEL_ON ? 0 : Math.max(-2.5, Math.min(2.5, s));
     }
     /** How many ticks in a row (up to now) this load has stayed at or above a level. */
-    ticksAtLeast(id, level) { const h = this.history.get(id) ?? []; let n = 0; for (let i = h.length - 1; i >= 0 && h[i] >= level; i--)
+    ticksAtLeast(id, level) { var _a; const h = (_a = this.history.get(id)) !== null && _a !== void 0 ? _a : []; let n = 0; for (let i = h.length - 1; i >= 0 && h[i] >= level; i--)
         n++; return n; }
-    controlTally(controlId, loadId) { return { ...(this.tallies.get(`${controlId}|${loadId}`) ?? { closedOn: 0, closedOff: 0, openOn: 0, openOff: 0 }) }; }
+    controlTally(controlId, loadId) { var _a; return { ...((_a = this.tallies.get(`${controlId}|${loadId}`)) !== null && _a !== void 0 ? _a : { closedOn: 0, closedOff: 0, openOn: 0, openOff: 0 }) }; }
     drainEvents() { const out = this.pending; this.pending = []; return out; }
 }
 /** Dense Gaussian elimination with partial pivoting (systems here are tiny). Singular columns give 0. */

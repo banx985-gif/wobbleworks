@@ -5,7 +5,8 @@ import { analyzeStructure, beamEndpoints } from "../structures/StructureSystem.j
  */
 const INK = "#203040";
 export function structureKind(def) {
-    return def.behaviours.find(b => ["BEAM", "STRUCT_ANCHOR", "STRUCT_GROUND", "CHASM", "TRAVELLER", "STRUCT_LOAD", "EGG", "WIND"].includes(b.kind))?.kind;
+    var _a;
+    return (_a = def.behaviours.find(b => ["BEAM", "STRUCT_ANCHOR", "STRUCT_GROUND", "CHASM", "TRAVELLER", "STRUCT_LOAD", "EGG", "WIND"].includes(b.kind))) === null || _a === void 0 ? void 0 : _a.kind;
 }
 /** Draw order inside a structure scene: ground first, then beams, then the things on them. */
 export function structureLayer(def) {
@@ -58,6 +59,7 @@ function drawMemberArt(c, img, id, len, h, broken) {
 function stressColour(r) { return r < 0.5 ? "#40c057" : r < 0.8 ? "#fab005" : "#e03131"; }
 /** One Builder Bay part. False when the part isn't a structure part. */
 export function drawStructurePart(c, part, def, selected, ctx) {
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p;
     const kind = structureKind(def);
     if (!kind)
         return false;
@@ -67,7 +69,7 @@ export function drawStructurePart(c, part, def, selected, ctx) {
     c.lineJoin = "round";
     c.lineCap = "round";
     if (kind === "CHASM") {
-        const w = Number(part.parameters.width ?? 4) * 100;
+        const w = Number((_a = part.parameters.width) !== null && _a !== void 0 ? _a : 4) * 100;
         const g = c.createLinearGradient(0, 520, 0, 900);
         g.addColorStop(0, "#5c3b1e");
         g.addColorStop(1, "#1c1006");
@@ -85,7 +87,7 @@ export function drawStructurePart(c, part, def, selected, ctx) {
         }
     }
     else if (kind === "STRUCT_GROUND") {
-        const w = Number(part.parameters.width ?? 4) * 100, h = Number(part.parameters.height ?? 3) * 100;
+        const w = Number((_b = part.parameters.width) !== null && _b !== void 0 ? _b : 4) * 100, h = Number((_c = part.parameters.height) !== null && _c !== void 0 ? _c : 3) * 100;
         c.fillStyle = "#c08f5f";
         c.strokeStyle = INK;
         c.lineWidth = 5;
@@ -124,13 +126,13 @@ export function drawStructurePart(c, part, def, selected, ctx) {
         drawBeam(c, part, def, selected, ctx);
     }
     else if (kind === "TRAVELLER") {
-        const t = st?.traveller(part.id);
-        const tx = (t?.x ?? part.position.x) * 100, ty = (t?.y ?? part.position.y) * 100;
+        const t = st === null || st === void 0 ? void 0 : st.traveller(part.id);
+        const tx = ((_d = t === null || t === void 0 ? void 0 : t.x) !== null && _d !== void 0 ? _d : part.position.x) * 100, ty = ((_e = t === null || t === void 0 ? void 0 : t.y) !== null && _e !== void 0 ? _e : part.position.y) * 100;
         const b = def.behaviours.find(q => q.kind === "TRAVELLER");
-        const who = b?.kind === "TRAVELLER" ? b.who : "BOLT";
-        const bob = t?.started && !t.arrived && !t.fallen ? Math.abs(Math.sin(ctx.time * 8)) * 4 : 0;
-        drawTraveller(c, who, tx, ty - bob, ctx.art, t?.fallen ?? false);
-        if (t?.blocked) {
+        const who = (b === null || b === void 0 ? void 0 : b.kind) === "TRAVELLER" ? b.who : "BOLT";
+        const bob = (t === null || t === void 0 ? void 0 : t.started) && !t.arrived && !t.fallen ? Math.abs(Math.sin(ctx.time * 8)) * 4 : 0;
+        drawTraveller(c, who, tx, ty - bob, ctx.art, (_f = t === null || t === void 0 ? void 0 : t.fallen) !== null && _f !== void 0 ? _f : false);
+        if (t === null || t === void 0 ? void 0 : t.blocked) {
             c.font = "900 18px system-ui";
             c.textAlign = "center";
             c.fillStyle = "#e03131";
@@ -140,7 +142,7 @@ export function drawStructurePart(c, part, def, selected, ctx) {
             c.strokeStyle = "#1c7ed688";
             c.lineWidth = 4;
             c.setLineDash([8, 8]);
-            const ex = Number(part.parameters.endX ?? part.position.x + 8) * 100;
+            const ex = Number((_g = part.parameters.endX) !== null && _g !== void 0 ? _g : part.position.x + 8) * 100;
             c.beginPath();
             c.moveTo(tx, ty - 120);
             c.lineTo(ex, ty - 120);
@@ -156,10 +158,10 @@ export function drawStructurePart(c, part, def, selected, ctx) {
         }
     }
     else if (kind === "STRUCT_LOAD") {
-        const l = st?.load(part.id);
-        const lx = (l?.x ?? part.position.x) * 100, ly = (l?.y ?? part.position.y) * 100;
+        const l = st === null || st === void 0 ? void 0 : st.load(part.id);
+        const lx = ((_h = l === null || l === void 0 ? void 0 : l.x) !== null && _h !== void 0 ? _h : part.position.x) * 100, ly = ((_j = l === null || l === void 0 ? void 0 : l.y) !== null && _j !== void 0 ? _j : part.position.y) * 100;
         const grows = part.parameters.grow === true;
-        const size = grows ? 30 + 30 * Math.min(1, (l?.applied ?? 0) / 30) : 34;
+        const size = grows ? 30 + 30 * Math.min(1, ((_k = l === null || l === void 0 ? void 0 : l.applied) !== null && _k !== void 0 ? _k : 0) / 30) : 34;
         c.fillStyle = grows ? "#495057" : "#d6a46a";
         c.strokeStyle = INK;
         c.lineWidth = 4;
@@ -170,17 +172,17 @@ export function drawStructurePart(c, part, def, selected, ctx) {
         c.fillStyle = "#fff";
         c.font = `900 ${grows ? 14 : 12}px system-ui`;
         c.textAlign = "center";
-        c.fillText(grows ? `${Math.round(l?.applied ?? 0)}` : "SAND", lx, ly - size / 2 + 5);
-        if (l?.done && part.parameters.grow === true) {
+        c.fillText(grows ? `${Math.round((_l = l === null || l === void 0 ? void 0 : l.applied) !== null && _l !== void 0 ? _l : 0)}` : "SAND", lx, ly - size / 2 + 5);
+        if ((l === null || l === void 0 ? void 0 : l.done) && part.parameters.grow === true) {
             c.fillStyle = INK;
             c.font = "900 16px system-ui";
             c.fillText(`held ${Math.round(l.held)}`, lx, ly - size - 12);
         }
     }
     else if (kind === "EGG") {
-        const e = st?.egg(part.id);
-        const ex = (e?.x ?? part.position.x) * 100, ey = (e?.y ?? part.position.y) * 100;
-        const cracked = e?.landed && (e.impact ?? 0) > 4;
+        const e = st === null || st === void 0 ? void 0 : st.egg(part.id);
+        const ex = ((_m = e === null || e === void 0 ? void 0 : e.x) !== null && _m !== void 0 ? _m : part.position.x) * 100, ey = ((_o = e === null || e === void 0 ? void 0 : e.y) !== null && _o !== void 0 ? _o : part.position.y) * 100;
+        const cracked = (e === null || e === void 0 ? void 0 : e.landed) && ((_p = e.impact) !== null && _p !== void 0 ? _p : 0) > 4;
         c.fillStyle = "#fff9db";
         c.strokeStyle = INK;
         c.lineWidth = 3;
@@ -202,7 +204,7 @@ export function drawStructurePart(c, part, def, selected, ctx) {
             c.textAlign = "center";
             c.fillText("CRACK!", ex, ey - 56);
         }
-        else if (e?.landed) {
+        else if (e === null || e === void 0 ? void 0 : e.landed) {
             c.font = "900 16px system-ui";
             c.fillStyle = "#2f9e44";
             c.textAlign = "center";
@@ -228,14 +230,15 @@ export function drawStructurePart(c, part, def, selected, ctx) {
     return true;
 }
 function drawBeam(c, part, def, selected, ctx) {
+    var _a, _b, _c, _d;
     const e = beamEndpoints(part, def);
     if (!e)
         return;
     const b = def.behaviours.find(q => q.kind === "BEAM");
-    if (b?.kind !== "BEAM")
+    if ((b === null || b === void 0 ? void 0 : b.kind) !== "BEAM")
         return;
     const st = ctx.structures;
-    const ms = st?.memberState(part.id);
+    const ms = st === null || st === void 0 ? void 0 : st.memberState(part.id);
     let x1 = e.x1 * 100, y1 = e.y1 * 100, x2 = e.x2 * 100, y2 = e.y2 * 100;
     if (st) {
         const m = st.members.find(q => q.partId === part.id);
@@ -247,8 +250,8 @@ function drawBeam(c, part, def, selected, ctx) {
             x2 = st.layout.joints[m.b].x * 100 + cl(db.x);
             y2 = st.layout.joints[m.b].y * 100 + cl(db.y);
         }
-        if (ms?.broken) {
-            const at = st.brokenAtTick(part.id) ?? st.tick();
+        if (ms === null || ms === void 0 ? void 0 : ms.broken) {
+            const at = (_a = st.brokenAtTick(part.id)) !== null && _a !== void 0 ? _a : st.tick();
             const fall = Math.min(600, ((st.tick() - at) / 60) ** 2 * 490);
             y1 += fall;
             y2 += fall;
@@ -256,7 +259,7 @@ function drawBeam(c, part, def, selected, ctx) {
         }
     }
     const t = b.thickness * 100;
-    const damage = Number(part.parameters.damage ?? 0);
+    const damage = Number((_b = part.parameters.damage) !== null && _b !== void 0 ? _b : 0);
     if (b.material === "ROPE") {
         const slack = ms && ms.mode !== "TENSION" ? 18 : 3;
         const mx = (x1 + x2) / 2, my = (y1 + y2) / 2 + slack;
@@ -291,10 +294,10 @@ function drawBeam(c, part, def, selected, ctx) {
                 c.shadowColor = "#ffd43b";
                 c.shadowBlur = 22;
             }
-            drawMemberArt(c, img, def.id, len, beamArtThickness(def.id, t), ms?.broken ?? false);
+            drawMemberArt(c, img, def.id, len, beamArtThickness(def.id, t), (_c = ms === null || ms === void 0 ? void 0 : ms.broken) !== null && _c !== void 0 ? _c : false);
             c.shadowBlur = 0;
         }
-        else if (ms?.broken) {
+        else if (ms === null || ms === void 0 ? void 0 : ms.broken) {
             c.beginPath();
             c.roundRect(0, -t / 2, len * 0.48, t, 4);
             c.fill();
@@ -329,7 +332,7 @@ function drawBeam(c, part, def, selected, ctx) {
                 c.fill();
             }
         }
-        if (damage > 0 && !ms?.broken) {
+        if (damage > 0 && !(ms === null || ms === void 0 ? void 0 : ms.broken)) {
             c.strokeStyle = "#e03131";
             c.lineWidth = 3;
             const mx = len / 2;
@@ -374,7 +377,7 @@ function drawBeam(c, part, def, selected, ctx) {
         c.restore();
     }
     // Bolts at the ends (the painted pictures have their own end plates).
-    if (b.material !== "ROPE" && ctx.art(beamArtId(def.id, b.material, Math.hypot(x2 - x1, y2 - y1)) ?? "")) {
+    if (b.material !== "ROPE" && ctx.art((_d = beamArtId(def.id, b.material, Math.hypot(x2 - x1, y2 - y1))) !== null && _d !== void 0 ? _d : "")) {
         c.globalAlpha = 1;
         return;
     }
@@ -390,6 +393,7 @@ function drawBeam(c, part, def, selected, ctx) {
     }
 }
 function drawTraveller(c, who, x, y, art, fallen) {
+    var _a;
     c.save();
     c.translate(x, y);
     if (fallen)
@@ -428,7 +432,7 @@ function drawTraveller(c, who, x, y, art, fallen) {
         c.fillText("HEAVY", 0, -76);
     }
     else if (who === "BOLT" && art("char.bolt.wave")) {
-        c.drawImage(art(fallen ? "char.bolt.panic" : "char.bolt.wave") ?? art("char.bolt.wave"), -40, -112, 80, 112);
+        c.drawImage((_a = art(fallen ? "char.bolt.panic" : "char.bolt.wave")) !== null && _a !== void 0 ? _a : art("char.bolt.wave"), -40, -112, 80, 112);
     }
     else {
         // Parade robots (and Bolt if his pictures haven't loaded): code-drawn.

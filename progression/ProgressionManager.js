@@ -5,25 +5,26 @@ import { MISSION_REWARDS, evaluateStars, grantRewardsTo, rewardById } from "./Re
 import { pendingRestorationMoments, restorationStage, VISITOR_HOOKS } from "./Restoration.js";
 function grant(p, rewardIds) { return grantRewardsTo(p, rewardIds); }
 export function recordMissionSuccess(save, levelId, evidence) {
+    var _a, _b, _c, _d, _e, _f, _g;
     const p = activeProfile(save);
     if (!p) {
         // Guest play (no inventor yet): keep the legacy completion record so nothing is lost; rewards wait for a profile.
-        const done = [...new Set([...(save.motionCompletedLevelIds ?? []), levelId])];
-        const next = withMotionProgress(save, done, [...(save.motionDiscoveries ?? []), ...evidence.discoveries]);
-        return { save: next, firstCompletion: !(save.motionCompletedLevelIds ?? []).includes(levelId), stars: ["solve"], newStars: ["solve"], newRewards: [], restoration: [] };
+        const done = [...new Set([...((_a = save.motionCompletedLevelIds) !== null && _a !== void 0 ? _a : []), levelId])];
+        const next = withMotionProgress(save, done, [...((_b = save.motionDiscoveries) !== null && _b !== void 0 ? _b : []), ...evidence.discoveries]);
+        return { save: next, firstCompletion: !((_c = save.motionCompletedLevelIds) !== null && _c !== void 0 ? _c : []).includes(levelId), stars: ["solve"], newStars: ["solve"], newRewards: [], restoration: [] };
     }
     const clearedBefore = new Set(clearedLabIds(save));
     const prev = p.levels[levelId];
     const runStars = evaluateStars(levelId, evidence);
-    const stars = ["solve", "efficient", "advanced"].filter(s => runStars.includes(s) || (prev?.stars ?? []).includes(s));
-    const newStars = stars.filter(s => !(prev?.stars ?? []).includes(s));
+    const stars = ["solve", "efficient", "advanced"].filter(s => { var _a; return runStars.includes(s) || ((_a = prev === null || prev === void 0 ? void 0 : prev.stars) !== null && _a !== void 0 ? _a : []).includes(s); });
+    const newStars = stars.filter(s => { var _a; return !((_a = prev === null || prev === void 0 ? void 0 : prev.stars) !== null && _a !== void 0 ? _a : []).includes(s); });
     const record = {
-        completed: true, stars, completions: (prev?.completions ?? 0) + 1,
-        bestPartCount: Math.min(prev?.bestPartCount ?? Number.MAX_SAFE_INTEGER, evidence.playerPartCount)
+        completed: true, stars, completions: ((_d = prev === null || prev === void 0 ? void 0 : prev.completions) !== null && _d !== void 0 ? _d : 0) + 1,
+        bestPartCount: Math.min((_e = prev === null || prev === void 0 ? void 0 : prev.bestPartCount) !== null && _e !== void 0 ? _e : Number.MAX_SAFE_INTEGER, evidence.playerPartCount)
     };
     let profile = { ...p, levels: { ...p.levels, [levelId]: record }, discoveries: [...new Set([...p.discoveries, ...evidence.discoveries])] };
     const rule = MISSION_REWARDS[levelId];
-    const toGrant = [...(!prev?.completed ? rule?.onComplete ?? [] : []), ...(stars.length === 3 ? rule?.onAllStars ?? [] : [])];
+    const toGrant = [...(!(prev === null || prev === void 0 ? void 0 : prev.completed) ? (_f = rule === null || rule === void 0 ? void 0 : rule.onComplete) !== null && _f !== void 0 ? _f : [] : []), ...(stars.length === 3 ? (_g = rule === null || rule === void 0 ? void 0 : rule.onAllStars) !== null && _g !== void 0 ? _g : [] : [])];
     const granted = grant(profile, toGrant);
     profile = granted.profile;
     let next = updateProfile(save, p.id, () => profile);
@@ -31,7 +32,7 @@ export function recordMissionSuccess(save, levelId, evidence) {
     const labCleared = clearedAfter.find(id => !clearedBefore.has(id));
     if (labCleared)
         next = updateProfile(next, p.id, q => ({ ...q, location: "HUB" }));
-    return { save: next, firstCompletion: !prev?.completed, stars, newStars, newRewards: granted.added, ...(labCleared ? { labCleared } : {}), restoration: labCleared ? pendingRestorationMoments(next) : [] };
+    return { save: next, firstCompletion: !(prev === null || prev === void 0 ? void 0 : prev.completed), stars, newStars, newRewards: granted.added, ...(labCleared ? { labCleared } : {}), restoration: labCleared ? pendingRestorationMoments(next) : [] };
 }
 export function markRewardsSeen(save, ids) {
     const p = activeProfile(save);

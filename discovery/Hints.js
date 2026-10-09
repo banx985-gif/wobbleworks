@@ -63,32 +63,47 @@ export const LEVEL_HINTS = { ...LAB_HINTS, ...challengeHints(LAB_HINTS), ...CONT
 export { POWER_HINTS, MAGNET_HINTS, WATER_HINTS, FLIGHT_HINTS, ROBOT_HINTS, SPACE_HINTS, CHAIN_HINTS };
 /** What each tier shows. Tiers are cumulative: Hint 3 still shows the idea and the glowing parts. */
 export function hintView(levelId, level, tier) {
+    var _a, _b, _c, _d, _e;
     const h = LEVEL_HINTS[levelId];
-    const concept = h?.concept ?? level?.hints?.[0] ?? "Change ONE thing, then TEST again.";
-    const parts = h?.usefulParts.length ? h.usefulParts : [];
+    const concept = (_c = (_a = h === null || h === void 0 ? void 0 : h.concept) !== null && _a !== void 0 ? _a : (_b = level === null || level === void 0 ? void 0 : level.hints) === null || _b === void 0 ? void 0 : _b[0]) !== null && _c !== void 0 ? _c : "Change ONE thing, then TEST again.";
+    const parts = (h === null || h === void 0 ? void 0 : h.usefulParts.length) ? h.usefulParts : [];
     if (tier === 0)
         return { tier, line: "", glowParts: [], ghosts: [] };
     if (tier === 1)
         return { tier, line: concept, glowParts: [], ghosts: [] };
-    const partLine = parts.length ? "These parts could help — look for the glow!" : (h?.noPartsLine ?? concept);
+    const partLine = parts.length ? "These parts could help — look for the glow!" : ((_d = h === null || h === void 0 ? void 0 : h.noPartsLine) !== null && _d !== void 0 ? _d : concept);
     if (tier === 2)
         return { tier, line: partLine, glowParts: parts, ghosts: [] };
     // Robot Lab: show the first blocks of one working program (never the whole program).
-    const firstProgram = h?.programs ? Object.values(h.programs)[0] : undefined;
-    if (firstProgram?.length) {
+    const firstProgram = (h === null || h === void 0 ? void 0 : h.programs) ? Object.values(h.programs)[0] : undefined;
+    if (firstProgram === null || firstProgram === void 0 ? void 0 : firstProgram.length) {
         const shown = firstProgram.slice(0, Math.min(2, Math.max(1, firstProgram.length - 1))).map(describeBlock).join(", then ");
         return { tier, line: `One working program starts like this: ${shown}…`, glowParts: parts, ghosts: [] };
     }
     const ghosts = h ? h.solution.slice(0, h.ghostCount) : [];
-    return { tier, line: ghosts.length ? "Here's a piece of one idea. Drag a real part onto the ghost, then TEST!" : (h?.noPartsLine ?? concept), glowParts: parts, ghosts };
+    return { tier, line: ghosts.length ? "Here's a piece of one idea. Drag a real part onto the ghost, then TEST!" : ((_e = h === null || h === void 0 ? void 0 : h.noPartsLine) !== null && _e !== void 0 ? _e : concept), glowParts: parts, ghosts };
 }
 /** Per-attempt hint state. Hints only ever go up one step when the child asks. */
 export class HintTracker {
-    levelId;
-    tierValue = 0;
-    asked = 0;
     constructor(levelId) {
-        this.levelId = levelId;
+        Object.defineProperty(this, "levelId", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: levelId
+        });
+        Object.defineProperty(this, "tierValue", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "asked", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
     }
     tier() { return this.tierValue; }
     timesAsked() { return this.asked; }

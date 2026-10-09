@@ -1,10 +1,38 @@
 export class FixedClock {
-    hz;
-    dt;
-    accumulator = 0;
-    previousMs = 0;
-    speed = 1;
-    constructor(hz = 60) { this.hz = hz; this.dt = 1 / hz; }
+    constructor(hz = 60) {
+        Object.defineProperty(this, "hz", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "dt", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "accumulator", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "previousMs", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "speed", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 1
+        });
+        this.hz = hz;
+        this.dt = 1 / hz;
+    }
     setSpeed(multiplier) { this.speed = Math.max(0, multiplier); }
     reset(nowMs) { this.previousMs = nowMs; this.accumulator = 0; }
     /**

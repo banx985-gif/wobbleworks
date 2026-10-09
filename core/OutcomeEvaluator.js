@@ -5,7 +5,7 @@ function programUses(blocks, op, sensorPrefix) {
     return blocks.some(b => (b.op === op && (!sensorPrefix || ((b.op === "IF" || b.op === "UNTIL") && b.sensor.startsWith(sensorPrefix)))) || ((b.op === "REPEAT" || b.op === "UNTIL") && programUses(b.body, op, sensorPrefix)) || (b.op === "IF" && (programUses(b.then, op, sensorPrefix) || programUses(b.else, op, sensorPrefix))));
 }
 function tagged(build, tag) {
-    return build.allParts().filter(part => part.tags?.includes(tag));
+    return build.allParts().filter(part => { var _a; return (_a = part.tags) === null || _a === void 0 ? void 0 : _a.includes(tag); });
 }
 function speed(runtime, id) {
     try {
@@ -36,7 +36,7 @@ function eventTargetMatches(runtime, build, targetTag, targetId) {
 function evaluateChainRule(rule, build, runtime) {
     const c = runtime.chain;
     const nodes = c.nodeList();
-    const tagOf = (id, tag) => build.getPart(id)?.tags?.includes(tag) === true;
+    const tagOf = (id, tag) => { var _a, _b; return ((_b = (_a = build.getPart(id)) === null || _a === void 0 ? void 0 : _a.tags) === null || _b === void 0 ? void 0 : _b.includes(tag)) === true; };
     const oneStart = (want) => !want || c.roots().length === 1;
     const path = (id) => [...c.pathTo(id)].reverse();
     switch (rule.kind) {
@@ -55,6 +55,7 @@ function evaluateChainRule(rule, build, runtime) {
     }
 }
 export function evaluateOutcomeRule(rule, build, runtime) {
+    var _a, _b, _c, _d, _e;
     if (rule.kind === "ELAPSED_AT_LEAST")
         return runtime.elapsedTime >= rule.seconds;
     if (rule.kind === "ELAPSED_AT_MOST")
@@ -90,13 +91,13 @@ export function evaluateOutcomeRule(rule, build, runtime) {
     }
     if (rule.kind === "EVENT_OCCURRED") {
         const count = runtime.causalEvents.filter(event => event.kind === rule.eventKind && eventTargetMatches(runtime, build, rule.targetTag, event.targetId)).length;
-        return count >= (rule.minimumCount ?? 1);
+        return count >= ((_a = rule.minimumCount) !== null && _a !== void 0 ? _a : 1);
     }
     if (rule.kind === "CONTACT_WITH_TAG") {
         const objects = new Set(tagged(build, rule.objectTag).map(part => part.id));
         const others = new Set(tagged(build, rule.otherTag).map(part => part.id));
         const count = runtime.causalEvents.filter(event => event.kind === "PHYSICS_CONTACT" && event.targetId !== undefined && ((objects.has(event.sourceId) && others.has(event.targetId)) || (objects.has(event.targetId) && others.has(event.sourceId)))).length;
-        return count >= (rule.minimumCount ?? 1);
+        return count >= ((_b = rule.minimumCount) !== null && _b !== void 0 ? _b : 1);
     }
     if (rule.kind === "FORBIDDEN_CONTACT") {
         const a = new Set(tagged(build, rule.aTag).map(part => part.id));
@@ -105,6 +106,7 @@ export function evaluateOutcomeRule(rule, build, runtime) {
     }
     if (rule.kind === "GEAR_OUTPUT") {
         return tagged(build, rule.targetTag).some(part => {
+            var _a;
             const st = runtime.gears.state(part.id);
             if (!st || st.omega === 0)
                 return false;
@@ -119,7 +121,7 @@ export function evaluateOutcomeRule(rule, build, runtime) {
                 return false;
             if (rule.minTurns !== undefined && st.turns < rule.minTurns)
                 return false;
-            return st.runTicks >= Math.round((rule.sustainSeconds ?? 0) * 60);
+            return st.runTicks >= Math.round(((_a = rule.sustainSeconds) !== null && _a !== void 0 ? _a : 0) * 60);
         });
     }
     if (rule.kind === "GEAR_COMPARE") {
@@ -134,7 +136,7 @@ export function evaluateOutcomeRule(rule, build, runtime) {
     }
     if (rule.kind === "STRUCT_ARRIVES") {
         const ts = tagged(build, rule.travellerTag);
-        return ts.length > 0 && ts.every(t => runtime.structures.traveller(t.id)?.arrived === true);
+        return ts.length > 0 && ts.every(t => { var _a; return ((_a = runtime.structures.traveller(t.id)) === null || _a === void 0 ? void 0 : _a.arrived) === true; });
     }
     if (rule.kind === "STRUCT_STABLE")
         return runtime.structures.calmTicksBelow(rule.maxWobble) >= Math.round(rule.sustainSeconds * 60);
@@ -143,13 +145,13 @@ export function evaluateOutcomeRule(rule, build, runtime) {
         return top !== undefined && top <= rule.aboveY && runtime.structures.calmTicksBelow(rule.maxWobble) >= Math.round(rule.sustainSeconds * 60);
     }
     if (rule.kind === "STRUCT_EGG_SAFE")
-        return tagged(build, rule.eggTag).some(e => { const st = runtime.structures.egg(e.id); return st !== undefined && st.landed && st.onStructure && (st.impact ?? Infinity) <= rule.maxImpact; });
+        return tagged(build, rule.eggTag).some(e => { var _a; const st = runtime.structures.egg(e.id); return st !== undefined && st.landed && st.onStructure && ((_a = st.impact) !== null && _a !== void 0 ? _a : Infinity) <= rule.maxImpact; });
     if (rule.kind === "STRUCT_COMPARE") {
         const a = tagged(build, rule.aTag)[0], b = tagged(build, rule.bTag)[0];
         if (!a || !b)
             return false;
         const la = runtime.structures.load(a.id), lb = runtime.structures.load(b.id);
-        if (!la?.done || !lb?.done || la.held <= 0 || lb.held <= 0)
+        if (!(la === null || la === void 0 ? void 0 : la.done) || !(lb === null || lb === void 0 ? void 0 : lb.done) || la.held <= 0 || lb.held <= 0)
             return false;
         return Math.max(la.held, lb.held) / Math.min(la.held, lb.held) >= rule.minRatio;
     }
@@ -183,7 +185,7 @@ export function evaluateOutcomeRule(rule, build, runtime) {
             return false;
         const inside = (o) => zones.some(z => { const a = position(runtime, o), b = position(runtime, z); return Math.hypot(a.x - b.x, a.y - b.y) <= rule.radius; });
         if (rule.kind === "NONE_IN_ZONE")
-            return runtime.elapsedTime >= (rule.minElapsed ?? 0) && !objects.some(inside);
+            return runtime.elapsedTime >= ((_c = rule.minElapsed) !== null && _c !== void 0 ? _c : 0) && !objects.some(inside);
         return objects.every(o => inside(o) && (rule.maxSpeed === undefined || speed(runtime, o.id) <= rule.maxSpeed));
     }
     if (rule.kind === "STAYS_PUT")
@@ -191,12 +193,13 @@ export function evaluateOutcomeRule(rule, build, runtime) {
     if (rule.kind === "NO_PUSHING") {
         const objects = new Set(tagged(build, rule.objectTag).map(p => p.id));
         return !runtime.causalEvents.some(e => {
+            var _a;
             if (e.kind !== "PHYSICS_CONTACT" || !e.targetId)
                 return false;
             const other = objects.has(e.sourceId) ? e.targetId : objects.has(e.targetId) ? e.sourceId : undefined;
             if (!other || objects.has(other))
                 return false;
-            return runtime.isDynamicBody(other) || Boolean(runtime.partDefinition(other)?.behaviours.some(b => b.kind === "MAGNET_BAR"));
+            return runtime.isDynamicBody(other) || Boolean((_a = runtime.partDefinition(other)) === null || _a === void 0 ? void 0 : _a.behaviours.some(b => b.kind === "MAGNET_BAR"));
         });
     }
     if (rule.kind === "FLOAT_STABLE") {
@@ -212,13 +215,13 @@ export function evaluateOutcomeRule(rule, build, runtime) {
     }
     if (rule.kind === "TANK_LEVEL") {
         const tanks = tagged(build, rule.tankTag);
-        return tanks.length > 0 && tanks.every(t => { const st = runtime.water.tank(t.id); return st !== undefined && st.fraction >= (rule.minFraction ?? 0) && st.fraction <= (rule.maxFraction ?? 1); });
+        return tanks.length > 0 && tanks.every(t => { var _a, _b; const st = runtime.water.tank(t.id); return st !== undefined && st.fraction >= ((_a = rule.minFraction) !== null && _a !== void 0 ? _a : 0) && st.fraction <= ((_b = rule.maxFraction) !== null && _b !== void 0 ? _b : 1); });
     }
     if (rule.kind === "WATER_RECEIVED") {
-        if (runtime.elapsedTime < (rule.minElapsed ?? 0))
+        if (runtime.elapsedTime < ((_d = rule.minElapsed) !== null && _d !== void 0 ? _d : 0))
             return false;
         const ts = tagged(build, rule.targetTag);
-        return ts.length > 0 && ts.every(t => { const w = runtime.water.waterReceived(t.id); return w >= (rule.min ?? 0) && w <= (rule.max ?? Infinity); });
+        return ts.length > 0 && ts.every(t => { var _a, _b; const w = runtime.water.waterReceived(t.id); return w >= ((_a = rule.min) !== null && _a !== void 0 ? _a : 0) && w <= ((_b = rule.max) !== null && _b !== void 0 ? _b : Infinity); });
     }
     if (rule.kind === "FILL_COMPARE") {
         const a = tagged(build, rule.aTag)[0], b = tagged(build, rule.bTag)[0];
@@ -272,7 +275,7 @@ export function evaluateOutcomeRule(rule, build, runtime) {
     if (rule.kind === "CREATURE_PARTS")
         return tagged(build, rule.creatureTag).some(p => { const c = runtime.creatures.creatures.find(x => x.id === p.id); return c !== undefined && c.clips.filter(k => k.kind === rule.part || (rule.part === "LEG" && k.kind === "BIG_LEG")).length >= rule.min; });
     if (rule.kind === "MUSIC_IN_ORDER")
-        return playedInOrder(runtime.music.notes, rule.tags.map(t => tagged(build, t)[0]?.id ?? ""));
+        return playedInOrder(runtime.music.notes, rule.tags.map(t => { var _a, _b; return (_b = (_a = tagged(build, t)[0]) === null || _a === void 0 ? void 0 : _a.id) !== null && _b !== void 0 ? _b : ""; }));
     if (rule.kind === "MUSIC_STEADY_BEAT")
         return steadyBeat(runtime.music.notes, rule.minNotes, rule.tolerance);
     if (rule.kind === "MUSIC_VARIETY")
@@ -290,7 +293,7 @@ export function evaluateOutcomeRule(rule, build, runtime) {
     if (rule.kind === "FLIGHT_DISTANCE")
         return tagged(build, rule.craftTag).some(c => { const st = runtime.flight.craft(c.id); return st !== undefined && st.flying && st.maxX >= rule.minX; });
     if (rule.kind === "SAFE_LANDING") {
-        if (runtime.elapsedTime < (rule.minElapsed ?? 0))
+        if (runtime.elapsedTime < ((_e = rule.minElapsed) !== null && _e !== void 0 ? _e : 0))
             return false;
         const objs = tagged(build, rule.objectTag);
         return objs.length > 0 && objs.every(o => runtime.flight.hasLanded(o.id) && runtime.flight.peakImpact(o.id) <= rule.maxImpact && speed(runtime, o.id) < 0.2);
@@ -308,7 +311,7 @@ export function evaluateOutcomeRule(rule, build, runtime) {
         if (!a || !b)
             return false;
         const sa = runtime.flight.craft(a.id), sb = runtime.flight.craft(b.id);
-        if (sa?.landedX === undefined || sb?.landedX === undefined)
+        if ((sa === null || sa === void 0 ? void 0 : sa.landedX) === undefined || (sb === null || sb === void 0 ? void 0 : sb.landedX) === undefined)
             return false;
         // How far each flew before touching down (sliding along the floor afterwards doesn't count).
         const da = sa.maxX - a.position.x, db = sb.maxX - b.position.x;
@@ -324,12 +327,12 @@ export function evaluateOutcomeRule(rule, build, runtime) {
             return bots.length > 0 && bots.every(b => { const v = runtime.robots.robot(b.id); return v !== undefined && v.done && !v.crashed && cells.has(`${Math.round(v.x)},${Math.round(v.y)}`) && (rule.maxBlocks === undefined || v.blocks <= rule.maxBlocks); });
         }
         if (rule.kind === "ROBOT_NO_CRASH")
-            return tagged(build, rule.robotTag).every(b => { const v = runtime.robots.robot(b.id); return v !== undefined && !v.crashed && v.bumps <= (rule.maxBumps ?? 0); });
+            return tagged(build, rule.robotTag).every(b => { var _a; const v = runtime.robots.robot(b.id); return v !== undefined && !v.crashed && v.bumps <= ((_a = rule.maxBumps) !== null && _a !== void 0 ? _a : 0); });
         const a = tagged(build, rule.aTag)[0], b = tagged(build, rule.bTag)[0];
         if (!a || !b)
             return false;
         const va = runtime.robots.robot(a.id), vb = runtime.robots.robot(b.id);
-        if (!va?.done || !vb?.done || va.crashed || vb.crashed || va.doneAt === undefined || vb.doneAt === undefined)
+        if (!(va === null || va === void 0 ? void 0 : va.done) || !(vb === null || vb === void 0 ? void 0 : vb.done) || va.crashed || vb.crashed || va.doneAt === undefined || vb.doneAt === undefined)
             return false;
         return Math.max(va.doneAt, vb.doneAt) / Math.max(0.01, Math.min(va.doneAt, vb.doneAt)) >= rule.minRatio;
     }
@@ -355,12 +358,13 @@ export function evaluateOutcomeRule(rule, build, runtime) {
     return false;
 }
 export function evaluateLevelOutcome(level, build, runtime) {
+    var _a, _b;
     if (!runtime)
         return { complete: false, passed: [] };
-    const rules = level.outcomeRules ?? [];
+    const rules = (_a = level.outcomeRules) !== null && _a !== void 0 ? _a : [];
     if (rules.length === 0)
         return { complete: false, passed: [] };
-    const seeded = new Set([...(level.staticObjects ?? []), ...level.starterParts].map(p => p.id));
+    const seeded = new Set([...((_b = level.staticObjects) !== null && _b !== void 0 ? _b : []), ...level.starterParts].map(p => p.id));
     const passed = rules.map(rule => rule.kind === "BUILD_WITHIN" ? buildWithin(rule, build, seeded) : evaluateOutcomeRule(rule, build, runtime));
     return { complete: passed.every(Boolean), passed };
 }

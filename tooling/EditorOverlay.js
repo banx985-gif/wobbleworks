@@ -3,14 +3,49 @@ import { createDefaultRegistry } from "../content/defaultParts.js";
 import { portsCompatible } from "../data/connectors.js";
 import { parseAndValidateLevel, parseAndValidatePart, exportJson, EditorRecoveryStore } from "./ContentTools.js";
 export class EditorOverlay {
-    root = document.createElement("aside");
-    text = document.createElement("textarea");
-    status = document.createElement("div");
-    preview = document.createElement("div");
-    mode = "part";
-    recovery = new EditorRecoveryStore();
-    registry = createDefaultRegistry();
     constructor() {
+        Object.defineProperty(this, "root", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: document.createElement("aside")
+        });
+        Object.defineProperty(this, "text", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: document.createElement("textarea")
+        });
+        Object.defineProperty(this, "status", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: document.createElement("div")
+        });
+        Object.defineProperty(this, "preview", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: document.createElement("div")
+        });
+        Object.defineProperty(this, "mode", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: "part"
+        });
+        Object.defineProperty(this, "recovery", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new EditorRecoveryStore()
+        });
+        Object.defineProperty(this, "registry", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: createDefaultRegistry()
+        });
         this.root.className = "editor-overlay hidden";
         this.root.innerHTML = `<div class="editor-header"><strong>Milestone 6 Content Tool</strong><button data-action="close" aria-label="Close tools">×</button></div><div class="editor-tabs"><button data-mode="part">Part Editor</button><button data-mode="level">Level Editor</button></div>`;
         this.text.spellcheck = false;
@@ -94,15 +129,16 @@ export class EditorOverlay {
         }
     }
     renderPreview() {
+        var _a, _b, _c, _d, _e, _f;
         try {
             const value = this.parse();
             if (this.mode === "part") {
                 const p = value;
-                this.preview.textContent = `${p.displayName}\n${p.category}\n${p.behaviours.map(b => b.kind).join(" + ")}\nPorts: ${p.ports.map(x => `${x.family}:${x.id}`).join(", ") || "none"}\nArt: ${p.art?.assetId ?? "debug shape"}\nPresets: ${p.presets?.length ?? 0}`;
+                this.preview.textContent = `${p.displayName}\n${p.category}\n${p.behaviours.map(b => b.kind).join(" + ")}\nPorts: ${p.ports.map(x => `${x.family}:${x.id}`).join(", ") || "none"}\nArt: ${(_b = (_a = p.art) === null || _a === void 0 ? void 0 : _a.assetId) !== null && _b !== void 0 ? _b : "debug shape"}\nPresets: ${(_d = (_c = p.presets) === null || _c === void 0 ? void 0 : _c.length) !== null && _d !== void 0 ? _d : 0}`;
             }
             else {
                 const l = value;
-                this.preview.textContent = `${l.title}\nEnvironment: ${l.environmentId}\nStarter parts: ${l.starterParts.length}\nAvailable parts: ${l.availablePartIds.length}\nGoals: ${l.goals.length}\nEvidence rules: ${l.evidenceRules.length}\nConstraints: ${l.constraints?.length ?? 0}`;
+                this.preview.textContent = `${l.title}\nEnvironment: ${l.environmentId}\nStarter parts: ${l.starterParts.length}\nAvailable parts: ${l.availablePartIds.length}\nGoals: ${l.goals.length}\nEvidence rules: ${l.evidenceRules.length}\nConstraints: ${(_f = (_e = l.constraints) === null || _e === void 0 ? void 0 : _e.length) !== null && _f !== void 0 ? _f : 0}`;
             }
             this.status.textContent = "✓ Deterministic editor preview built from validated data";
         }

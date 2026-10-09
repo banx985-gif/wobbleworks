@@ -14,8 +14,9 @@ export const SAVE_ENVELOPE_VERSION = 2;
 export const SAVE_KEYS = Object.freeze({ current: "save.current", previousGood: "save.previousGood", quarantine: "save.quarantine", newerVersionCopy: "save.newerVersionCopy" });
 /** JSON with sorted keys and undefined fields dropped — identical before and after a JSON round trip. */
 export function canonicalJson(value) {
+    var _a;
     if (value === null || typeof value !== "object")
-        return JSON.stringify(value) ?? "null";
+        return (_a = JSON.stringify(value)) !== null && _a !== void 0 ? _a : "null";
     if (Array.isArray(value))
         return `[${value.map(v => v === undefined ? "null" : canonicalJson(v)).join(",")}]`;
     const record = value;
@@ -34,9 +35,21 @@ export function payloadChecksum(canonical) {
     return `${fnv1a(canonical)}${(h >>> 0).toString(16).padStart(8, "0")}`;
 }
 export class MemoryStore {
-    data = new Map();
-    /** Test hook: make the next N writes fail before anything is applied. */
-    failNextWrites = 0;
+    constructor() {
+        Object.defineProperty(this, "data", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        /** Test hook: make the next N writes fail before anything is applied. */
+        Object.defineProperty(this, "failNextWrites", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+    }
     async get(key) { return structuredClone(this.data.get(key)); }
     async setMany(entries) {
         if (this.failNextWrites > 0) {
@@ -52,36 +65,74 @@ export class MemoryStore {
     keys() { return [...this.data.keys()]; }
 }
 export class IndexedDbStore {
-    dbName;
-    dbVersion;
     constructor(dbName = "wobbleworks", dbVersion = 1) {
-        this.dbName = dbName;
-        this.dbVersion = dbVersion;
+        Object.defineProperty(this, "dbName", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: dbName
+        });
+        Object.defineProperty(this, "dbVersion", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: dbVersion
+        });
     }
     open() { return new Promise((resolve, reject) => { const req = indexedDB.open(this.dbName, this.dbVersion); req.onupgradeneeded = () => { const db = req.result; if (!db.objectStoreNames.contains("kv"))
         db.createObjectStore("kv"); }; req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error); }); }
     async get(key) { const db = await this.open(); return await new Promise((resolve, reject) => { const tx = db.transaction("kv", "readonly"); const req = tx.objectStore("kv").get(key); req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error); tx.oncomplete = () => db.close(); }); }
     /** One readwrite transaction: IndexedDB commits all puts together or aborts all of them. */
     async setMany(entries) { const db = await this.open(); await new Promise((resolve, reject) => { const tx = db.transaction("kv", "readwrite"); const store = tx.objectStore("kv"); for (const e of entries)
-        store.put(e.value, e.key); tx.oncomplete = () => { db.close(); resolve(); }; tx.onerror = () => { db.close(); reject(tx.error); }; tx.onabort = () => { db.close(); reject(tx.error ?? new Error("Save transaction aborted")); }; }); }
+        store.put(e.value, e.key); tx.oncomplete = () => { db.close(); resolve(); }; tx.onerror = () => { db.close(); reject(tx.error); }; tx.onabort = () => { var _a; db.close(); reject((_a = tx.error) !== null && _a !== void 0 ? _a : new Error("Save transaction aborted")); }; }); }
 }
 export class SaveManager {
-    store;
-    validate;
-    options;
-    revision = 0;
-    lastByteLength = 0;
     constructor(store, validate, options = {}) {
-        this.store = store;
-        this.validate = validate;
-        this.options = options;
+        Object.defineProperty(this, "store", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: store
+        });
+        Object.defineProperty(this, "validate", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: validate
+        });
+        Object.defineProperty(this, "options", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: options
+        });
+        Object.defineProperty(this, "revision", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "lastByteLength", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        /** Saves are serialised: a second save waits for the first, so two writes can never interleave. */
+        Object.defineProperty(this, "queue", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: Promise.resolve()
+        });
     }
     /** Size in bytes of the most recent successful write (for the storage manager). */
     lastSaveBytes() { return this.lastByteLength; }
     seal(payload, revision) {
+        var _a, _b, _c, _d, _e;
         const canonical = canonicalJson(payload);
-        const schemaVersion = this.options.schemaVersionOf?.(payload) ?? Number(payload?.schemaVersion ?? 1);
-        return { envelopeVersion: SAVE_ENVELOPE_VERSION, schemaVersion, revision, savedAtMs: (this.options.now ?? Date.now)(), byteLength: utf8Length(canonical), checksum: payloadChecksum(canonical), payload: JSON.parse(canonical) };
+        const schemaVersion = (_c = (_b = (_a = this.options).schemaVersionOf) === null || _b === void 0 ? void 0 : _b.call(_a, payload)) !== null && _c !== void 0 ? _c : Number((_d = payload === null || payload === void 0 ? void 0 : payload.schemaVersion) !== null && _d !== void 0 ? _d : 1);
+        return { envelopeVersion: SAVE_ENVELOPE_VERSION, schemaVersion, revision, savedAtMs: ((_e = this.options.now) !== null && _e !== void 0 ? _e : Date.now)(), byteLength: utf8Length(canonical), checksum: payloadChecksum(canonical), payload: JSON.parse(canonical) };
     }
     /** Checks checksum + validity of an envelope as stored. */
     open(raw) {
@@ -118,8 +169,6 @@ export class SaveManager {
         }
         return this.validate(payload) ? { ok: true, payload: payload, migrated: false, revision } : { ok: false };
     }
-    /** Saves are serialised: a second save waits for the first, so two writes can never interleave. */
-    queue = Promise.resolve();
     save(payload, options = {}) {
         const run = this.queue.then(() => this.saveNow(payload, options), () => this.saveNow(payload, options));
         this.queue = run.catch(() => undefined);
@@ -130,15 +179,15 @@ export class SaveManager {
             throw new Error("Refused to save invalid data");
         const currentRaw = await this.store.get(SAVE_KEYS.current);
         const current = currentRaw === undefined ? undefined : this.open(currentRaw);
-        const newer = current?.ok === false && current.futureVersion === true;
+        const newer = (current === null || current === void 0 ? void 0 : current.ok) === false && current.futureVersion === true;
         if (newer && !options.replaceNewerVersion)
             throw new Error("A save from a newer version is stored; refusing to overwrite it");
-        if (current?.ok)
+        if (current === null || current === void 0 ? void 0 : current.ok)
             this.revision = Math.max(this.revision, current.revision);
         const next = this.seal(payload, this.revision + 1);
         const writes = [{ key: SAVE_KEYS.current, value: next }];
         // Only a verified-good current copy may become the previous-good checkpoint.
-        if (current?.ok)
+        if (current === null || current === void 0 ? void 0 : current.ok)
             writes.push({ key: SAVE_KEYS.previousGood, value: currentRaw });
         else if (newer)
             writes.push({ key: SAVE_KEYS.newerVersionCopy, value: currentRaw }); // kept in its own slot, never overwritten by corruption handling
@@ -150,24 +199,25 @@ export class SaveManager {
         return next;
     }
     async loadWithRecovery() {
+        var _a;
         const currentRaw = await this.store.get(SAVE_KEYS.current);
         const current = currentRaw === undefined ? undefined : this.open(currentRaw);
-        if (current?.ok) {
+        if (current === null || current === void 0 ? void 0 : current.ok) {
             this.revision = current.revision;
             return { payload: current.payload, recovered: false, migrated: current.migrated, quarantined: false, unreadable: false, futureVersion: false };
         }
-        const futureVersion = current?.ok === false && current.futureVersion === true;
+        const futureVersion = (current === null || current === void 0 ? void 0 : current.ok) === false && current.futureVersion === true;
         const previousRaw = await this.store.get(SAVE_KEYS.previousGood);
         const previous = previousRaw === undefined ? undefined : this.open(previousRaw);
         let quarantined = false;
         if (currentRaw !== undefined && !futureVersion) {
             try {
-                await this.store.setMany([{ key: SAVE_KEYS.quarantine, value: { savedAtMs: (this.options.now ?? Date.now)(), raw: currentRaw } }]);
+                await this.store.setMany([{ key: SAVE_KEYS.quarantine, value: { savedAtMs: ((_a = this.options.now) !== null && _a !== void 0 ? _a : Date.now)(), raw: currentRaw } }]);
                 quarantined = true;
             }
             catch { /* keep going: never block play */ }
         }
-        if (previous?.ok) {
+        if (previous === null || previous === void 0 ? void 0 : previous.ok) {
             this.revision = previous.revision;
             return { payload: previous.payload, recovered: true, migrated: previous.migrated, quarantined, unreadable: false, futureVersion };
         }
@@ -181,13 +231,27 @@ export class SaveManager {
  */
 export const THUMB_INDEX_KEY = "thumbs.index";
 export const THUMB_PREFIX = "thumb.";
-export const THUMB_MAX_CHARS = 120_000;
+export const THUMB_MAX_CHARS = 120000;
 export class ThumbnailCache {
-    store;
-    index;
-    memory = new Map();
     constructor(store) {
-        this.store = store;
+        Object.defineProperty(this, "store", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: store
+        });
+        Object.defineProperty(this, "index", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "memory", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
     }
     async keys() {
         if (!this.index) {
@@ -252,26 +316,63 @@ export class ThumbnailCache {
             this.memory.delete(k);
         return dead.length;
     }
-    async bytes() { let n = 0; for (const k of await this.keys())
-        n += (await this.get(k))?.length ?? 0; return n; }
+    async bytes() { var _a, _b; let n = 0; for (const k of await this.keys())
+        n += (_b = (_a = (await this.get(k))) === null || _a === void 0 ? void 0 : _a.length) !== null && _b !== void 0 ? _b : 0; return n; }
 }
 /**
  * Debounced autosave: many quick changes → one save. A failed save is reported and retried on the
  * next change; it never throws into gameplay.
  */
 export class AutosaveScheduler {
-    write;
-    delayMs;
-    timers;
-    timer;
-    pending;
-    inFlight;
-    lastError;
-    savesCompleted = 0;
     constructor(write, delayMs = 600, timers = { set: (fn, ms) => setTimeout(fn, ms), clear: t => clearTimeout(t) }) {
-        this.write = write;
-        this.delayMs = delayMs;
-        this.timers = timers;
+        Object.defineProperty(this, "write", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: write
+        });
+        Object.defineProperty(this, "delayMs", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: delayMs
+        });
+        Object.defineProperty(this, "timers", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: timers
+        });
+        Object.defineProperty(this, "timer", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "pending", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "inFlight", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "lastError", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "savesCompleted", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
     }
     request(payload) {
         this.pending = payload;

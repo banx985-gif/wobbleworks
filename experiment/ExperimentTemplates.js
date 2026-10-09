@@ -55,12 +55,13 @@ export const EXPERIMENT_TEMPLATES = [
         lanes: { a: lane(0, 0, "ball-a"), b: lane(8, 0, "ball-b") }, seconds: 6, sameWithin: 0.05, labId: "space-centre" }
 ];
 export function experimentTemplate(id) { return EXPERIMENT_TEMPLATES.find(t => t.id === id); }
-export function experimentLab(templateId) { return MAIN_LABS.find(l => l.id === experimentTemplate(templateId)?.labId); }
+export function experimentLab(templateId) { return MAIN_LABS.find(l => { var _a; return l.id === ((_a = experimentTemplate(templateId)) === null || _a === void 0 ? void 0 : _a.labId); }); }
 /**
  * The rig with A set to option `a` and B to option `b`: the variable parts are swapped/moved/removed and each
  * choice's extra parts added at its lane's anchor. Everything else is untouched, so A and B differ in one thing only.
  */
 export function buildExperimentRig(parts, template, a, b) {
+    var _a, _b, _c, _d, _e;
     const out = [];
     for (const p of parts) {
         const laneKey = p.id === "var-a" ? "a" : p.id === "var-b" ? "b" : undefined;
@@ -71,12 +72,12 @@ export function buildExperimentRig(parts, template, a, b) {
         const o = template.options[laneKey === "a" ? a : b];
         if (!o || o.remove)
             continue;
-        out.push({ ...p, ...(o.definitionId ? { definitionId: o.definitionId } : {}), position: { x: round(p.position.x + (o.dx ?? 0)), y: round(p.position.y + (o.dy ?? 0)) }, rotation: o.rotation ?? p.rotation, parameters: { ...p.parameters, ...(o.parameters ?? {}) } });
+        out.push({ ...p, ...(o.definitionId ? { definitionId: o.definitionId } : {}), position: { x: round(p.position.x + ((_a = o.dx) !== null && _a !== void 0 ? _a : 0)), y: round(p.position.y + ((_b = o.dy) !== null && _b !== void 0 ? _b : 0)) }, rotation: (_c = o.rotation) !== null && _c !== void 0 ? _c : p.rotation, parameters: { ...p.parameters, ...((_d = o.parameters) !== null && _d !== void 0 ? _d : {}) } });
     }
     for (const [laneKey, choice] of [["a", a], ["b", b]]) {
         const o = template.options[choice];
         const anchor = template.lanes[laneKey].anchor;
-        (o?.add ?? []).forEach((x, i) => out.push({ id: `opt-${laneKey}-${i}`, definitionId: x.definitionId, position: { x: round(anchor.x + x.x), y: round(anchor.y + x.y) }, rotation: x.rotation ?? 0, parameters: { locked: true, ...(x.parameters ?? {}) }, tags: [`lane.${laneKey}`] }));
+        ((_e = o === null || o === void 0 ? void 0 : o.add) !== null && _e !== void 0 ? _e : []).forEach((x, i) => { var _a, _b; return out.push({ id: `opt-${laneKey}-${i}`, definitionId: x.definitionId, position: { x: round(anchor.x + x.x), y: round(anchor.y + x.y) }, rotation: (_a = x.rotation) !== null && _a !== void 0 ? _a : 0, parameters: { locked: true, ...((_b = x.parameters) !== null && _b !== void 0 ? _b : {}) }, tags: [`lane.${laneKey}`] }); });
     }
     return out;
 }
@@ -91,8 +92,9 @@ export function verdict(template, valueA, valueB) {
 }
 /** The result in child words: "B went farther!" / "They were about the same." */
 export function verdictLine(template, words, v) {
+    var _a, _b;
     if (v === "SAME")
         return "They were about the same.";
-    const w = template.asks === "MORE" ? words?.more ?? "had more" : words?.less ?? "had less";
+    const w = template.asks === "MORE" ? (_a = words === null || words === void 0 ? void 0 : words.more) !== null && _a !== void 0 ? _a : "had more" : (_b = words === null || words === void 0 ? void 0 : words.less) !== null && _b !== void 0 ? _b : "had less";
     return `${v} ${w}!`;
 }

@@ -1,7 +1,24 @@
 export class CameraController {
-    x = 800;
-    y = 450;
-    zoom = 1;
+    constructor() {
+        Object.defineProperty(this, "x", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 800
+        });
+        Object.defineProperty(this, "y", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 450
+        });
+        Object.defineProperty(this, "zoom", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 1
+        });
+    }
     reset() { this.x = 800; this.y = 450; this.zoom = 1; }
     pan(dx, dy) { this.x -= dx / this.zoom; this.y -= dy / this.zoom; this.clamp(); }
     /** Moves the view towards a point (logical units). `ease` 1 = jump there, smaller = glide. */

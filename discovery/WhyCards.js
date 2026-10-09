@@ -33,7 +33,7 @@ export const WHY_CHOICES = {
     NOT_FAIR: { label: "Not a fair test", icon: "⚖️" },
     NO_SUN: { label: "Not facing the sun", icon: "☀️" }
 };
-function tagged(build, tag) { return build.allParts().find(p => p.tags?.includes(tag)); }
+function tagged(build, tag) { return build.allParts().find(p => { var _a; return (_a = p.tags) === null || _a === void 0 ? void 0 : _a.includes(tag); }); }
 function state(runtime, id) { try {
     return runtime.physics.state(id);
 }
@@ -92,10 +92,11 @@ function choicesFor(reason) {
  * then Bolt simply doesn't ask (no made-up reasons).
  */
 export function diagnoseRun(level, build, runtime) {
+    var _a;
     if (!runtime || runtime.tick < 20)
         return undefined;
     const card = (reason, evidence) => ({ reason, evidence, choices: choicesFor(reason) });
-    const rules = level?.outcomeRules ?? [];
+    const rules = (_a = level === null || level === void 0 ? void 0 : level.outcomeRules) !== null && _a !== void 0 ? _a : [];
     // Space Centre first: its stages decide which older system's story matters.
     const spaceCard = diagnoseSpace(rules, build, runtime, card);
     if (spaceCard)
@@ -143,8 +144,8 @@ export function diagnoseRun(level, build, runtime) {
             return card("NOT_CONNECTED", "The wheel was next to the cart, but it wasn't attached, so they moved separately.");
     }
     // Crashing into a hazard (a barrier or danger line) means it arrived too fast to stop.
-    const hazards = build.allParts().filter(p => p.tags?.some(t => t.startsWith("hazard.")));
-    for (const subject of build.allParts().filter(p => p.tags?.some(t => t.startsWith("subject.")))) {
+    const hazards = build.allParts().filter(p => { var _a; return (_a = p.tags) === null || _a === void 0 ? void 0 : _a.some(t => t.startsWith("hazard.")); });
+    for (const subject of build.allParts().filter(p => { var _a; return (_a = p.tags) === null || _a === void 0 ? void 0 : _a.some(t => t.startsWith("subject.")); })) {
         const hit = runtime.causalEvents.find(e => e.kind === "PHYSICS_CONTACT" && hazards.some(h => (e.sourceId === h.id && e.targetId === subject.id) || (e.targetId === h.id && e.sourceId === subject.id)));
         if (hit)
             return card("TOO_FAST", `${cap(nameOf(subject))} crashed into the barrier at ${(hit.tick / 60).toFixed(1)}s — it was still going too fast to stop.`);
@@ -208,6 +209,7 @@ export function diagnoseRun(level, build, runtime) {
 }
 const WHO = { BOLT: "Bolt", ELEPHANT: "the elephant robot", CART: "the cart", ROBOT: "a parade robot" };
 function diagnoseStructures(rules, build, runtime, card) {
+    var _a, _b, _c, _d, _e, _f, _g, _h;
     const st = runtime.structures;
     const ev = runtime.causalEvents;
     const n = (v) => v.toFixed(1);
@@ -227,40 +229,40 @@ function diagnoseStructures(rules, build, runtime, card) {
         if (r.kind === "STRUCT_COMPARE") {
             const ta = tagged(build, r.aTag), tb = tagged(build, r.bTag);
             const la = ta && st.load(ta.id), lb = tb && st.load(tb.id);
-            if (la?.done && lb?.done && la.held > 0 && lb.held > 0 && Math.max(la.held, lb.held) / Math.min(la.held, lb.held) < r.minRatio)
+            if ((la === null || la === void 0 ? void 0 : la.done) && (lb === null || lb === void 0 ? void 0 : lb.done) && la.held > 0 && lb.held > 0 && Math.max(la.held, lb.held) / Math.min(la.held, lb.held) < r.minRatio)
                 return card("SAME", `A held ${n(la.held)} and B held ${n(lb.held)} — almost the same. Make the two bridges different.`);
         }
     // Whatever gave way FIRST is the cause; later collapses are just the result.
     const firstFailure = ev.find(e => e.kind === "STRUCT_COLLAPSE" || e.kind === "STRUCT_BREAK");
-    const collapse = firstFailure?.kind === "STRUCT_COLLAPSE" ? firstFailure : undefined;
+    const collapse = (firstFailure === null || firstFailure === void 0 ? void 0 : firstFailure.kind) === "STRUCT_COLLAPSE" ? firstFailure : undefined;
     if (collapse)
         return card("UNSTABLE", "Part of the structure leaned over and fell down — it had no triangles to stop it changing shape.");
-    const brk = firstFailure?.kind === "STRUCT_BREAK" ? firstFailure : undefined;
+    const brk = (firstFailure === null || firstFailure === void 0 ? void 0 : firstFailure.kind) === "STRUCT_BREAK" ? firstFailure : undefined;
     if (brk) {
-        const mode = String(brk.data?.mode ?? "");
+        const mode = String((_b = (_a = brk.data) === null || _a === void 0 ? void 0 : _a.mode) !== null && _b !== void 0 ? _b : "");
         const mat = material(brk.sourceId);
         const what = mode === "BENDING" ? "bent too much in the middle and snapped" : mode === "BUCKLE" ? "was squashed until it buckled sideways" : mode === "TENSION" ? "was pulled until it snapped" : "was squashed until it broke";
         return card("TOO_HEAVY", `A ${mat} beam ${what}. Stronger material, a shorter span or a triangle would share the load.`);
     }
     const blocked = ev.find(e => e.kind === "TRAVELLER_BLOCKED");
     if (blocked) {
-        const who = WHO[registryWho(build, blocked.sourceId)] ?? "someone";
+        const who = (_c = WHO[registryWho(build, blocked.sourceId)]) !== null && _c !== void 0 ? _c : "someone";
         return card("BLOCKED", `Something you built was in the way, so ${who} couldn't get past.`);
     }
     const fell = ev.find(e => e.kind === "TRAVELLER_FELL");
     if (fell) {
-        const who = WHO[registryWho(build, fell.sourceId)] ?? "someone";
-        return card("NOT_CONNECTED", `${cap(who)} walked off the edge at ${n(Number(fell.data?.x ?? 0))} m — the path didn't reach all the way.`);
+        const who = (_d = WHO[registryWho(build, fell.sourceId)]) !== null && _d !== void 0 ? _d : "someone";
+        return card("NOT_CONNECTED", `${cap(who)} walked off the edge at ${n(Number((_f = (_e = fell.data) === null || _e === void 0 ? void 0 : _e.x) !== null && _f !== void 0 ? _f : 0))} m — the path didn't reach all the way.`);
     }
     for (const r of rules) {
         if (r.kind === "STRUCT_EGG_SAFE") {
             const egg = tagged(build, r.eggTag);
             const e = egg && st.egg(egg.id);
-            if (e?.landed) {
+            if (e === null || e === void 0 ? void 0 : e.landed) {
                 if (!e.onStructure)
                     return card("NOT_CONNECTED", "Nothing caught the egg — it fell all the way to the floor.");
-                if ((e.impact ?? 0) > r.maxImpact)
-                    return card("TOO_FAST", `The egg landed with a bump of ${n(e.impact ?? 0)}; it can only take ${n(r.maxImpact)}. A shorter drop or a softer catch helps.`);
+                if (((_g = e.impact) !== null && _g !== void 0 ? _g : 0) > r.maxImpact)
+                    return card("TOO_FAST", `The egg landed with a bump of ${n((_h = e.impact) !== null && _h !== void 0 ? _h : 0)}; it can only take ${n(r.maxImpact)}. A shorter drop or a softer catch helps.`);
             }
         }
         if (r.kind === "STRUCT_HEIGHT") {
@@ -275,26 +277,27 @@ function diagnoseStructures(rules, build, runtime, card) {
         if (r.kind === "STRUCT_COMPARE") {
             const a = tagged(build, r.aTag), b = tagged(build, r.bTag);
             const la = a && st.load(a.id), lb = b && st.load(b.id);
-            if (la?.done && lb?.done && la.held > 0 && lb.held > 0 && Math.max(la.held, lb.held) / Math.min(la.held, lb.held) < r.minRatio)
+            if ((la === null || la === void 0 ? void 0 : la.done) && (lb === null || lb === void 0 ? void 0 : lb.done) && la.held > 0 && lb.held > 0 && Math.max(la.held, lb.held) / Math.min(la.held, lb.held) < r.minRatio)
                 return card("SAME", `A held ${n(la.held)} and B held ${n(lb.held)} — almost the same. Make the two bridges different.`);
-            if ((la?.fell && la.held === 0) || (lb?.fell && lb.held === 0))
+            if (((la === null || la === void 0 ? void 0 : la.fell) && la.held === 0) || ((lb === null || lb === void 0 ? void 0 : lb.fell) && lb.held === 0))
                 return card("NOT_CONNECTED", "A test weight had no bridge under it and dropped straight into the canyon.");
         }
     }
     return undefined;
 }
-function registryWho(build, id) { const p = build.getPart(id); return p?.definitionId === "builder.elephant" ? "ELEPHANT" : p?.definitionId === "builder.cart" ? "CART" : p?.definitionId === "builder.robot" ? "ROBOT" : "BOLT"; }
+function registryWho(build, id) { const p = build.getPart(id); return (p === null || p === void 0 ? void 0 : p.definitionId) === "builder.elephant" ? "ELEPHANT" : (p === null || p === void 0 ? void 0 : p.definitionId) === "builder.cart" ? "CART" : (p === null || p === void 0 ? void 0 : p.definitionId) === "builder.robot" ? "ROBOT" : "BOLT"; }
 function diagnoseGears(rules, build, runtime, card) {
+    var _a, _b, _c, _d, _e, _f;
     const g = runtime.gears;
     const n = (v) => v.toFixed(1);
     const targets = rules.flatMap((r) => r.kind === "GEAR_OUTPUT" ? [{ rule: r, tag: r.targetTag }] : r.kind === "GEAR_COMPARE" ? [{ rule: r, tag: r.aTag }, { rule: r, tag: r.bTag }] : []);
     // Any jam or stall anywhere is the headline.
     const jam = runtime.causalEvents.find(e => e.kind === "GEAR_JAMMED");
     if (jam)
-        return card("JAMMED", jam.data?.reason === "CLASH" ? "Two gears were overlapping, so their teeth crashed and nothing could turn." : jam.data?.reason === "FIGHT" ? "Two drivers were trying to turn the same gears in different ways." : "Gears were meshed in a ring: each one tried to turn its neighbour the wrong way, so they all locked.");
+        return card("JAMMED", ((_a = jam.data) === null || _a === void 0 ? void 0 : _a.reason) === "CLASH" ? "Two gears were overlapping, so their teeth crashed and nothing could turn." : ((_b = jam.data) === null || _b === void 0 ? void 0 : _b.reason) === "FIGHT" ? "Two drivers were trying to turn the same gears in different ways." : "Gears were meshed in a ring: each one tried to turn its neighbour the wrong way, so they all locked.");
     const stall = runtime.causalEvents.find(e => e.kind === "GEAR_STALLED");
     if (stall)
-        return card("TOO_HEAVY", `The load needed ${n(Number(stall.data?.required ?? 0))} units of turning force but the driver only had ${n(Number(stall.data?.available ?? 0))}. A slower gear set-up is stronger.`);
+        return card("TOO_HEAVY", `The load needed ${n(Number((_d = (_c = stall.data) === null || _c === void 0 ? void 0 : _c.required) !== null && _d !== void 0 ? _d : 0))} units of turning force but the driver only had ${n(Number((_f = (_e = stall.data) === null || _e === void 0 ? void 0 : _e.available) !== null && _f !== void 0 ? _f : 0))}. A slower gear set-up is stronger.`);
     for (const { rule, tag } of targets) {
         const part = tagged(build, tag);
         if (!part)
@@ -318,7 +321,7 @@ function diagnoseGears(rules, build, runtime, card) {
             return card("TOO_SLOW", `It turned at ${n(Math.abs(st.omega))}, but it needs at least ${n(rule.minSpeed)}. It was ${n(Math.abs(st.factor))} times the driver's speed.`);
     }
     const cmp = rules.find(r => r.kind === "GEAR_COMPARE");
-    if (cmp?.kind === "GEAR_COMPARE") {
+    if ((cmp === null || cmp === void 0 ? void 0 : cmp.kind) === "GEAR_COMPARE") {
         const a = tagged(build, cmp.aTag), b = tagged(build, cmp.bTag);
         const wa = a ? Math.abs(g.omega(a.id)) : 0, wb = b ? Math.abs(g.omega(b.id)) : 0;
         if (wa && wb && Math.max(wa, wb) / Math.min(wa, wb) < cmp.minRatio)
@@ -328,6 +331,7 @@ function diagnoseGears(rules, build, runtime, card) {
 }
 function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 function diagnosePower(rules, build, runtime, card) {
+    var _a, _b, _c, _d, _e;
     const c = runtime.circuits;
     if (!c.layout.elements.length)
         return undefined;
@@ -335,14 +339,14 @@ function diagnosePower(rules, build, runtime, card) {
     const pct = (v) => `${Math.round(v * 100)}%`;
     const tripped = events.find(e => e.kind === "BREAKER_TRIPPED");
     if (tripped)
-        return card("OVERLOAD", `Everything together wanted ${tripped.data?.power} units of power, but the station can only give ${tripped.data?.limit}. It switched off to stay safe.`);
+        return card("OVERLOAD", `Everything together wanted ${(_a = tripped.data) === null || _a === void 0 ? void 0 : _a.power} units of power, but the station can only give ${(_b = tripped.data) === null || _b === void 0 ? void 0 : _b.limit}. It switched off to stay safe.`);
     for (const r of rules)
         if (r.kind === "ENERGY_AT_MOST" && c.energyUsed() > r.maxEnergy)
             return card("USED_TOO_MUCH", `The machine used ${c.energyUsed().toFixed(1)} units of battery energy. The limit was ${r.maxEnergy}.`);
     for (const r of rules)
         if (r.kind === "CIRCUIT_CONTROLLED") {
-            for (const load of build.allParts().filter(p => p.tags?.includes(r.targetTag)))
-                for (const ctl of build.allParts().filter(p => p.tags?.includes(r.controlTag))) {
+            for (const load of build.allParts().filter(p => { var _a; return (_a = p.tags) === null || _a === void 0 ? void 0 : _a.includes(r.targetTag); }))
+                for (const ctl of build.allParts().filter(p => { var _a; return (_a = p.tags) === null || _a === void 0 ? void 0 : _a.includes(r.controlTag); })) {
                     const t = c.controlTally(ctl.id, load.id);
                     if (t.openOn > 3)
                         return card("ALWAYS_ON", `It was on for ${(t.openOn / 60).toFixed(1)} s while the button wasn't pressed — the button isn't part of its loop.`);
@@ -353,12 +357,12 @@ function diagnosePower(rules, build, runtime, card) {
         return card("SHORTCUT", `The current went through a plain wire beside ${nameOf(build.getPart(bypass.sourceId))} instead of through it, so it got almost nothing.`);
     const stalled = events.find(e => e.kind === "GEAR_STALLED" && runtime.gears.isElectric(e.sourceId));
     if (stalled)
-        return card("TOO_HEAVY", `The motor could only turn with ${stalled.data?.available} units of force, but the load needed ${stalled.data?.required}.`);
+        return card("TOO_HEAVY", `The motor could only turn with ${(_c = stalled.data) === null || _c === void 0 ? void 0 : _c.available} units of force, but the load needed ${(_d = stalled.data) === null || _d === void 0 ? void 0 : _d.required}.`);
     const targets = rules.flatMap(r => r.kind === "CIRCUIT_POWERED" || r.kind === "CIRCUIT_CONTROLLED" ? [r.targetTag] : r.kind === "CIRCUIT_COMPARE" ? [r.aTag, r.bTag] : []);
     const motors = runtime.gears.nodes.filter(n => runtime.gears.isElectric(n.id)).map(n => n.id);
     const loose = c.layout.terminals.filter(t => !t.isWire && c.layout.terminals.filter(u => u.node === t.node).length < 2).length;
     for (const tag of targets)
-        for (const p of build.allParts().filter(q => q.tags?.includes(tag))) {
+        for (const p of build.allParts().filter(q => { var _a; return (_a = q.tags) === null || _a === void 0 ? void 0 : _a.includes(tag); })) {
             const l = c.load(p.id);
             if (!l)
                 continue;
@@ -367,23 +371,23 @@ function diagnosePower(rules, build, runtime, card) {
         }
     for (const r of rules)
         if (r.kind === "CIRCUIT_POWERED") {
-            const dim = build.allParts().filter(p => p.tags?.includes(r.targetTag)).map(p => c.load(p.id)).filter(l => l && l.on && l.peakLevel < r.minLevel);
+            const dim = build.allParts().filter(p => { var _a; return (_a = p.tags) === null || _a === void 0 ? void 0 : _a.includes(r.targetTag); }).map(p => c.load(p.id)).filter(l => l && l.on && l.peakLevel < r.minLevel);
             if (dim.length)
                 return card("NOT_ENOUGH_FORCE", `It only got ${pct(dim[0].peakLevel)} power — ${dim.length > 1 ? "the bulbs are sharing one battery's push in one long loop" : "not enough push reached it"}.`);
         }
     for (const r of rules)
         if (r.kind === "CIRCUIT_COMPARE") {
-            const a = build.allParts().find(p => p.tags?.includes(r.aTag)), b = build.allParts().find(p => p.tags?.includes(r.bTag));
+            const a = build.allParts().find(p => { var _a; return (_a = p.tags) === null || _a === void 0 ? void 0 : _a.includes(r.aTag); }), b = build.allParts().find(p => { var _a; return (_a = p.tags) === null || _a === void 0 ? void 0 : _a.includes(r.bTag); });
             const la = a && c.load(a.id), lb = b && c.load(b.id);
-            if (la?.on && lb?.on && lb.power / Math.max(la.power, 1e-6) < r.minRatio)
+            if ((la === null || la === void 0 ? void 0 : la.on) && (lb === null || lb === void 0 ? void 0 : lb.on) && lb.power / Math.max(la.power, 1e-6) < r.minRatio)
                 return card("SAME", `Bulb A got ${pct(la.level)} and bulb B got ${pct(lb.level)} — about the same. Is B really using both batteries?`);
         }
     for (const id of motors) {
         const drive = c.motorDrive(id);
         const zone = rules.find(r => r.kind === "OBJECT_ENTERS_ZONE");
-        if (drive < 0 && zone?.kind === "OBJECT_ENTERS_ZONE")
+        if (drive < 0 && (zone === null || zone === void 0 ? void 0 : zone.kind) === "OBJECT_ENTERS_ZONE")
             return card("WRONG_DIRECTION", "The motor turned backwards, so the machine moved the wrong way. Swap which wire goes to + and which to −.");
-        if (drive === 0 && !c.load(id)?.everOn)
+        if (drive === 0 && !((_e = c.load(id)) === null || _e === void 0 ? void 0 : _e.everOn))
             return card("NOT_CONNECTED", "The motor never got any electricity — its loop isn't complete" + (build.allParts().some(p => p.definitionId === "circuit.switch" && !c.isClosed(p.id)) ? " (is the switch on?)." : "."));
     }
     return undefined;
@@ -393,7 +397,7 @@ function diagnoseMagnets(rules, build, runtime, card) {
     if (!m.hasMagnets())
         return undefined;
     const events = runtime.causalEvents;
-    const tag = (t) => build.allParts().filter(p => p.tags?.includes(t));
+    const tag = (t) => build.allParts().filter(p => { var _a; return (_a = p.tags) === null || _a === void 0 ? void 0 : _a.includes(t); });
     const pos = (id, fallback) => { try {
         const s = runtime.physics.state(id);
         return { x: s.x, y: s.y };
@@ -422,7 +426,7 @@ function diagnoseMagnets(rules, build, runtime, card) {
     for (const r of rules)
         if (r.kind === "NO_PUSHING")
             for (const p of tag(r.objectTag)) {
-                const touch = events.find(e => e.kind === "PHYSICS_CONTACT" && (e.sourceId === p.id || e.targetId === p.id) && [e.sourceId, e.targetId].some(o => o && o !== p.id && (runtime.isDynamicBody(o) || runtime.partDefinition(o)?.behaviours.some(b => b.kind === "MAGNET_BAR"))));
+                const touch = events.find(e => e.kind === "PHYSICS_CONTACT" && (e.sourceId === p.id || e.targetId === p.id) && [e.sourceId, e.targetId].some(o => { var _a; return o && o !== p.id && (runtime.isDynamicBody(o) || ((_a = runtime.partDefinition(o)) === null || _a === void 0 ? void 0 : _a.behaviours.some(b => b.kind === "MAGNET_BAR"))); }));
                 if (touch) {
                     const other = build.getPart(touch.sourceId === p.id ? touch.targetId : touch.sourceId);
                     const attracted = events.some(e => e.kind === "MAGNET_ATTRACT" && (e.sourceId === p.id || e.targetId === p.id));
@@ -442,7 +446,7 @@ function diagnoseMagnets(rules, build, runtime, card) {
                 if (away && events.some(e => e.kind === "MAGNET_ATTRACT" && (e.sourceId === p.id || e.targetId === p.id)))
                     return card("WRONG_POLE", `Opposite ends were facing, so ${nameOf(p)} was pulled the wrong way.`);
             }
-    const magnetic = (id) => ["IRON", "STEEL", "NICKEL"].includes(String(runtime.partDefinition(id)?.behaviours.find(b => b.kind === "MATERIAL")?.kind === "MATERIAL" ? runtime.partDefinition(id).behaviours.find(b => b.kind === "MATERIAL").material : ""));
+    const magnetic = (id) => { var _a, _b; return ["IRON", "STEEL", "NICKEL"].includes(String(((_b = (_a = runtime.partDefinition(id)) === null || _a === void 0 ? void 0 : _a.behaviours.find(b => b.kind === "MATERIAL")) === null || _b === void 0 ? void 0 : _b.kind) === "MATERIAL" ? runtime.partDefinition(id).behaviours.find(b => b.kind === "MATERIAL").material : "")); };
     for (const r of rules)
         if (r.kind === "ALL_IN_ZONE" || r.kind === "MATERIALS_SORTED") {
             const items = tag(r.kind === "ALL_IN_ZONE" ? r.objectTag : r.sampleTag);
@@ -459,11 +463,12 @@ function diagnoseMagnets(rules, build, runtime, card) {
 }
 function m2(v) { return `${v.toFixed(1)} m`; }
 function diagnoseWater(rules, build, runtime, card) {
+    var _a, _b, _c, _d;
     const w = runtime.water;
     if (!w.layout.ports.length)
         return undefined;
     const events = runtime.causalEvents;
-    const tag = (t) => build.allParts().filter(p => p.tags?.includes(t));
+    const tag = (t) => build.allParts().filter(p => { var _a; return (_a = p.tags) === null || _a === void 0 ? void 0 : _a.includes(t); });
     for (const r of rules)
         if (r.kind === "WATER_RECEIVED" && r.max !== undefined)
             for (const p of tag(r.targetTag))
@@ -479,12 +484,12 @@ function diagnoseWater(rules, build, runtime, card) {
     const pumps = build.allParts().filter(p => p.definitionId === "plumb.pump");
     const piped = (id) => { const ports = w.layout.ports.filter(q => q.partId === id); return ports.length > 0 && ports.every(q => w.layout.ports.filter(o => o.node === q.node).length >= 2); };
     if (pumps.length && !events.some(e => e.kind === "PUMP_LIFT")) {
-        if (pumps.some(p => piped(p.id) && (runtime.circuits.load(p.id)?.everOn ?? false) === false))
+        if (pumps.some(p => { var _a, _b; return piped(p.id) && ((_b = (_a = runtime.circuits.load(p.id)) === null || _a === void 0 ? void 0 : _a.everOn) !== null && _b !== void 0 ? _b : false) === false; }))
             return card("NOT_CONNECTED", "The pump never got any electricity, so it couldn't push.");
     }
     const airlock = events.find(e => e.kind === "WATER_AIRLOCK");
     if (airlock)
-        return card("TOO_HIGH", `The water couldn't climb up to the pipe at ${(8.4 - Number(airlock.data?.y ?? 0)).toFixed(1)} m high — water can't go higher than where it starts on its own.`);
+        return card("TOO_HIGH", `The water couldn't climb up to the pipe at ${(8.4 - Number((_b = (_a = airlock.data) === null || _a === void 0 ? void 0 : _a.y) !== null && _b !== void 0 ? _b : 0)).toFixed(1)} m high — water can't go higher than where it starts on its own.`);
     const spill = events.find(e => e.kind === "WATER_SPILL");
     const spilled = w.totalSpilled();
     for (const r of rules)
@@ -522,7 +527,7 @@ function diagnoseWater(rules, build, runtime, card) {
         }
     const wheels = runtime.gears.nodes.filter(n => runtime.gears.isHydraulic(n.id));
     for (const n of wheels) {
-        if ((runtime.gears.state(n.id)?.runTicks ?? 0) === 0)
+        if (((_d = (_c = runtime.gears.state(n.id)) === null || _c === void 0 ? void 0 : _c.runTicks) !== null && _d !== void 0 ? _d : 0) === 0)
             return card("NOT_CONNECTED", "No water reached the water wheel, so it never turned.");
         if (rules.some(r => r.kind === "GEAR_OUTPUT"))
             return card("NOT_CONNECTED", "The water wheel turned, but nothing passed its turning on to the machine.");
@@ -531,11 +536,12 @@ function diagnoseWater(rules, build, runtime, card) {
 }
 /** Space Centre: only what the space simulation measured in this run (truth.space.v1), stage by stage. */
 function diagnoseSpace(rules, build, runtime, card) {
+    var _a, _b, _c, _d, _e, _f;
     const s = runtime.space;
     if (!s.hasSpace())
         return undefined;
     const events = runtime.causalEvents;
-    const tag = (t) => build.allParts().filter(p => p.tags?.includes(t));
+    const tag = (t) => build.allParts().filter(p => { var _a; return (_a = p.tags) === null || _a === void 0 ? void 0 : _a.includes(t); });
     const of = (k, id) => events.filter(e => e.kind === k && (!id || e.sourceId === id));
     // A repair job: the tower's own measurements first (a wobbling tower explains itself).
     if (rules.some(r => r.kind === "STRUCT_STABLE")) {
@@ -553,7 +559,7 @@ function diagnoseSpace(rules, build, runtime, card) {
                     const b = runtime.robots.box(box.id);
                     const slot = tag(r.zoneTag)[0];
                     const v = runtime.robots.robot(arm.id);
-                    if (b && slot && v?.done && !runtime.robots.boxAt(box.id, slot.id)) {
+                    if (b && slot && (v === null || v === void 0 ? void 0 : v.done) && !runtime.robots.boxAt(box.id, slot.id)) {
                         const off = Math.abs(b.x - Math.round(slot.position.x)) + Math.abs(b.y - Math.round(slot.position.y));
                         return card(b.carried ? "NOT_CONNECTED" : off <= 1 ? "MISSED" : "WRONG_TURN", b.carried ? "The arm finished its program still holding the module — it never let go." : `The arm put the module down ${off} square${off === 1 ? "" : "s"} away from the slot.`);
                     }
@@ -581,12 +587,12 @@ function diagnoseSpace(rules, build, runtime, card) {
         if (!part)
             continue;
         if (v.type === "ROVER") {
-            const wanted = rules.some(r => r.kind === "ROVER_DELIVERS" && part.tags?.some(t => t === r.roverTag));
+            const wanted = rules.some(r => { var _a; return r.kind === "ROVER_DELIVERS" && ((_a = part.tags) === null || _a === void 0 ? void 0 : _a.some(t => t === r.roverTag)); });
             if (!wanted)
                 continue;
             if (of("ROVER_NO_WHEELS", v.id).length)
                 return card("UNSTABLE", "It needs a wheel at the front AND a wheel at the back to stand up and roll.");
-            if (!v.attached.some(id => build.getPart(id)?.definitionId === "space.drive-motor"))
+            if (!v.attached.some(id => { var _a; return ((_a = build.getPart(id)) === null || _a === void 0 ? void 0 : _a.definitionId) === "space.drive-motor"; }))
                 return card("NOT_CONNECTED", "Nothing turned the wheels — it needs a drive motor.");
             if (of("ROVER_NO_POWER", v.id).length)
                 return card("NOT_CONNECTED", s.vesselViews().length && build.allParts().some(p => p.definitionId === "space.sun") ? "The motor had no power. Is there a battery — or a solar panel facing the sun?" : "The motor had no power — it needs a battery.");
@@ -594,31 +600,31 @@ function diagnoseSpace(rules, build, runtime, card) {
                 return card("NOT_CONNECTED", "The rover was waiting to be told to go. What starts it?");
             if (of("ROVER_SLIP", v.id).length) {
                 const e = of("ROVER_SLIP", v.id)[0];
-                return card("NO_GRIP", `The wheels spun on the slope: they could only grip with ${Math.round(Number(e.data?.grip ?? 0) * 100)}% of the rover's weight, and on the Moon that weight is small.`);
+                return card("NO_GRIP", `The wheels spun on the slope: they could only grip with ${Math.round(Number((_b = (_a = e.data) === null || _a === void 0 ? void 0 : _a.grip) !== null && _b !== void 0 ? _b : 0) * 100)}% of the rover's weight, and on the Moon that weight is small.`);
             }
         }
         else {
             const thrusted = of("BOOSTER_IGNITED").some(e => e.targetId === v.id);
             if (s.isHeld(v.id))
-                return card("NOT_CONNECTED", heldReason(build, runtime, String(part.parameters.waitFor ?? "")));
-            if (!thrusted && v.attached.some(id => build.getPart(id)?.definitionId === "space.booster") && part.definitionId === "space.rocket")
+                return card("NOT_CONNECTED", heldReason(build, runtime, String((_c = part.parameters.waitFor) !== null && _c !== void 0 ? _c : "")));
+            if (!thrusted && v.attached.some(id => { var _a; return ((_a = build.getPart(id)) === null || _a === void 0 ? void 0 : _a.definitionId) === "space.booster"; }) && part.definitionId === "space.rocket")
                 return card("NOT_CONNECTED", "The booster never lit. What is it waiting for?");
-            if (of("ROCKET_TUMBLE", v.id).length && !v.attached.some(id => build.getPart(id)?.definitionId === "space.fins"))
+            if (of("ROCKET_TUMBLE", v.id).length && !v.attached.some(id => { var _a; return ((_a = build.getPart(id)) === null || _a === void 0 ? void 0 : _a.definitionId) === "space.fins"; }))
                 return card("UNSTABLE", of("ROCKET_GUST", v.id).length ? "The gust knocked the rocket's nose round and it tumbled. Nothing at the back kept it pointing straight." : "The rocket tumbled over — nothing at the back kept it pointing straight.");
             for (const r of rules)
-                if (r.kind === "SAFE_LANDING" && part.tags?.includes(r.objectTag)) {
+                if (r.kind === "SAFE_LANDING" && ((_d = part.tags) === null || _d === void 0 ? void 0 : _d.includes(r.objectTag))) {
                     const hit = runtime.flight.peakImpact(v.id);
                     if (hit > r.maxImpact)
                         return card(of("PARACHUTE_NO_AIR").length ? "NO_AIR" : "TOO_FAST", of("PARACHUTE_NO_AIR").length ? `There's no air here, so the parachute had nothing to push on. It hit at ${hit.toFixed(1)} m/s.` : `It hit the ground at ${hit.toFixed(1)} m/s. A gentle touchdown is ${r.maxImpact} m/s or less.`);
                 }
             for (const r of rules)
-                if (r.kind === "GATES_PASSED" && part.tags?.includes(r.craftTag)) {
+                if (r.kind === "GATES_PASSED" && ((_e = part.tags) === null || _e === void 0 ? void 0 : _e.includes(r.craftTag))) {
                     const missed = tag(r.gateTag).filter(g => !runtime.flight.gatesPassed(v.id).includes(g.id));
                     if (missed.length)
                         return card("MISSED", `It missed ${missed.length === 1 ? "a ring" : `${missed.length} rings`} of the launch corridor.`);
                 }
             for (const r of rules)
-                if (r.kind === "OBJECT_ENTERS_ZONE" && part.tags?.includes(r.objectTag) && v.touchdown) {
+                if (r.kind === "OBJECT_ENTERS_ZONE" && ((_f = part.tags) === null || _f === void 0 ? void 0 : _f.includes(r.objectTag)) && v.touchdown) {
                     const z = tag(r.zoneTag)[0];
                     const st = runtime.physics.state(v.id);
                     if (z) {
@@ -655,6 +661,7 @@ function diagnoseSpace(rules, build, runtime, card) {
 }
 /** Why a stage never started: follow its release back through the systems that feed it. */
 function heldReason(build, runtime, waitFor) {
+    var _a, _b;
     const [kind, id] = waitFor.split(":");
     if (kind === "TURNED") {
         const motors = build.allParts().filter(p => p.definitionId === "circuit.motor");
@@ -668,10 +675,10 @@ function heldReason(build, runtime, waitFor) {
                 return "The launch switch is off, so no electricity reached the clamp motor.";
             return "No electricity reached the clamp motor, so the clamp held on.";
         }
-        return `The clamp motor ran, but its turning never reached ${build.getPart(id ?? "") ? "the clamp gear" : "the clamp"} — something between them is missing.`;
+        return `The clamp motor ran, but its turning never reached ${build.getPart(id !== null && id !== void 0 ? id : "") ? "the clamp gear" : "the clamp"} — something between them is missing.`;
     }
     if (kind === "POWERED")
-        return `It was waiting for electricity to reach the ${build.getPart(id ?? "")?.definitionId.replace(/^[a-z]+./, "").replaceAll("-", " ") ?? "circuit"}.`;
+        return `It was waiting for electricity to reach the ${(_b = (_a = build.getPart(id !== null && id !== void 0 ? id : "")) === null || _a === void 0 ? void 0 : _a.definitionId.replace(/^[a-z]+./, "").replaceAll("-", " ")) !== null && _b !== void 0 ? _b : "circuit"}.`;
     if (kind === "TOUCHDOWN")
         return "It was waiting for the lander to touch down first.";
     if (kind === "GATE_PASSED")
@@ -684,7 +691,7 @@ function diagnoseRobots(rules, build, runtime, card) {
     if (!r.hasRobots())
         return undefined;
     const events = runtime.causalEvents;
-    const tag = (t) => build.allParts().filter(p => p.tags?.includes(t));
+    const tag = (t) => build.allParts().filter(p => { var _a; return (_a = p.tags) === null || _a === void 0 ? void 0 : _a.includes(t); });
     for (const v of r.robotViews()) {
         if (v.crashed)
             return card("BAD_TIMING", "A moving sweeper hit the robot. It went at the wrong moment — try waiting first.");
@@ -725,8 +732,8 @@ function diagnoseFlight(rules, build, runtime, card) {
     if (!f.hasFlight())
         return undefined;
     const events = runtime.causalEvents;
-    const tag = (t) => build.allParts().filter(p => p.tags?.includes(t));
-    const defs = (c) => c.attached.map(id => build.getPart(id)?.definitionId ?? "");
+    const tag = (t) => build.allParts().filter(p => { var _a; return (_a = p.tags) === null || _a === void 0 ? void 0 : _a.includes(t); });
+    const defs = (c) => c.attached.map(id => { var _a, _b; return (_b = (_a = build.getPart(id)) === null || _a === void 0 ? void 0 : _a.definitionId) !== null && _b !== void 0 ? _b : ""; });
     for (const r of rules)
         if (r.kind === "SAFE_LANDING")
             for (const p of tag(r.objectTag)) {

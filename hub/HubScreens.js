@@ -13,9 +13,10 @@ import { dueContractVisitors, openJobs } from "../contracts/Contracts.js";
  * reward is also a maker piece (hard hat, goggles, cap) — one shared list, so the locker puts it on.
  */
 export function effectiveLook(profile) {
+    var _a, _b;
     if (!profile.look)
         return undefined;
-    const piece = profile.equipped?.avatar ? rewardById(profile.equipped.avatar)?.piece : undefined;
+    const piece = ((_a = profile.equipped) === null || _a === void 0 ? void 0 : _a.avatar) ? (_b = rewardById(profile.equipped.avatar)) === null || _b === void 0 ? void 0 : _b.piece : undefined;
     if (!piece)
         return profile.look;
     const category = piece.split(".")[1];
@@ -53,8 +54,9 @@ export const AVATAR_COLOURS = { ORANGE: "#ff922b", BLUE: "#339af0", GREEN: "#40c
 /** Painted inventor portraits (cropped from Aaron's inventor-select art). */
 export const AVATAR_PORTRAITS = { BLUE: "./assets/avatars/avatar.blue.webp", PINK: "./assets/avatars/avatar.pink.webp", GREEN: "./assets/avatars/avatar.green.webp" };
 export function avatarBadge(profile, size = 54) {
+    var _a, _b;
     const wrap = el("span", "avatar-badge");
-    wrap.style.setProperty("--avatar", AVATAR_COLOURS[profile.avatarStyle] ?? "#ff922b");
+    wrap.style.setProperty("--avatar", (_a = AVATAR_COLOURS[profile.avatarStyle]) !== null && _a !== void 0 ? _a : "#ff922b");
     wrap.style.width = wrap.style.height = `${size}px`;
     const look = effectiveLook(profile);
     if (look) {
@@ -71,7 +73,7 @@ export function avatarBadge(profile, size = 54) {
     }
     else
         wrap.append(svg(`<circle cx="32" cy="36" r="24" fill="var(--avatar)" stroke="#18323f" stroke-width="5"/><circle cx="24" cy="34" r="4" fill="#18323f"/><circle cx="40" cy="34" r="4" fill="#18323f"/><path d="M23 45 q9 7 18 0" fill="none" stroke="#18323f" stroke-width="4" stroke-linecap="round"/>`, "0 0 64 64"));
-    const hat = profile.equipped?.avatar ? rewardById(profile.equipped.avatar) : undefined;
+    const hat = ((_b = profile.equipped) === null || _b === void 0 ? void 0 : _b.avatar) ? rewardById(profile.equipped.avatar) : undefined;
     if (hat) {
         const h = el("span", "avatar-hat", hat.icon);
         wrap.append(h);
@@ -155,6 +157,7 @@ function shelfArt(count) { const g = el("div", "station-stack shelf-stack"); g.a
     g.append(el("span", "shelf-count", "★".repeat(Math.min(3, count)))); return g; }
 let hubActions;
 export function renderHub(root, save, cb) {
+    var _a;
     const p = activeProfile(save);
     root.replaceChildren();
     if (!p)
@@ -174,7 +177,7 @@ export function renderHub(root, save, cb) {
     const title = el("h1", "hub-title", "Workshop");
     const right = el("div", "hub-right");
     right.append(stars);
-    hubActions ??= document.querySelector("#hub-actions") ?? undefined;
+    hubActions !== null && hubActions !== void 0 ? hubActions : (hubActions = (_a = document.querySelector("#hub-actions")) !== null && _a !== void 0 ? _a : undefined);
     if (hubActions)
         right.append(hubActions);
     top.append(who, title, right);
@@ -198,7 +201,7 @@ export function renderHub(root, save, cb) {
   `, "0 0 1000 560", "hub-backdrop", true));
     const unseen = new Set(p.unseenRewards);
     const shelfBadge = p.shelf.length ? String(p.shelf.length) : undefined;
-    const lockerNew = p.unseenRewards.some(id => { const k = rewardById(id)?.kind; return k === "AVATAR" || k === "BOLT_COSTUME" || k === "SPROCKET_ACCESSORY" || k === "FRAME"; });
+    const lockerNew = p.unseenRewards.some(id => { var _a; const k = (_a = rewardById(id)) === null || _a === void 0 ? void 0 : _a.kind; return k === "AVATAR" || k === "BOLT_COSTUME" || k === "SPROCKET_ACCESSORY" || k === "FRAME"; });
     const trophyNew = p.unseenRewards.some(id => id.startsWith("badge.") || id.startsWith("sticker."));
     const prop = (id) => () => hubProp(id);
     const stations = [
@@ -337,6 +340,7 @@ const LOCKER_TABS = [
     { slot: "frame", label: "Frames", empty: "Frames for your invention shelf come from delivery missions." }
 ];
 export function renderLocker(root, save, tab, cb) {
+    var _a, _b;
     root.replaceChildren();
     const p = activeProfile(save);
     if (!p)
@@ -358,7 +362,7 @@ export function renderLocker(root, save, tab, cb) {
     else if (tab === "sprocket")
         preview.append(sprocketArt(p.equipped.sprocket));
     else
-        preview.append(el("div", "frame-preview", p.equipped.frame ? rewardById(p.equipped.frame)?.icon ?? "🖼️" : "🖼️"));
+        preview.append(el("div", "frame-preview", p.equipped.frame ? (_b = (_a = rewardById(p.equipped.frame)) === null || _a === void 0 ? void 0 : _a.icon) !== null && _b !== void 0 ? _b : "🖼️" : "🖼️"));
     const grid = el("div", "locker-grid");
     const owned = lockerItems(save, tab);
     const none = el("button", `locker-item${p.equipped[tab] === undefined ? " selected" : ""}`);
@@ -409,7 +413,7 @@ export function renderTrophies(root, save, cb) {
         const levels = lab.missions.map(m => p.levels[m.id]).filter(Boolean);
         if (!levels.length)
             continue;
-        const got = levels.reduce((n, r) => n + (r?.stars.length ?? 0), 0);
+        const got = levels.reduce((n, r) => { var _a; return n + ((_a = r === null || r === void 0 ? void 0 : r.stars.length) !== null && _a !== void 0 ? _a : 0); }, 0);
         const row = el("div", "trophy-lab");
         row.append(el("span", "", lab.icon), el("strong", "", lab.title), el("span", "star on", "★"), el("span", "", `${got} of ${lab.missions.length * 3}`));
         labs.append(row);
@@ -418,9 +422,10 @@ export function renderTrophies(root, save, cb) {
 }
 /** Science Fair history (M28): every accepted entry and the measured awards it earned. Fun awards are never kept. */
 function fairBook(save) {
+    var _a, _b;
     const book = el("section", "story-book fair-book");
     book.append(el("h2", "", "🎪 Science Fair history"));
-    const entries = [...(activeProfile(save)?.fairs ?? [])].reverse();
+    const entries = [...((_b = (_a = activeProfile(save)) === null || _a === void 0 ? void 0 : _a.fairs) !== null && _b !== void 0 ? _b : [])].reverse();
     if (!entries.length) {
         book.append(el("p", "muted", "No fair entries yet. Fairs open as you restore the campus labs."));
         return book;
@@ -429,7 +434,7 @@ function fairBook(save) {
     for (const e of entries.slice(0, 20)) {
         const fd = FAIR_TITLES[e.fairId];
         const li = el("li");
-        li.append(el("strong", "", `${fd ?? "Fair"} · ${new Date(e.savedAtMs).toLocaleDateString(undefined, { day: "numeric", month: "short" })}`), el("span", "", ` — ${e.title}${e.awards.length ? ` · 🏅 ${e.awards.join(", ")}` : ""}`));
+        li.append(el("strong", "", `${fd !== null && fd !== void 0 ? fd : "Fair"} · ${new Date(e.savedAtMs).toLocaleDateString(undefined, { day: "numeric", month: "short" })}`), el("span", "", ` — ${e.title}${e.awards.length ? ` · 🏅 ${e.awards.join(", ")}` : ""}`));
         list.append(li);
     }
     book.append(list);
@@ -438,6 +443,7 @@ function fairBook(save) {
 const FAIR_TITLES = { "fair.motion-makers": "Motion Makers", "fair.strong-and-powered": "Strong & Powered", "fair.water-and-air-show": "Water & Air Show", "fair.smart-machines": "Smart Machines", "fair.anything-goes": "Anything Goes" };
 /** The Campus Story book: the great machine's blueprint as it is found, plus recordings and memories to replay. */
 function storyBook(save, cb) {
+    var _a, _b;
     const c = collectedStory(save);
     const book = el("section", "story-book");
     book.append(el("h2", "", "📜 Campus Story"));
@@ -446,14 +452,15 @@ function storyBook(save, cb) {
     MAIN_LABS.forEach((lab, i) => { const piece = el("div", `blueprint-piece${found.has(lab.id) ? " found" : ""}`, found.has(lab.id) ? CENTRAL_MACHINE_SYSTEMS[i] : "?"); piece.title = found.has(lab.id) ? c.blueprints.find(s => s.labId === lab.id).lines[0] : `Restore the ${lab.title} to find this piece`; grid.append(piece); });
     book.append(el("p", "", c.complete ? "The whole blueprint! The great machine is waiting in the Grand Invention Hall." : `Blueprint pieces found: ${c.blueprints.length} of ${MAIN_LABS.length}. Each restored lab adds one.`), grid);
     const list = (title, scenes, empty) => {
+        var _a, _b;
         const wrap = el("div", "");
         wrap.append(el("strong", "", title));
         const row = el("div", "story-list");
         if (!scenes.length)
             row.append(el("span", "muted", empty));
         for (const s of scenes) {
-            const b = el("button", "", `▶ ${MAIN_LABS.find(l => l.id === s.labId)?.title ?? s.title}`);
-            b.addEventListener("click", () => cb?.replayStory(s));
+            const b = el("button", "", `▶ ${(_b = (_a = MAIN_LABS.find(l => l.id === s.labId)) === null || _a === void 0 ? void 0 : _a.title) !== null && _b !== void 0 ? _b : s.title}`);
+            b.addEventListener("click", () => cb === null || cb === void 0 ? void 0 : cb.replayStory(s));
             row.append(b);
         }
         wrap.append(row);
@@ -461,11 +468,12 @@ function storyBook(save, cb) {
     };
     book.append(list("Old inventor recordings", c.recordings, "Finish a lab's Mega Build to find its recording."), list("Bolt's memories", c.memories, "Restore a lab to help Bolt remember."));
     book.append(list("The ending", campaignComplete(save) ? [...ENDING_SCENES, CREDITS] : [], "Run the Great WobbleWorks Machine in the Grand Invention Hall."));
-    if (activeProfile(save)?.levels[FINAL_PROTOTYPE_LEVEL]?.completed)
+    if ((_b = (_a = activeProfile(save)) === null || _a === void 0 ? void 0 : _a.levels[FINAL_PROTOTYPE_LEVEL]) === null || _b === void 0 ? void 0 : _b.completed)
         book.append(list("Bolt's last memory", [BOLT_FINAL_MEMORY], ""));
     return book;
 }
 export function renderShelf(root, save, cb) {
+    var _a;
     root.replaceChildren();
     const p = activeProfile(save);
     if (!p)
@@ -481,7 +489,7 @@ export function renderShelf(root, save, cb) {
         thumb.append(miniBuild(item.build.parts.map(x => ({ x: x.position.x, y: x.position.y, id: x.definitionId }))));
         // An invention from My Inventions shows its saved picture when there is one.
         if (item.inventionId && cb.thumb)
-            void cb.thumb(item.inventionId, item.versionN ?? 1).then(src => { if (!src)
+            void cb.thumb(item.inventionId, (_a = item.versionN) !== null && _a !== void 0 ? _a : 1).then(src => { if (!src)
                 return; const img = el("img"); img.src = src; img.alt = ""; thumb.replaceChildren(img); });
         b.append(thumb, el("strong", "", item.title), el("span", "muted", `${item.build.parts.length} parts`));
         b.addEventListener("click", () => cb.open(item.id));
@@ -495,11 +503,12 @@ export function miniBuild(parts) {
 }
 /** Inventor select cards, styled after Aaron's "Choose your inventor" art. Tap = select, tap again = play. */
 export function renderProfileSelect(root, save, selectedId, cb) {
+    var _a;
     root.replaceChildren();
     const ordered = [...save.profiles].sort((a, b) => b.lastPlayedAtMs - a.lastPlayedAtMs);
     for (const p of ordered) {
         const card = el("div", `inventor-card${p.id === selectedId ? " selected" : ""}`);
-        card.style.setProperty("--card", AVATAR_COLOURS[p.avatarStyle] ?? "#339af0");
+        card.style.setProperty("--card", (_a = AVATAR_COLOURS[p.avatarStyle]) !== null && _a !== void 0 ? _a : "#339af0");
         const pick = el("button", "inventor-pick");
         pick.setAttribute("aria-label", `${p.name}${p.id === selectedId ? " — selected, tap to play" : ""}`);
         const art = el("div", "inventor-art");

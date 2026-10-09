@@ -14,12 +14,12 @@ export function collectSpaceDiscoveries(build, runtime) {
     const events = runtime.causalEvents;
     const of = (k) => events.filter(e => e.kind === k);
     const has = (k) => of(k).length > 0;
-    const def = (id) => (id ? build.getPart(id)?.definitionId : undefined);
-    if (of("ROVER_DRIVING").some(e => (s.vessel(e.sourceId)?.driving ?? false)))
+    const def = (id) => { var _a; return (id ? (_a = build.getPart(id)) === null || _a === void 0 ? void 0 : _a.definitionId : undefined); };
+    if (of("ROVER_DRIVING").some(e => { var _a, _b; return ((_b = (_a = s.vessel(e.sourceId)) === null || _a === void 0 ? void 0 : _a.driving) !== null && _b !== void 0 ? _b : false); }))
         out.add("space.rover");
-    if (of("ROVER_CLIMB").some(e => Number(e.data?.grip ?? 0) >= 0.9))
+    if (of("ROVER_CLIMB").some(e => { var _a, _b; return Number((_b = (_a = e.data) === null || _a === void 0 ? void 0 : _a.grip) !== null && _b !== void 0 ? _b : 0) >= 0.9; }))
         out.add("space.grip");
-    if (of("HIT_GROUND").some(e => Number(e.data?.g ?? 9.81) < 5 && Number(e.data?.seconds ?? 0) >= 0.6))
+    if (of("HIT_GROUND").some(e => { var _a, _b, _c, _d; return Number((_b = (_a = e.data) === null || _a === void 0 ? void 0 : _a.g) !== null && _b !== void 0 ? _b : 9.81) < 5 && Number((_d = (_c = e.data) === null || _c === void 0 ? void 0 : _c.seconds) !== null && _d !== void 0 ? _d : 0) >= 0.6; }))
         out.add("space.low-gravity");
     // The same kind of object, with exactly the same mass, landed in two different gravities: weight changed, mass didn't.
     const fallen = build.allParts().filter(p => runtime.isDynamicBody(p.id) && s.fallTime(p.id) !== undefined && !s.isAttached(p.id));
@@ -27,16 +27,16 @@ export function collectSpaceDiscoveries(build, runtime) {
         out.add("space.mass-same");
     if (has("ROCKET_LIFTOFF"))
         out.add("space.thrust");
-    if (of("ROCKET_STRAIGHT").some(e => e.data?.fins === true && of("ROCKET_GUST").some(g => g.sourceId === e.sourceId)))
+    if (of("ROCKET_STRAIGHT").some(e => { var _a; return ((_a = e.data) === null || _a === void 0 ? void 0 : _a.fins) === true && of("ROCKET_GUST").some(g => g.sourceId === e.sourceId); }))
         out.add("space.fins");
-    if (of("TOUCHDOWN").some(e => Number(e.data?.distance ?? 0) > 4 && def(e.sourceId) === "space.rocket"))
+    if (of("TOUCHDOWN").some(e => { var _a, _b; return Number((_b = (_a = e.data) === null || _a === void 0 ? void 0 : _a.distance) !== null && _b !== void 0 ? _b : 0) > 4 && def(e.sourceId) === "space.rocket"; }))
         out.add("space.trajectory");
     if (has("PARACHUTE_NO_AIR"))
         out.add("space.no-air");
-    if (of("TOUCHDOWN").some(e => e.data?.legs === true && runtime.flight.peakImpact(e.sourceId) <= 2) && has("LEGS_ABSORB"))
+    if (of("TOUCHDOWN").some(e => { var _a; return ((_a = e.data) === null || _a === void 0 ? void 0 : _a.legs) === true && runtime.flight.peakImpact(e.sourceId) <= 2; }) && has("LEGS_ABSORB"))
         out.add("space.landing");
     const panels = build.allParts().filter(p => p.definitionId === "space.solar-panel" && !s.isAttached(p.id));
-    if (panels.some(p => Math.abs(runtime.circuits.current(p.id)) > 0.3) || of("ROVER_DRIVING").some(e => e.data?.power === "SOLAR"))
+    if (panels.some(p => Math.abs(runtime.circuits.current(p.id)) > 0.3) || of("ROVER_DRIVING").some(e => { var _a; return ((_a = e.data) === null || _a === void 0 ? void 0 : _a.power) === "SOLAR"; }))
         out.add("space.solar");
     if (has("ORBIT_ARC"))
         out.add("space.planet-pull");

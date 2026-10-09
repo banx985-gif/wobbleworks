@@ -144,7 +144,7 @@ export function renderParentDashboard(root, save, storage, notice, cb) {
     input.type = "file";
     input.accept = ".json,application/json";
     input.className = "visually-hidden";
-    input.addEventListener("change", () => { const f = input.files?.[0]; if (f)
+    input.addEventListener("change", () => { var _a; const f = (_a = input.files) === null || _a === void 0 ? void 0 : _a[0]; if (f)
         cb.importBackup(f); input.value = ""; });
     label.append(input);
     const row = el("div", "parent-row");

@@ -6,14 +6,14 @@ const ACCENT = { a: "á", e: "é", i: "í", o: "ö", u: "ü", c: "ç", n: "ñ", 
 export function pseudoText(s) {
     if (!s.trim() || !/[A-Za-z]/.test(s) || s.startsWith("⟦"))
         return s;
-    const body = [...s].map(ch => ACCENT[ch] ?? ch).join("");
+    const body = [...s].map(ch => { var _a; return (_a = ACCENT[ch]) !== null && _a !== void 0 ? _a : ch; }).join("");
     return `⟦${body}${"~".repeat(Math.max(1, Math.round(s.length * 0.35)))}⟧`;
 }
 export function setLanguage(next, opts = {}) { table = next; pseudoMode = opts.pseudo === true; done.clear(); }
 export function isPseudo() { return pseudoMode; }
 /** The translation of an English string (or the English itself when there is none). */
-export function t(text) { if (pseudoMode)
-    return pseudoText(text); return table?.[text] ?? text; }
+export function t(text) { var _a; if (pseudoMode)
+    return pseudoText(text); return (_a = table === null || table === void 0 ? void 0 : table[text]) !== null && _a !== void 0 ? _a : text; }
 function translateValue(v) {
     const trimmed = v.trim();
     if (!trimmed || !/[A-Za-z]/.test(trimmed) || done.has(trimmed))
@@ -30,8 +30,9 @@ export function localiseTree(root) {
     if (!table && !pseudoMode)
         return;
     const walk = (n) => {
+        var _a;
         if (n.nodeType === 3) {
-            const next = translateValue(n.nodeValue ?? "");
+            const next = translateValue((_a = n.nodeValue) !== null && _a !== void 0 ? _a : "");
             if (next !== undefined)
                 n.nodeValue = next;
             return;
@@ -71,7 +72,8 @@ export function watch(root) {
 }
 /** Start-up: ?lang=pseudo, or ?lang=<code> with content/strings/<code>.json. English needs nothing. */
 export async function startLocalisation(root, search = typeof location === "undefined" ? "" : location.search) {
-    const lang = new URLSearchParams(search).get("lang") ?? "en";
+    var _a, _b;
+    const lang = (_a = new URLSearchParams(search).get("lang")) !== null && _a !== void 0 ? _a : "en";
     if (lang === "pseudo")
         setLanguage(undefined, { pseudo: true });
     else if (lang !== "en" && /^[a-z]{2}(-[A-Z]{2})?$/.test(lang)) {
@@ -79,7 +81,7 @@ export async function startLocalisation(root, search = typeof location === "unde
             const r = await fetch(`./content/strings/${lang}.json`);
             if (r.ok) {
                 const j = await r.json();
-                setLanguage(j.strings ?? {});
+                setLanguage((_b = j.strings) !== null && _b !== void 0 ? _b : {});
             }
         }
         catch { /* stay in English */ }

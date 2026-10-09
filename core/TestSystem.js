@@ -1,12 +1,36 @@
 import { RuntimeWorld } from "../physics/RuntimeWorld.js";
 export class TestSystem {
-    registry;
-    runtime;
-    snapshot;
-    paused = false;
-    speed = 1;
     constructor(registry) {
-        this.registry = registry;
+        Object.defineProperty(this, "registry", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: registry
+        });
+        Object.defineProperty(this, "runtime", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "snapshot", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "paused", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: false
+        });
+        Object.defineProperty(this, "speed", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 1
+        });
     }
     start(snapshot) { this.stop(); this.snapshot = snapshot; this.runtime = new RuntimeWorld(snapshot, this.registry); this.paused = false; return this.runtime; }
     step(dt = 1 / 60) { if (!this.runtime || this.paused)

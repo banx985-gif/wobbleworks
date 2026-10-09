@@ -27,7 +27,7 @@ export function renderCreator(root, save, cb) {
     }
     const grid = el("div", "creator-grid");
     for (const c of [...list].reverse())
-        grid.append(card(c, save, cb, me?.id));
+        grid.append(card(c, save, cb, me === null || me === void 0 ? void 0 : me.id));
     root.append(grid);
 }
 function card(c, save, cb, me) {

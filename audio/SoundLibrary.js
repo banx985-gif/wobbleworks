@@ -74,7 +74,7 @@ export const MUSIC_THEMES = {
     workshop: { tempo: 110, scale: PENTA, root: 261.6, lead: "marimba", melody: [[0, 2, -1, 3, 4, -1, 2, 1], [0, 1, -1, 2, 4, -1, 3, 2]], bass: [0, 3], drums: [1, 0, 2, 0, 1, 0, 2, 0] }
 };
 /** The theme for a place: its own, or the workshop theme for creative modes. */
-export function musicFor(placeId) { return MUSIC_THEMES[placeId] ?? MUSIC_THEMES.workshop; }
+export function musicFor(placeId) { var _a; return (_a = MUSIC_THEMES[placeId]) !== null && _a !== void 0 ? _a : MUSIC_THEMES.workshop; }
 /** Frequency of a scale step (wraps up the octave). */
 export function stepHz(theme, step) { const n = theme.scale.length; const oct = Math.floor(step / n), idx = ((step % n) + n) % n; return theme.root * Math.pow(2, (theme.scale[idx] + 12 * oct) / 12); }
 /** The three sliders are independent: each only ever changes its own sound. */

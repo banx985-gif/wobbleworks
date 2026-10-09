@@ -8,9 +8,9 @@ const GEAR_COLOURS = {
     "gear.small": "#ffd43b", "gear.medium": "#74c0fc", "gear.large": "#ff922b", "gear.door-wheel": "#adb5bd",
     "gear.belt-pulley": "#b197fc", "gear.belt-pulley-big": "#9775fa"
 };
-export function gearBehaviour(def) { const g = def.behaviours.find(b => b.kind === "GEAR"); return g?.kind === "GEAR" ? g : undefined; }
-export function gearOutput(def) { const o = def.behaviours.find(b => b.kind === "GEAR_OUTPUT"); return o?.kind === "GEAR_OUTPUT" ? o : undefined; }
-export function gearDriver(def) { const d = def.behaviours.find(b => b.kind === "GEAR_DRIVER"); return d?.kind === "GEAR_DRIVER" ? d : undefined; }
+export function gearBehaviour(def) { const g = def.behaviours.find(b => b.kind === "GEAR"); return (g === null || g === void 0 ? void 0 : g.kind) === "GEAR" ? g : undefined; }
+export function gearOutput(def) { const o = def.behaviours.find(b => b.kind === "GEAR_OUTPUT"); return (o === null || o === void 0 ? void 0 : o.kind) === "GEAR_OUTPUT" ? o : undefined; }
+export function gearDriver(def) { const d = def.behaviours.find(b => b.kind === "GEAR_DRIVER"); return (d === null || d === void 0 ? void 0 : d.kind) === "GEAR_DRIVER" ? d : undefined; }
 function toothedGear(c, r, teeth, fill, selected) {
     const depth = Math.min(14, r * 0.18), inner = r - depth;
     c.beginPath();
@@ -87,27 +87,28 @@ function pulley(c, r, fill, selected) {
 /** Gear pictures come from the one part-art map (PartPictures.ts): gear.small → medium → large → xlarge, smallest to largest. */
 export const GEAR_ART = Object.fromEntries(["gear.small", "gear.medium", "gear.large", "gear.door-wheel"].map(id => [id, partPictureArt(id)]));
 export function drawGearPart(c, part, def, selected, ctx) {
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j;
     const g = gearBehaviour(def);
     if (!g)
         return false;
-    const st = ctx.gears?.state(part.id);
-    const angle = (st?.angle ?? 0) + part.rotation;
+    const st = (_a = ctx.gears) === null || _a === void 0 ? void 0 : _a.state(part.id);
+    const angle = ((_b = st === null || st === void 0 ? void 0 : st.angle) !== null && _b !== void 0 ? _b : 0) + part.rotation;
     const x = part.position.x * 100, y = part.position.y * 100, r = g.radius * 100;
     const out = gearOutput(def), drive = gearDriver(def);
-    const turning = Math.abs(st?.omega ?? 0) > 1e-3;
+    const turning = Math.abs((_c = st === null || st === void 0 ? void 0 : st.omega) !== null && _c !== void 0 ? _c : 0) > 1e-3;
     c.save();
     c.translate(x, y);
     // Painted machine bodies (crank, motor, fan): the picture stands still; the shaft (drawn below) turns.
     // (Lab parts on a shaft — electric motor, water wheel — are painted by their own lab's drawing.)
     const ownBody = part.definitionId.startsWith("gear.") && (out || drive) && g.role === "SHAFT";
-    const body = ownBody ? drawPartPicture(c, ctx.art, part.definitionId, { selected, spinAngle: angle, spinning: turning }) : Boolean(partPictureArt(part.definitionId) && ctx.art?.(partPictureArt(part.definitionId)));
+    const body = ownBody ? drawPartPicture(c, ctx.art, part.definitionId, { selected, spinAngle: angle, spinning: turning }) : Boolean(partPictureArt(part.definitionId) && ((_d = ctx.art) === null || _d === void 0 ? void 0 : _d.call(ctx, partPictureArt(part.definitionId))));
     if (out && !(body && out.output === "FAN"))
-        drawOutputBody(c, part, out.output, angle, st?.omega ?? 0, ctx, out.drum ?? g.radius);
+        drawOutputBody(c, part, out.output, angle, (_e = st === null || st === void 0 ? void 0 : st.omega) !== null && _e !== void 0 ? _e : 0, ctx, (_f = out.drum) !== null && _f !== void 0 ? _f : g.radius);
     if (drive && !body)
         drawDriverBody(c, drive.driver, angle);
     c.rotate(angle);
     const art = partPictureArt(part.definitionId);
-    const pic = art ? ctx.art?.(art) : undefined;
+    const pic = art ? (_g = ctx.art) === null || _g === void 0 ? void 0 : _g.call(ctx, art) : undefined;
     if (g.role === "GEAR" && pic) {
         // Painted gear scaled to this gear's size and turning with it (the painted teeth needn't match the count; the solver uses the real one).
         if (selected) {
@@ -128,7 +129,7 @@ export function drawGearPart(c, part, def, selected, ctx) {
         }
     }
     else if (g.role === "GEAR")
-        toothedGear(c, r, Math.max(6, g.teeth), GEAR_COLOURS[part.definitionId] ?? "#ced4da", selected);
+        toothedGear(c, r, Math.max(6, g.teeth), (_h = GEAR_COLOURS[part.definitionId]) !== null && _h !== void 0 ? _h : "#ced4da", selected);
     else if (g.role === "PULLEY" && pic) {
         // The pulley wheel is painted into its bracket, so the picture stays upright and turning marks go round the rim.
         c.rotate(-angle);
@@ -145,7 +146,7 @@ export function drawGearPart(c, part, def, selected, ctx) {
         }
     }
     else if (g.role === "PULLEY")
-        pulley(c, r, GEAR_COLOURS[part.definitionId] ?? "#b197fc", selected);
+        pulley(c, r, (_j = GEAR_COLOURS[part.definitionId]) !== null && _j !== void 0 ? _j : "#b197fc", selected);
     else if (!body || drive) {
         c.fillStyle = selected ? "#ffe066" : "#868e96";
         c.strokeStyle = INK;
@@ -216,6 +217,7 @@ function drawDriverBody(c, kind, angle) {
     c.restore();
 }
 function drawOutputBody(c, part, kind, angle, omega, ctx, drum) {
+    var _a, _b, _c, _d;
     c.save();
     c.strokeStyle = INK;
     c.lineWidth = 5;
@@ -247,17 +249,17 @@ function drawOutputBody(c, part, kind, angle, omega, ctx, drum) {
         const load = typeof part.parameters.ropeTo === "string" ? ctx.parts.find(p => p.id === part.parameters.ropeTo) : undefined;
         if (load) {
             const s = ctx.states.get(load.id);
-            const lx = ((s?.x ?? load.position.x) - part.position.x) * 100, ly = ((s?.y ?? load.position.y) - part.position.y) * 100;
+            const lx = (((_a = s === null || s === void 0 ? void 0 : s.x) !== null && _a !== void 0 ? _a : load.position.x) - part.position.x) * 100, ly = (((_b = s === null || s === void 0 ? void 0 : s.y) !== null && _b !== void 0 ? _b : load.position.y) - part.position.y) * 100;
             const def = ctx.registry(load.definitionId);
             const rb = def.behaviours.find(b => b.kind === "RIGID_BODY");
-            const top = ly - (rb?.kind === "RIGID_BODY" ? rb.height * 50 : 40);
+            const top = ly - ((rb === null || rb === void 0 ? void 0 : rb.kind) === "RIGID_BODY" ? rb.height * 50 : 40);
             c.strokeStyle = "#8d5524";
             c.lineWidth = 5;
             c.beginPath();
             c.moveTo(d, 0);
             c.lineTo(lx, top);
             c.stroke();
-            const hook = ctx.art?.("structure.hook");
+            const hook = (_c = ctx.art) === null || _c === void 0 ? void 0 : _c.call(ctx, "structure.hook");
             if (hook)
                 c.drawImage(hook, lx - 11, top - 30, 22, 36);
             else {
@@ -296,7 +298,7 @@ function drawOutputBody(c, part, kind, angle, omega, ctx, drum) {
         c.fillText("DRUM", 0, -d - 22);
     }
     else if (kind === "CAROUSEL") {
-        const flung = Math.abs(omega) > Number(part.parameters.flingAbove ?? 2.6);
+        const flung = Math.abs(omega) > Number((_d = part.parameters.flingAbove) !== null && _d !== void 0 ? _d : 2.6);
         c.save();
         c.rotate(angle);
         c.fillStyle = "#ffa8a8";
@@ -502,7 +504,7 @@ export function drawRotationView(c, gears, showValues) {
         const status = gears.status(s.id);
         if (status === "JAMMED" || status === "STALLED") {
             const info = gears.trainInfo(s.id);
-            if (!info?.driverId || labelled.has(info.driverId))
+            if (!(info === null || info === void 0 ? void 0 : info.driverId) || labelled.has(info.driverId))
                 continue;
             labelled.add(info.driverId);
             const d = gears.node(info.driverId);

@@ -28,16 +28,18 @@ const REGULARISE = 1e-3;
 /** No real structure is perfectly straight: every downward load also gives a tiny sideways nudge (3%), so an unbraced frame leans the way a real one would. */
 const SIDEWAYS_NUDGE = 0.03;
 export function beamEndpoints(part, def) {
+    var _a;
     const b = def.behaviours.find(x => x.kind === "BEAM");
-    if (b?.kind !== "BEAM")
+    if ((b === null || b === void 0 ? void 0 : b.kind) !== "BEAM")
         return undefined;
-    const length = Number(part.parameters.length ?? b.length);
+    const length = Number((_a = part.parameters.length) !== null && _a !== void 0 ? _a : b.length);
     const c = Math.cos(part.rotation), s = Math.sin(part.rotation);
     return { x1: part.position.x - c * length / 2, y1: part.position.y - s * length / 2, x2: part.position.x + c * length / 2, y2: part.position.y + s * length / 2, length };
 }
 function onFloor(x, y, chasms) { return y >= FLOOR_Y - 0.12 && !chasms.some(c => x > c.x1 && x < c.x2); }
 /** Geometry → joints, members and fixed surfaces. Pure; used in BUILD mode too (joint dots, support marks). */
 export function analyzeStructure(parts, definition) {
+    var _a, _b, _c, _d;
     const chasms = [];
     const fixedSurfaces = [];
     const anchors = [];
@@ -48,11 +50,11 @@ export function analyzeStructure(parts, definition) {
             continue;
         for (const b of def.behaviours) {
             if (b.kind === "CHASM")
-                chasms.push({ x1: p.position.x - Number(p.parameters.width ?? b.width) / 2, x2: p.position.x + Number(p.parameters.width ?? b.width) / 2 });
+                chasms.push({ x1: p.position.x - Number((_a = p.parameters.width) !== null && _a !== void 0 ? _a : b.width) / 2, x2: p.position.x + Number((_b = p.parameters.width) !== null && _b !== void 0 ? _b : b.width) / 2 });
             if (b.kind === "STRUCT_ANCHOR")
                 anchors.push({ x: p.position.x, y: p.position.y, id: p.id });
             if (b.kind === "STRUCT_GROUND") {
-                const w = Number(p.parameters.width ?? b.width), h = Number(p.parameters.height ?? b.height);
+                const w = Number((_c = p.parameters.width) !== null && _c !== void 0 ? _c : b.width), h = Number((_d = p.parameters.height) !== null && _d !== void 0 ? _d : b.height);
                 const top = p.position.y - h / 2;
                 grounds.push({ x1: p.position.x - w / 2, x2: p.position.x + w / 2, top });
                 fixedSurfaces.push({ x1: p.position.x - w / 2, y1: top, x2: p.position.x + w / 2, y2: top, hardness: 1.5 });
@@ -86,10 +88,10 @@ export function analyzeStructure(parts, definition) {
         joints.push({ x, y, supported: support !== undefined, ...(support ? { support } : {}) });
         return joints.length - 1;
     };
-    const beams = parts.map(p => ({ p, def: definition(p.definitionId) })).filter(x => x.def?.behaviours.some(b => b.kind === "BEAM")).sort((p, q) => p.p.id.localeCompare(q.p.id));
+    const beams = parts.map(p => ({ p, def: definition(p.definitionId) })).filter(x => { var _a; return (_a = x.def) === null || _a === void 0 ? void 0 : _a.behaviours.some(b => b.kind === "BEAM"); }).sort((p, q) => p.p.id.localeCompare(q.p.id));
     for (const { p, def } of beams) {
         const b = def.behaviours.find(x => x.kind === "BEAM");
-        if (b?.kind !== "BEAM")
+        if ((b === null || b === void 0 ? void 0 : b.kind) !== "BEAM")
             continue;
         const e = beamEndpoints(p, def);
         if (e.length < 0.2)
@@ -131,33 +133,148 @@ function solveLinear(A, f) {
 }
 /** One TEST run of a structure. Deterministic: the same build always behaves the same way. */
 export class StructureSystem {
-    definition;
-    layout;
-    broken = new Map();
-    brokenTick = new Map();
-    axial = new Map();
-    ratio = new Map();
-    peak = new Map();
-    slack = new Set();
-    disp = [];
-    travellers = [];
-    eggs = [];
-    loads = [];
-    wind = [];
-    pending = [];
-    wobbleNow = 0;
-    peakWobble = 0;
-    /** Wobble each tick, or -1 for a tick where something broke or loads were still settling. */
-    history = [];
-    time = 0;
-    tickCount = 0;
-    everBroken = false;
-    extra = [];
-    mountsOk = new Map();
-    /** 0–0.9: how damaged (cracked) a member already is. Damaged members are weaker in every way. */
-    damage = new Map();
     constructor(parts, definition) {
-        this.definition = definition;
+        var _a, _b, _c, _d, _e, _f, _g, _h;
+        Object.defineProperty(this, "definition", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: definition
+        });
+        Object.defineProperty(this, "layout", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "broken", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "brokenTick", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "axial", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "ratio", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "peak", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "slack", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Set()
+        });
+        Object.defineProperty(this, "disp", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "travellers", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "eggs", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "loads", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "wind", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "pending", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "wobbleNow", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "peakWobble", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        /** Wobble each tick, or -1 for a tick where something broke or loads were still settling. */
+        Object.defineProperty(this, "history", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "time", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "tickCount", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "everBroken", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: false
+        });
+        Object.defineProperty(this, "extra", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "mountsOk", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        /** 0–0.9: how damaged (cracked) a member already is. Damaged members are weaker in every way. */
+        Object.defineProperty(this, "damage", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
         this.layout = analyzeStructure(parts, definition);
         this.disp = this.layout.joints.map(() => ({ x: 0, y: 0 }));
         for (const p of parts)
@@ -169,30 +286,31 @@ export class StructureSystem {
                 continue;
             for (const b of def.behaviours) {
                 if (b.kind === "TRAVELLER") {
-                    const endX = Number(p.parameters.endX ?? p.position.x + 8);
-                    this.travellers.push({ lowestY: p.position.y, usedMember: false, startY: p.position.y, id: p.id, who: b.who, weight: Number(p.parameters.weight ?? b.weight), speed: Number(p.parameters.speed ?? b.speed), height: b.height, x: p.position.x, y: p.position.y, vy: 0, endX, dir: Math.sign(endX - p.position.x) || 1, delay: Number(p.parameters.delay ?? 0), fallen: false, arrived: false, blocked: false, started: false });
+                    const endX = Number((_a = p.parameters.endX) !== null && _a !== void 0 ? _a : p.position.x + 8);
+                    this.travellers.push({ lowestY: p.position.y, usedMember: false, startY: p.position.y, id: p.id, who: b.who, weight: Number((_b = p.parameters.weight) !== null && _b !== void 0 ? _b : b.weight), speed: Number((_c = p.parameters.speed) !== null && _c !== void 0 ? _c : b.speed), height: b.height, x: p.position.x, y: p.position.y, vy: 0, endX, dir: Math.sign(endX - p.position.x) || 1, delay: Number((_d = p.parameters.delay) !== null && _d !== void 0 ? _d : 0), fallen: false, arrived: false, blocked: false, started: false });
                 }
                 if (b.kind === "EGG")
                     this.eggs.push({ id: p.id, weight: b.weight, x: p.position.x, y: p.position.y, vy: 0, landed: false, onStructure: false });
                 if (b.kind === "STRUCT_LOAD")
-                    this.loads.push({ id: p.id, weight: Number(p.parameters.weight ?? b.weight), x: p.position.x, y: p.position.y, startAt: Number(p.parameters.startAt ?? 0), ramp: Number(p.parameters.rampSeconds ?? 1), grow: p.parameters.grow === true, applied: 0, held: 0, done: false, fell: false });
+                    this.loads.push({ id: p.id, weight: Number((_e = p.parameters.weight) !== null && _e !== void 0 ? _e : b.weight), x: p.position.x, y: p.position.y, startAt: Number((_f = p.parameters.startAt) !== null && _f !== void 0 ? _f : 0), ramp: Number((_g = p.parameters.rampSeconds) !== null && _g !== void 0 ? _g : 1), grow: p.parameters.grow === true, applied: 0, held: 0, done: false, fell: false });
                 if (b.kind === "WIND")
-                    this.wind.push({ force: Number(p.parameters.force ?? b.force) });
+                    this.wind.push({ force: Number((_h = p.parameters.force) !== null && _h !== void 0 ? _h : b.force) });
             }
         }
     }
     // -------------------------------------------------------------- queries
     get members() { return this.layout.members; }
     memberState(id) {
+        var _a, _b, _c;
         if (!this.layout.members.some(m => m.id === id))
             return undefined;
-        const ax = this.axial.get(id) ?? 0;
+        const ax = (_a = this.axial.get(id)) !== null && _a !== void 0 ? _a : 0;
         const br = this.broken.get(id);
-        return { id, broken: br !== undefined, ...(br ? { breakMode: br } : {}), axial: ax, ratio: this.ratio.get(id) ?? 0, peakRatio: this.peak.get(id) ?? 0, mode: this.slack.has(id) ? "SLACK" : Math.abs(ax) < 1e-6 ? "NONE" : ax > 0 ? "TENSION" : "COMPRESSION" };
+        return { id, broken: br !== undefined, ...(br ? { breakMode: br } : {}), axial: ax, ratio: (_b = this.ratio.get(id)) !== null && _b !== void 0 ? _b : 0, peakRatio: (_c = this.peak.get(id)) !== null && _c !== void 0 ? _c : 0, mode: this.slack.has(id) ? "SLACK" : Math.abs(ax) < 1e-6 ? "NONE" : ax > 0 ? "TENSION" : "COMPRESSION" };
     }
     memberStates() { return this.layout.members.map(m => this.memberState(m.id)); }
-    damageOf(id) { return this.damage.get(id) ?? 0; }
-    jointDisplacement(i) { return this.disp[i] ?? { x: 0, y: 0 }; }
+    damageOf(id) { var _a; return (_a = this.damage.get(id)) !== null && _a !== void 0 ? _a : 0; }
+    jointDisplacement(i) { var _a; return (_a = this.disp[i]) !== null && _a !== void 0 ? _a : { x: 0, y: 0 }; }
     wobble() { return this.wobbleNow; }
     maxWobble() { return this.peakWobble; }
     brokenCount() { return this.broken.size; }
@@ -222,7 +340,7 @@ export class StructureSystem {
         return top;
     }
     /** Did this traveller walk on something the child built? */
-    walkedOnStructure(id) { return this.travellers.find(t => t.id === id)?.usedMember ?? false; }
+    walkedOnStructure(id) { var _a, _b; return (_b = (_a = this.travellers.find(t => t.id === id)) === null || _a === void 0 ? void 0 : _a.usedMember) !== null && _b !== void 0 ? _b : false; }
     /** Did this traveller go up by more than half a metre (e.g. a Motion ramp)? */
     climbedRamp(id) { const t = this.travellers.find(x => x.id === id); return t ? t.startY - Math.min(t.y, t.startY) > 0.5 || t.lowestY < t.startY - 0.5 : false; }
     /** Tick a member broke on (for drawing it falling). */
@@ -235,7 +353,7 @@ export class StructureSystem {
     load(id) { const l = this.loads.find(x => x.id === id); return l ? { id, x: l.x, y: l.y, applied: l.applied, held: l.held, done: l.done, fell: l.fell, ...(l.onMember ? { onMember: l.onMember } : {}) } : undefined; }
     loadStates() { return this.loads.map(l => this.load(l.id)); }
     /** Whether an external point load (e.g. a winch) found a joint to hang from last tick. */
-    mounted(sourceId) { return this.mountsOk.get(sourceId) ?? false; }
+    mounted(sourceId) { var _a; return (_a = this.mountsOk.get(sourceId)) !== null && _a !== void 0 ? _a : false; }
     /** Is there a standing joint within 0.3 m of this point? (cheap; used before the first tick too) */
     hasJointNear(x, y) { return this.layout.joints.some((j, i) => Math.hypot(j.x - x, j.y - y) <= 0.3 && this.layout.members.some(m => (m.a === i || m.b === i) && !this.broken.has(m.id))); }
     drainEvents() { const out = this.pending; this.pending = []; return out; }
@@ -351,6 +469,7 @@ export class StructureSystem {
         }
     }
     moveEggs(dt) {
+        var _a;
         for (const e of this.eggs) {
             if (e.landed) {
                 if (e.onMember && this.broken.has(e.onMember)) {
@@ -377,7 +496,7 @@ export class StructureSystem {
             e.y = hit.y;
             e.landed = true;
             const impact = round(e.vy * hit.s.hardness);
-            e.impact = Math.max(e.impact ?? 0, impact);
+            e.impact = Math.max((_a = e.impact) !== null && _a !== void 0 ? _a : 0, impact);
             e.vy = 0;
             e.onStructure = hit.s.memberId !== undefined;
             if (hit.s.memberId)
@@ -438,18 +557,19 @@ export class StructureSystem {
         return false;
     }
     solveAll(ramp) {
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j;
         const { joints, members } = this.layout;
         // Point loads sitting on members (travellers, eggs, test loads): P at fraction t along the member.
         const pointOnMember = [];
         for (const t of this.travellers)
             if (t.onMember && !t.fallen && !t.arrived)
-                pointOnMember.push({ member: t.onMember, t: t.at ?? 0.5, P: t.weight, source: t.id });
+                pointOnMember.push({ member: t.onMember, t: (_a = t.at) !== null && _a !== void 0 ? _a : 0.5, P: t.weight, source: t.id });
         for (const e of this.eggs)
             if (e.landed && e.onMember)
                 pointOnMember.push({ member: e.onMember, t: this.memberT(e.onMember, e.x), P: e.weight, source: e.id });
         for (const l of this.loads)
             if (l.onMember && !l.done)
-                pointOnMember.push({ member: l.onMember, t: l.at ?? 0.5, P: l.applied, source: l.id });
+                pointOnMember.push({ member: l.onMember, t: (_b = l.at) !== null && _b !== void 0 ? _b : 0.5, P: l.applied, source: l.id });
         for (let pass = 0; pass < 10; pass++) {
             const active = members.filter(m => !this.broken.has(m.id) && !this.slack.has(m.id));
             // Components; members with no supported joint simply fall.
@@ -515,7 +635,7 @@ export class StructureSystem {
                 addLoad(m.a, 0, w / 2);
                 addLoad(m.b, 0, w / 2);
                 if (m.material !== "ROPE")
-                    bend.set(m.id, (bend.get(m.id) ?? 0) + w * L / 8 * Math.abs(c));
+                    bend.set(m.id, ((_c = bend.get(m.id)) !== null && _c !== void 0 ? _c : 0) + w * L / 8 * Math.abs(c));
             }
             for (const pl of pointOnMember) {
                 const m = active.find(q => q.id === pl.member);
@@ -526,7 +646,7 @@ export class StructureSystem {
                 addLoad(m.b, 0, P * pl.t);
                 const a = joints[m.a], b = joints[m.b];
                 const cos = Math.abs(b.x - a.x) / m.length;
-                bend.set(m.id, (bend.get(m.id) ?? 0) + P * pl.t * (1 - pl.t) * m.length * cos);
+                bend.set(m.id, ((_d = bend.get(m.id)) !== null && _d !== void 0 ? _d : 0) + P * pl.t * (1 - pl.t) * m.length * cos);
             }
             // External point loads (a winch hanging from a joint) and wind at the top.
             this.mountsOk.clear();
@@ -550,11 +670,11 @@ export class StructureSystem {
             const compWobble = new Map();
             for (const j of free) {
                 const c = comp.get(j);
-                compWobble.set(c, Math.max(compWobble.get(c) ?? 0, Math.hypot(this.disp[j].x, this.disp[j].y)));
+                compWobble.set(c, Math.max((_e = compWobble.get(c)) !== null && _e !== void 0 ? _e : 0, Math.hypot(this.disp[j].x, this.disp[j].y)));
             }
             changed = false;
             for (const m of active)
-                if ((compWobble.get(comp.get(m.a)) ?? 0) > COLLAPSE_WOBBLE) {
+                if (((_f = compWobble.get(comp.get(m.a))) !== null && _f !== void 0 ? _f : 0) > COLLAPSE_WOBBLE) {
                     this.breakMember(m, "COLLAPSE");
                     changed = true;
                 }
@@ -575,13 +695,13 @@ export class StructureSystem {
                     continue;
                 }
                 const compCap = Math.min(mat.compression, mat.buckle / (L * L));
-                const strength = 1 - Math.max(0, Math.min(0.9, this.damage.get(m.id) ?? 0));
+                const strength = 1 - Math.max(0, Math.min(0.9, (_g = this.damage.get(m.id)) !== null && _g !== void 0 ? _g : 0));
                 const axialRatio = N >= 0 ? N / (mat.tension * strength) : (compCap > 0 ? -N / (compCap * strength) : Infinity);
-                const bendRatio = m.material === "ROPE" ? 0 : (bend.get(m.id) ?? 0) / (mat.bending * strength);
+                const bendRatio = m.material === "ROPE" ? 0 : ((_h = bend.get(m.id)) !== null && _h !== void 0 ? _h : 0) / (mat.bending * strength);
                 const r = axialRatio + bendRatio;
                 this.axial.set(m.id, N);
                 this.ratio.set(m.id, r);
-                this.peak.set(m.id, Math.max(this.peak.get(m.id) ?? 0, r));
+                this.peak.set(m.id, Math.max((_j = this.peak.get(m.id)) !== null && _j !== void 0 ? _j : 0, r));
                 const mode = bendRatio >= axialRatio ? "BENDING" : N >= 0 ? "TENSION" : compCap < mat.compression ? "BUCKLE" : "COMPRESSION";
                 if (r > 1 && (!worst || r > worst.r))
                     worst = { m, mode, r };

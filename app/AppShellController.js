@@ -6,11 +6,33 @@ export const SHELL_SCREENS = [
 ];
 export const SHELL_SMOKE_ROUTE = SHELL_SCREENS;
 export class AppShellController {
-    screen = "SPLASH";
-    lockedUntilMs = 0;
-    transitionLockMs;
-    smokeIndex = -1;
-    constructor(transitionLockMs = 180) { this.transitionLockMs = transitionLockMs; }
+    constructor(transitionLockMs = 180) {
+        Object.defineProperty(this, "screen", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: "SPLASH"
+        });
+        Object.defineProperty(this, "lockedUntilMs", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "transitionLockMs", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "smokeIndex", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: -1
+        });
+        this.transitionLockMs = transitionLockMs;
+    }
     current() { return this.screen; }
     titleVisibility(save) { return titleVisibility(save); }
     isInputLocked(nowMs) { return nowMs < this.lockedUntilMs; }

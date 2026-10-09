@@ -19,16 +19,16 @@ export const EARTH_G = 9.81;
 export const MOON_G = 1.62;
 const RHO = 1.2;
 const FLOOR = 8.4;
-export function spaceBehaviour(def) { const b = def?.behaviours.find(x => x.kind === "SPACE"); return b?.kind === "SPACE" ? b : undefined; }
-export function vesselBehaviour(def) { const b = def?.behaviours.find(x => x.kind === "VESSEL"); return b?.kind === "VESSEL" ? b : undefined; }
+export function spaceBehaviour(def) { const b = def === null || def === void 0 ? void 0 : def.behaviours.find(x => x.kind === "SPACE"); return (b === null || b === void 0 ? void 0 : b.kind) === "SPACE" ? b : undefined; }
+export function vesselBehaviour(def) { const b = def === null || def === void 0 ? void 0 : def.behaviours.find(x => x.kind === "VESSEL"); return (b === null || b === void 0 ? void 0 : b.kind) === "VESSEL" ? b : undefined; }
 /** Can this part clip onto a rocket or rover? Space parts, plus a Power Lab battery, a solar panel and a Flight Hangar parachute. */
 export function attachKind(def) {
     const s = spaceBehaviour(def);
     if (s)
         return s.part;
-    if (def?.behaviours.some(b => b.kind === "CIRCUIT" && b.role === "BATTERY"))
+    if (def === null || def === void 0 ? void 0 : def.behaviours.some(b => b.kind === "CIRCUIT" && b.role === "BATTERY"))
         return "BATTERY";
-    if (def?.behaviours.some(b => b.kind === "AERO" && b.part === "PARACHUTE"))
+    if (def === null || def === void 0 ? void 0 : def.behaviours.some(b => b.kind === "AERO" && b.part === "PARACHUTE"))
         return "CHUTE";
     return undefined;
 }
@@ -57,7 +57,7 @@ export function spaceSnap(x, y, kind, vessel) {
     return best ? { x: best.x, y: best.y } : undefined;
 }
 /** A launch pad's tilt (radians; set by tapping the pad: 0°, 15°, 30°, 45°). */
-export function padTilt(pad) { return Number(pad.parameters.tilt ?? 0) * Math.PI / 180; }
+export function padTilt(pad) { var _a; return Number((_a = pad.parameters.tilt) !== null && _a !== void 0 ? _a : 0) * Math.PI / 180; }
 /** Which part owns each clip-on part (the nearest rocket or rover in reach). Pure — used in BUILD mode too. */
 export function attachmentOwners(parts, definition) {
     const vesselParts = parts.filter(p => vesselBehaviour(definition(p.definitionId)));
@@ -79,13 +79,14 @@ export function attachmentOwners(parts, definition) {
 }
 /** Rockets standing on a tilted pad lean over with all their parts, turning about the bottom of the rocket. Pure. */
 export function tiltedPoses(parts, definition) {
+    var _a, _b;
     const out = new Map();
     const owners = attachmentOwners(parts, definition);
     for (const v of parts) {
-        if (vesselBehaviour(definition(v.definitionId))?.vessel !== "ROCKET")
+        if (((_a = vesselBehaviour(definition(v.definitionId))) === null || _a === void 0 ? void 0 : _a.vessel) !== "ROCKET")
             continue;
-        const r = definition(v.definitionId)?.behaviours.find(b => b.kind === "RIGID_BODY");
-        const half = r?.kind === "RIGID_BODY" ? r.height / 2 : 0.5;
+        const r = (_b = definition(v.definitionId)) === null || _b === void 0 ? void 0 : _b.behaviours.find(b => b.kind === "RIGID_BODY");
+        const half = (r === null || r === void 0 ? void 0 : r.kind) === "RIGID_BODY" ? r.height / 2 : 0.5;
         const pad = parts.find(p => p.definitionId === "space.launch-pad" && Math.abs(p.position.x - v.position.x) < 0.8 && p.position.y > v.position.y && p.position.y - v.position.y < half + 0.5);
         const tilt = pad ? padTilt(pad) : 0;
         if (!tilt)
@@ -101,38 +102,142 @@ export function tiltedPoses(parts, definition) {
     return out;
 }
 export class SpaceSystem {
-    parts;
-    definition;
-    zones = [];
-    vessels = [];
-    planets = [];
-    launchers = [];
-    suns = [];
-    bodies = [];
-    heldParts = new Map();
-    falls = new Map();
-    thrustNow = new Map();
-    driving = new Set();
-    slipping = new Set();
-    orbit = new Map();
-    pending = [];
-    tilts;
-    windAt = () => ({ x: 0, y: 0 });
-    once = new Set();
-    started = false;
-    ticks = 0;
-    elapsed = 0;
     constructor(parts, definition) {
-        this.parts = parts;
-        this.definition = definition;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
+        Object.defineProperty(this, "parts", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: parts
+        });
+        Object.defineProperty(this, "definition", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: definition
+        });
+        Object.defineProperty(this, "zones", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "vessels", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "planets", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "launchers", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "suns", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "bodies", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "heldParts", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "falls", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "thrustNow", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "driving", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Set()
+        });
+        Object.defineProperty(this, "slipping", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Set()
+        });
+        Object.defineProperty(this, "orbit", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "pending", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "tilts", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "windAt", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: () => ({ x: 0, y: 0 })
+        });
+        Object.defineProperty(this, "once", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Set()
+        });
+        Object.defineProperty(this, "started", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: false
+        });
+        Object.defineProperty(this, "ticks", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "elapsed", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
         const owner = attachmentOwners(parts, definition);
         this.tilts = tiltedPoses(parts, definition);
         for (const p of parts) {
             const def = definition(p.definitionId);
-            for (const b of def?.behaviours ?? []) {
+            for (const b of (_a = def === null || def === void 0 ? void 0 : def.behaviours) !== null && _a !== void 0 ? _a : []) {
                 if (b.kind === "GRAVITY_ZONE") {
-                    const w = Number(p.parameters.width ?? 16);
-                    this.zones.push({ id: p.id, x1: p.position.x - w / 2, x2: p.position.x + w / 2, g: Number(p.parameters.g ?? b.g), air: p.parameters.air === undefined ? b.air : p.parameters.air === true, wind: Number(p.parameters.wind ?? 0), label: String(p.parameters.label ?? (Number(p.parameters.g ?? b.g) < 0.01 ? "ZERO G" : Number(p.parameters.g ?? b.g) < 5 ? "MOON" : "EARTH")) });
+                    const w = Number((_b = p.parameters.width) !== null && _b !== void 0 ? _b : 16);
+                    this.zones.push({ id: p.id, x1: p.position.x - w / 2, x2: p.position.x + w / 2, g: Number((_c = p.parameters.g) !== null && _c !== void 0 ? _c : b.g), air: p.parameters.air === undefined ? b.air : p.parameters.air === true, wind: Number((_d = p.parameters.wind) !== null && _d !== void 0 ? _d : 0), label: String((_e = p.parameters.label) !== null && _e !== void 0 ? _e : (Number((_f = p.parameters.g) !== null && _f !== void 0 ? _f : b.g) < 0.01 ? "ZERO G" : Number((_g = p.parameters.g) !== null && _g !== void 0 ? _g : b.g) < 5 ? "MOON" : "EARTH")) });
                 }
                 if (b.kind === "PLANET")
                     this.planets.push({ part: p, pull: b.pull, radius: b.radius, range: b.range });
@@ -157,10 +262,10 @@ export class SpaceSystem {
                 const kind = attachKind(qd);
                 const sp = spaceBehaviour(qd);
                 const dx = q.position.x - p.position.x, dy = q.position.y - p.position.y;
-                attached.push({ part: q, kind, def: qd, lx: dx * c + dy * s, ly: -dx * s + dy * c, mass: sp?.mass ?? (kind === "BATTERY" ? 0.3 : 0.05), burnLeft: Number(q.parameters.burn ?? sp?.burn ?? 0) });
+                attached.push({ part: q, kind, def: qd, lx: dx * c + dy * s, ly: -dx * s + dy * c, mass: (_h = sp === null || sp === void 0 ? void 0 : sp.mass) !== null && _h !== void 0 ? _h : (kind === "BATTERY" ? 0.3 : 0.05), burnLeft: Number((_k = (_j = q.parameters.burn) !== null && _j !== void 0 ? _j : sp === null || sp === void 0 ? void 0 : sp.burn) !== null && _k !== void 0 ? _k : 0) });
             }
             const r = def.behaviours.find(b => b.kind === "RIGID_BODY");
-            const bodyMass = r?.kind === "RIGID_BODY" ? r.density * r.width * r.height * (r.shape === "CIRCLE" ? Math.PI / 4 : 1) : 0.5;
+            const bodyMass = (r === null || r === void 0 ? void 0 : r.kind) === "RIGID_BODY" ? r.density * r.width * r.height * (r.shape === "CIRCLE" ? Math.PI / 4 : 1) : 0.5;
             this.vessels.push({ id: p.id, part: p, type: vb.vessel, dragArea: vb.dragArea, parts: attached, mass: bodyMass + attached.reduce((t, a) => t + a.mass, 0), omega: 0, flying: false, maxAltitude: 0, startY: p.position.y, touchdown: false, held: typeof p.parameters.waitFor === "string", minAngle: p.rotation, maxAngle: p.rotation, slipTicks: 0, driveTicks: 0 });
         }
         for (const l of this.launchers) {
@@ -178,12 +283,13 @@ export class SpaceSystem {
     isAttached(partId) { return this.vessels.some(v => v.parts.some(a => a.part.id === partId)); }
     zoneAt(x) { return this.zones.find(z => x >= z.x1 && x < z.x2); }
     /** Gravity (m/s²) where x is: a zone's, or ordinary Earth gravity. */
-    gravityAt(x) { return this.zoneAt(x)?.g ?? EARTH_G; }
-    airAt(x) { return this.zoneAt(x)?.air ?? true; }
+    gravityAt(x) { var _a, _b; return (_b = (_a = this.zoneAt(x)) === null || _a === void 0 ? void 0 : _a.g) !== null && _b !== void 0 ? _b : EARTH_G; }
+    airAt(x) { var _a, _b; return (_b = (_a = this.zoneAt(x)) === null || _a === void 0 ? void 0 : _a.air) !== null && _b !== void 0 ? _b : true; }
     /** How strongly the sun shines on a panel facing `angle` (0 = straight up) at (x, y): 0..1. */
     sunlight(x, y, angle) { return sunFactor(this.suns, x, y, angle); }
     /** One tick (force phase): zone gravity, planets, launchers, held parts, then every rocket and rover. */
     step(dt, physics, happened, windAt = () => ({ x: 0, y: 0 })) {
+        var _a, _b, _c, _d, _e;
         this.windAt = windAt;
         if (!this.started) {
             this.started = true;
@@ -217,7 +323,7 @@ export class SpaceSystem {
                     v.held = false;
                 this.pending.push({ kind: "STAGE_RELEASED", sourceId: id, data: { after: String(p.parameters.waitFor) } });
                 try {
-                    physics.setLinearVelocity(id, { x: Number(p.parameters.launchVx ?? 0), y: Number(p.parameters.launchVy ?? 0) });
+                    physics.setLinearVelocity(id, { x: Number((_a = p.parameters.launchVx) !== null && _a !== void 0 ? _a : 0), y: Number((_b = p.parameters.launchVy) !== null && _b !== void 0 ? _b : 0) });
                 }
                 catch { /* no body */ }
                 continue;
@@ -281,10 +387,10 @@ export class SpaceSystem {
         }
         // Launchers fling whatever sits on them at their chosen speed, once, half a second in.
         for (const l of this.launchers) {
-            if (!l.payload || this.once.has(`launch:${l.part.id}`) || this.elapsed < Number(l.part.parameters.fireAt ?? 0.5))
+            if (!l.payload || this.once.has(`launch:${l.part.id}`) || this.elapsed < Number((_c = l.part.parameters.fireAt) !== null && _c !== void 0 ? _c : 0.5))
                 continue;
             this.once.add(`launch:${l.part.id}`);
-            const speed = l.speeds[Math.max(0, Math.min(l.speeds.length - 1, Math.round(Number(l.part.parameters.power ?? 0))))] ?? 0;
+            const speed = (_e = l.speeds[Math.max(0, Math.min(l.speeds.length - 1, Math.round(Number((_d = l.part.parameters.power) !== null && _d !== void 0 ? _d : 0))))]) !== null && _e !== void 0 ? _e : 0;
             const a = l.part.rotation;
             try {
                 physics.setLinearVelocity(l.payload, { x: Math.cos(a) * speed, y: Math.sin(a) * speed });
@@ -302,12 +408,14 @@ export class SpaceSystem {
         }
     }
     attachmentStarted(a, happened) {
+        var _a;
         const wait = a.part.parameters.waitFor;
         if (typeof wait === "string" && !happened(wait))
             return false;
-        return this.elapsed >= Number(a.part.parameters.delay ?? 0);
+        return this.elapsed >= Number((_a = a.part.parameters.delay) !== null && _a !== void 0 ? _a : 0);
     }
     stepRocket(v, dt, physics, happened) {
+        var _a, _b, _c, _d, _e;
         let st;
         try {
             st = physics.state(v.id);
@@ -316,16 +424,16 @@ export class SpaceSystem {
             return;
         }
         const z = this.zoneAt(st.x);
-        const air = z?.air ?? true;
+        const air = (_a = z === null || z === void 0 ? void 0 : z.air) !== null && _a !== void 0 ? _a : true;
         const gust = air ? this.windAt(st.x, st.y) : { x: 0, y: 0 };
-        const wind = (z?.wind ?? 0) + gust.x;
+        const wind = ((_b = z === null || z === void 0 ? void 0 : z.wind) !== null && _b !== void 0 ? _b : 0) + gust.x;
         const ux = Math.sin(st.angle), uy = -Math.cos(st.angle);
         const c = Math.cos(st.angle), s = Math.sin(st.angle);
         let fx = 0, fy = 0, torque = 0, thrust = 0;
         for (const a of v.parts) {
             if (a.kind !== "BOOSTER" || a.burnLeft <= 0 || !this.attachmentStarted(a, happened))
                 continue;
-            const T = spaceBehaviour(a.def)?.thrust ?? 10;
+            const T = (_d = (_c = spaceBehaviour(a.def)) === null || _c === void 0 ? void 0 : _c.thrust) !== null && _d !== void 0 ? _d : 10;
             a.burnLeft -= dt;
             fx += ux * T;
             fy += uy * T;
@@ -392,10 +500,11 @@ export class SpaceSystem {
         physics.setAngularVelocity(v.id, v.omega);
         if (thrust > 0 && !this.once.has(`lift:${v.id}`) && v.startY - st.y > 0.3) {
             this.once.add(`lift:${v.id}`);
-            this.pending.push({ kind: "ROCKET_LIFTOFF", sourceId: v.id, data: { thrust: round(thrust), weight: round(v.mass * (z?.g ?? EARTH_G)) } });
+            this.pending.push({ kind: "ROCKET_LIFTOFF", sourceId: v.id, data: { thrust: round(thrust), weight: round(v.mass * ((_e = z === null || z === void 0 ? void 0 : z.g) !== null && _e !== void 0 ? _e : EARTH_G)) } });
         }
     }
     stepRover(v, dt, physics, happened) {
+        var _a, _b, _c;
         let st;
         try {
             st = physics.state(v.id);
@@ -432,15 +541,15 @@ export class SpaceSystem {
         if (contact) {
             const other = contact.a === v.id ? contact.b : contact.a;
             const op = this.parts.find(p => p.id === other);
-            const rb = op ? this.definition(op.definitionId)?.behaviours.find(b => b.kind === "RIGID_BODY") : undefined;
-            if (rb?.kind === "RIGID_BODY" && rb.shape === "RAMP")
+            const rb = op ? (_a = this.definition(op.definitionId)) === null || _a === void 0 ? void 0 : _a.behaviours.find(b => b.kind === "RIGID_BODY") : undefined;
+            if ((rb === null || rb === void 0 ? void 0 : rb.kind) === "RIGID_BODY" && rb.shape === "RAMP")
                 slope = op.rotation;
         }
         const tx = Math.cos(slope), ty = Math.sin(slope);
         const m = v.mass;
-        const grip = Math.max(...v.parts.filter(a => a.kind === "WHEEL").map(a => spaceBehaviour(a.def)?.grip ?? 0.5));
+        const grip = Math.max(...v.parts.filter(a => a.kind === "WHEEL").map(a => { var _a, _b; return (_b = (_a = spaceBehaviour(a.def)) === null || _a === void 0 ? void 0 : _a.grip) !== null && _b !== void 0 ? _b : 0.5; }));
         const sp = spaceBehaviour(drive.def);
-        const maxForce = sp?.force ?? 4, target = sp?.speed ?? 1.6;
+        const maxForce = (_b = sp === null || sp === void 0 ? void 0 : sp.force) !== null && _b !== void 0 ? _b : 4, target = (_c = sp === null || sp === void 0 ? void 0 : sp.speed) !== null && _c !== void 0 ? _c : 1.6;
         const traction = grip * m * g * Math.cos(slope);
         const limit = Math.min(maxForce, traction);
         const vt = st.vx * tx + st.vy * ty;
@@ -473,6 +582,7 @@ export class SpaceSystem {
     }
     /** After the physics step: flight, tumbling, touchdowns, how high things got and when they first hit the ground. */
     observe(physics) {
+        var _a;
         for (const b of this.bodies) {
             let st;
             try {
@@ -481,7 +591,7 @@ export class SpaceSystem {
             catch {
                 continue;
             }
-            const f = this.falls.get(b.part.id) ?? { startY: b.part.position.y, minY: b.part.position.y, ...(this.zoneAt(b.part.position.x) ? { zone: this.zoneAt(b.part.position.x).id } : {}) };
+            const f = (_a = this.falls.get(b.part.id)) !== null && _a !== void 0 ? _a : { startY: b.part.position.y, minY: b.part.position.y, ...(this.zoneAt(b.part.position.x) ? { zone: this.zoneAt(b.part.position.x).id } : {}) };
             this.falls.set(b.part.id, f);
             f.minY = Math.min(f.minY, st.y);
             const grounded = st.y + b.height / 2 >= FLOOR - 0.02 || physics.contactEvents.some(e => e.a === b.part.id || e.b === b.part.id);
@@ -524,15 +634,16 @@ export class SpaceSystem {
         }
         this.ticks += 1;
     }
-    halfHeight(id) { const p = this.parts.find(q => q.id === id); const r = p ? this.definition(p.definitionId)?.behaviours.find(b => b.kind === "RIGID_BODY") : undefined; return r?.kind === "RIGID_BODY" ? r.height / 2 : 0.2; }
+    halfHeight(id) { var _a; const p = this.parts.find(q => q.id === id); const r = p ? (_a = this.definition(p.definitionId)) === null || _a === void 0 ? void 0 : _a.behaviours.find(b => b.kind === "RIGID_BODY") : undefined; return (r === null || r === void 0 ? void 0 : r.kind) === "RIGID_BODY" ? r.height / 2 : 0.2; }
     /** The top of whatever solid ground is under (x, from y down). */
     groundBelow(x, y, physics) {
+        var _a, _b, _c;
         let best = FLOOR;
         for (const p of this.parts) {
-            const r = this.definition(p.definitionId)?.behaviours.find(b => b.kind === "RIGID_BODY");
-            if (r?.kind !== "RIGID_BODY" || r.bodyType !== "STATIC" || r.shape === "RAMP")
+            const r = (_a = this.definition(p.definitionId)) === null || _a === void 0 ? void 0 : _a.behaviours.find(b => b.kind === "RIGID_BODY");
+            if ((r === null || r === void 0 ? void 0 : r.kind) !== "RIGID_BODY" || r.bodyType !== "STATIC" || r.shape === "RAMP")
                 continue;
-            const w = Number(p.parameters.width ?? r.width), h = Number(p.parameters.height ?? r.height);
+            const w = Number((_b = p.parameters.width) !== null && _b !== void 0 ? _b : r.width), h = Number((_c = p.parameters.height) !== null && _c !== void 0 ? _c : r.height);
             const top = p.position.y - h / 2;
             if (Math.abs(x - p.position.x) <= w / 2 && top >= y - 0.6 && top < best)
                 best = top;
@@ -542,11 +653,12 @@ export class SpaceSystem {
     }
     // ---------------------------------------------------------------- read-only views
     vessel(id) {
+        var _a;
         const v = this.vessels.find(x => x.id === id);
         if (!v)
             return undefined;
         const f = this.roverFacts(v);
-        return { id, type: v.type, mass: round(v.mass), thrust: this.thrustNow.get(id) ?? 0, flying: v.flying, touchdown: v.touchdown, angleSpread: v.maxAngle - v.minAngle, attached: v.parts.map(a => a.part.id), stable: f.stable, powered: f.powered, driving: this.driving.has(id), slipping: this.slipping.has(id), maxAltitude: v.maxAltitude };
+        return { id, type: v.type, mass: round(v.mass), thrust: (_a = this.thrustNow.get(id)) !== null && _a !== void 0 ? _a : 0, flying: v.flying, touchdown: v.touchdown, angleSpread: v.maxAngle - v.minAngle, attached: v.parts.map(a => a.part.id), stable: f.stable, powered: f.powered, driving: this.driving.has(id), slipping: this.slipping.has(id), maxAltitude: v.maxAltitude };
     }
     vesselViews() { return this.vessels.map(v => this.vessel(v.id)); }
     attachedPose(partId, physics) {
@@ -567,14 +679,14 @@ export class SpaceSystem {
         return undefined;
     }
     /** Seconds from the start until this body first touched the ground (undefined if it hasn't). */
-    fallTime(id) { const f = this.falls.get(id); return f?.groundTick === undefined ? undefined : f.groundTick / 60; }
+    fallTime(id) { const f = this.falls.get(id); return (f === null || f === void 0 ? void 0 : f.groundTick) === undefined ? undefined : f.groundTick / 60; }
     /** How far above its start this body rose at most (m). */
     maxRise(id) { const f = this.falls.get(id); return f ? f.startY - f.minY : 0; }
     orbitDegrees(id) { const o = this.orbit.get(id); return o ? Math.abs(o.total) * 180 / Math.PI : 0; }
     isHeld(id) { return this.heldParts.has(id); }
     boosterFuel(partId) { for (const v of this.vessels) {
         const a = v.parts.find(x => x.part.id === partId);
-        if (a?.kind === "BOOSTER")
+        if ((a === null || a === void 0 ? void 0 : a.kind) === "BOOSTER")
             return Math.max(0, a.burnLeft);
     } return undefined; }
     drainEvents() { const out = this.pending; this.pending = []; return out; }

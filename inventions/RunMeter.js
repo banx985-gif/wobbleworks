@@ -4,14 +4,49 @@
  * it started, the fastest any body went, the longest chain, and the biggest structure wobble.
  */
 export class RunMeter {
-    buildChecksum;
-    start = new Map();
-    distance = 0;
-    height = 0;
-    speed = 0;
-    ticks = 0;
     constructor(buildChecksum) {
-        this.buildChecksum = buildChecksum;
+        Object.defineProperty(this, "buildChecksum", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: buildChecksum
+        });
+        Object.defineProperty(this, "start", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "distance", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "height", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "speed", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "ticks", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "runtime", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
     }
     sample(runtime) {
         this.ticks++;
@@ -27,14 +62,13 @@ export class RunMeter {
         }
         this.runtime = runtime;
     }
-    runtime;
     /** Results so far; nothing until the TEST has run for half a second. */
     result() {
         if (this.ticks < 30)
             return undefined;
         const out = { distance: this.distance, height: Math.max(0, this.height), speed: this.speed };
         const rt = this.runtime;
-        if (rt?.chain.active)
+        if (rt === null || rt === void 0 ? void 0 : rt.chain.active)
             out.chain = rt.chain.longest();
         if (rt && rt.structures.memberStates().length)
             out.wobble = rt.structures.maxWobble();

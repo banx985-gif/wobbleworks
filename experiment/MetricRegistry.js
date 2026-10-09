@@ -24,40 +24,108 @@ export const METRIC_WORDS = {
 };
 /** Watches subjects during a TEST, tick by tick, and turns what happened into registered metrics. */
 export class MetricRecorder {
-    subjects;
-    finishLines;
-    prices;
-    start = new Map();
-    far = new Map();
-    low = new Map();
-    peak = new Map();
-    speedSum = new Map();
-    stillSince = new Map();
-    moved = new Set();
-    bounced = new Map();
-    lastVy = new Map();
-    crossed = new Map();
-    ticks = 0;
     /** `finishLines`: a subject's time is when it first reaches this x (a finish flag), if it has one. */
     /** `prices`: a challenge's own price list (part id → coins); buildCost can only be measured where one is configured. */
     constructor(subjects, finishLines = {}, prices) {
-        this.subjects = subjects;
-        this.finishLines = finishLines;
-        this.prices = prices;
+        Object.defineProperty(this, "subjects", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: subjects
+        });
+        Object.defineProperty(this, "finishLines", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: finishLines
+        });
+        Object.defineProperty(this, "prices", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: prices
+        });
+        Object.defineProperty(this, "start", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "far", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "low", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "peak", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "speedSum", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "stillSince", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "moved", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Set()
+        });
+        Object.defineProperty(this, "bounced", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "lastVy", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "crossed", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "ticks", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
     }
     sample(runtime) {
+        var _a, _b, _c, _d, _e, _f, _g;
         this.ticks++;
         for (const id of this.subjects) {
             // Gears turn rather than travel: their speed is how fast they turn.
             if (runtime.gears.nodes.some(n => n.id === id)) {
                 const w = Math.abs(runtime.gears.omega(id)) / (Math.PI * 2);
-                const a = this.speedSum.get(id) ?? { sum: 0, n: 0 };
+                const a = (_a = this.speedSum.get(id)) !== null && _a !== void 0 ? _a : { sum: 0, n: 0 };
                 if (w > 0.001 || a.n) {
                     a.sum += w;
                     a.n++;
                     this.speedSum.set(id, a);
                 }
-                this.peak.set(id, Math.max(this.peak.get(id) ?? 0, w));
+                this.peak.set(id, Math.max((_b = this.peak.get(id)) !== null && _b !== void 0 ? _b : 0, w));
                 continue;
             }
             let st;
@@ -77,12 +145,12 @@ export class MetricRecorder {
             // A glider's distance is how far it flew; anything else, how far it got from where it started.
             const craft = runtime.flight.craft(id);
             const d = craft ? Math.max(0, craft.maxX - s0.x) : Math.abs(st.x - s0.x);
-            this.far.set(id, Math.max(this.far.get(id) ?? 0, d));
-            this.low.set(id, Math.min(this.low.get(id) ?? s0.y, st.y));
-            this.peak.set(id, Math.max(this.peak.get(id) ?? 0, speed));
+            this.far.set(id, Math.max((_c = this.far.get(id)) !== null && _c !== void 0 ? _c : 0, d));
+            this.low.set(id, Math.min((_d = this.low.get(id)) !== null && _d !== void 0 ? _d : s0.y, st.y));
+            this.peak.set(id, Math.max((_e = this.peak.get(id)) !== null && _e !== void 0 ? _e : 0, speed));
             if (speed > 0.05) {
                 this.moved.add(id);
-                const a = this.speedSum.get(id) ?? { sum: 0, n: 0 };
+                const a = (_f = this.speedSum.get(id)) !== null && _f !== void 0 ? _f : { sum: 0, n: 0 };
                 a.sum += speed;
                 a.n++;
                 this.speedSum.set(id, a);
@@ -91,7 +159,7 @@ export class MetricRecorder {
             else if (!this.stillSince.has(id))
                 this.stillSince.set(id, this.ticks);
             // Bounce: after the first time it comes down onto something, how high does it rise again?
-            const lv = this.lastVy.get(id) ?? 0;
+            const lv = (_g = this.lastVy.get(id)) !== null && _g !== void 0 ? _g : 0;
             this.lastVy.set(id, st.vy);
             const b = this.bounced.get(id);
             if (!b && lv > 0.5 && st.vy <= 0)
@@ -104,6 +172,7 @@ export class MetricRecorder {
     settled() { return this.subjects.every(id => (this.finishLines[id] !== undefined && this.crossed.has(id)) || !this.moved.has(id) || (this.stillSince.has(id) && this.ticks - this.stillSince.get(id) >= 30)); }
     /** A registered metric for one subject, measured from this run. Undefined when there is nothing honest to report. */
     measure(metric, id, runtime, build) {
+        var _a, _b, _c, _d;
         switch (metric) {
             case "distanceTravelled": return this.far.get(id);
             case "maximumHeight": {
@@ -118,21 +187,21 @@ export class MetricRecorder {
                 const a = this.speedSum.get(id);
                 return a && a.n ? a.sum / a.n : undefined;
             }
-            case "elapsedTime": return this.crossed.get(id) ?? finishTime(id, runtime);
+            case "elapsedTime": return (_a = this.crossed.get(id)) !== null && _a !== void 0 ? _a : finishTime(id, runtime);
             case "supportedLoad": {
                 const l = runtime.structures.load(id);
-                return l?.done ? l.held : undefined;
+                return (l === null || l === void 0 ? void 0 : l.done) ? l.held : undefined;
             }
             case "energyUsed": {
-                const lane = build.getPart(id)?.tags?.find(t => t.startsWith("lane."));
-                const batteries = build.allParts().filter(p => p.tags?.includes(lane ?? "") && runtime.circuits.source(p.id));
-                return batteries.length ? batteries.reduce((t, p) => t + (runtime.circuits.source(p.id)?.energyUsed ?? 0), 0) : undefined;
+                const lane = (_c = (_b = build.getPart(id)) === null || _b === void 0 ? void 0 : _b.tags) === null || _c === void 0 ? void 0 : _c.find(t => t.startsWith("lane."));
+                const batteries = build.allParts().filter(p => { var _a; return ((_a = p.tags) === null || _a === void 0 ? void 0 : _a.includes(lane !== null && lane !== void 0 ? lane : "")) && runtime.circuits.source(p.id); });
+                return batteries.length ? batteries.reduce((t, p) => { var _a, _b; return t + ((_b = (_a = runtime.circuits.source(p.id)) === null || _a === void 0 ? void 0 : _a.energyUsed) !== null && _b !== void 0 ? _b : 0); }, 0) : undefined;
             }
-            case "programBlockCount": return runtime.robots.robot(id)?.blocks;
+            case "programBlockCount": return (_d = runtime.robots.robot(id)) === null || _d === void 0 ? void 0 : _d.blocks;
             case "peakImpact": return runtime.flight.peakImpact(id);
             case "partCount": return build.allParts().length;
             // Only the parts the player placed (room parts are locked), at the configured prices.
-            case "buildCost": return this.prices ? build.allParts().filter(p => p.parameters.locked !== true).reduce((t, p) => t + (this.prices[p.definitionId] ?? 0), 0) : undefined;
+            case "buildCost": return this.prices ? build.allParts().filter(p => p.parameters.locked !== true).reduce((t, p) => { var _a; return t + ((_a = this.prices[p.definitionId]) !== null && _a !== void 0 ? _a : 0); }, 0) : undefined;
             case "chainLength": return runtime.chain.longest();
             case "uniqueMechanismCount": return runtime.chain.families().length;
             case "survivalState": return runtime.causalEvents.some(e => e.kind === "STRUCTURE_BROKE" && (e.sourceId === id || e.targetId === id)) ? 0 : 1;
@@ -154,7 +223,7 @@ function finishTime(id, runtime) {
     if (fill !== undefined)
         return fill;
     const r = runtime.robots.robot(id);
-    if (r?.doneAt !== undefined && !r.crashed)
+    if ((r === null || r === void 0 ? void 0 : r.doneAt) !== undefined && !r.crashed)
         return r.doneAt;
     const fall = runtime.space.fallTime(id);
     if (fall !== undefined)

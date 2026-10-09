@@ -6,9 +6,10 @@ import { FULL_GAME_PRODUCT, trustedKeys, verifyProof } from "./Entitlement.js";
 export const PROOF_KEY = "entitlement.proof";
 /** Decide ownership from the cached proof. Offline, a valid proof is enough: play is never held hostage by the network. */
 export async function resolveOwnership(input) {
+    var _a, _b;
     if (input.cached === undefined || input.cached === null)
         return { status: { state: input.saveState, source: "SAVE", checkedOnline: false }, clearCache: false };
-    const check = await verifyProof(input.cached, input.keys ?? trustedKeys(), input.nowMs ?? Date.now());
+    const check = await verifyProof(input.cached, (_a = input.keys) !== null && _a !== void 0 ? _a : trustedKeys(), (_b = input.nowMs) !== null && _b !== void 0 ? _b : Date.now());
     if (!check.ok)
         return { status: { state: input.saveState, source: "SAVE", proofProblem: check.reason, checkedOnline: false }, clearCache: check.reason === "NOT_A_PROOF" };
     let r = "UNREACHABLE";
@@ -25,16 +26,37 @@ export async function resolveOwnership(input) {
     return { status: { state: r === "VALID" ? "OWNED" : "OFFLINE_GRACE", source: "PROOF", checkedOnline: r === "VALID" }, clearCache: false };
 }
 export class OwnershipController {
-    store;
-    adapter;
-    keys;
-    online;
-    status = { state: "UNKNOWN", source: "SAVE", checkedOnline: false };
     constructor(store, adapter, keys = trustedKeys(), online = () => typeof navigator === "undefined" || navigator.onLine) {
-        this.store = store;
-        this.adapter = adapter;
-        this.keys = keys;
-        this.online = online;
+        Object.defineProperty(this, "store", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: store
+        });
+        Object.defineProperty(this, "adapter", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: adapter
+        });
+        Object.defineProperty(this, "keys", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: keys
+        });
+        Object.defineProperty(this, "online", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: online
+        });
+        Object.defineProperty(this, "status", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: { state: "UNKNOWN", source: "SAVE", checkedOnline: false }
+        });
     }
     current() { return this.status; }
     storeKind() { return this.adapter.kind; }
@@ -100,8 +122,8 @@ export class OwnershipController {
         }
         return this.status.state !== before.state || this.status.source !== before.source;
     }
-    async buy() { return this.settle(this.adapter.available ? await this.safe(() => this.adapter.purchase()) : { kind: "UNAVAILABLE", message: this.adapter.unavailableReason ?? "Buying isn't available here." }, "bought"); }
-    async restore() { return this.settle(this.adapter.available ? await this.safe(() => this.adapter.restore()) : { kind: "UNAVAILABLE", message: this.adapter.unavailableReason ?? "Restoring isn't available here." }, "restored"); }
+    async buy() { var _a; return this.settle(this.adapter.available ? await this.safe(() => this.adapter.purchase()) : { kind: "UNAVAILABLE", message: (_a = this.adapter.unavailableReason) !== null && _a !== void 0 ? _a : "Buying isn't available here." }, "bought"); }
+    async restore() { var _a; return this.settle(this.adapter.available ? await this.safe(() => this.adapter.restore()) : { kind: "UNAVAILABLE", message: (_a = this.adapter.unavailableReason) !== null && _a !== void 0 ? _a : "Restoring isn't available here." }, "restored"); }
     async safe(f) { try {
         return await f();
     }

@@ -30,7 +30,7 @@ export function fairOpen(save, id) {
 export function scienceFairOpen(save) { return SCIENCE_FAIRS.some(f => fairOpen(save, f.id)); }
 export function domainOf(definitionId) {
     const p = definitionId.split(".")[0];
-    if (["motion", "gear", "scrap", "silly", "sandbox", "chain", "structure"].includes(p ?? ""))
+    if (["motion", "gear", "scrap", "silly", "sandbox", "chain", "structure"].includes(p !== null && p !== void 0 ? p : ""))
         return "Mechanics";
     if (p === "builder")
         return "Structures";
@@ -55,22 +55,60 @@ const SENSE = new Set(["SENSOR_DECISION", "MAGNET_SWITCH_CLOSED", "MAGNET_SWITCH
 const ACT = new Set(["ROBOT_MOVED", "ROBOT_TURNED", "BOX_GRABBED", "BOX_DROPPED", "LOAD_ON", "CANNON_FIRE", "BELL_RING", "CONFETTI_BURST", "PUMP_MOVED_WATER", "BOOSTER_IGNITED", "ELECTROMAGNET_ON", "BUTTON_PRESSED"]);
 /** Watches the fair TEST tick by tick. */
 export class FairRun {
-    fair;
-    build;
-    seeded;
-    start = new Map();
-    travel = new Map();
-    peak = 0;
-    lift = 0;
-    ticks = 0;
     constructor(fair, build, seeded) {
-        this.fair = fair;
-        this.build = build;
-        this.seeded = seeded;
+        Object.defineProperty(this, "fair", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: fair
+        });
+        Object.defineProperty(this, "build", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: build
+        });
+        Object.defineProperty(this, "seeded", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: seeded
+        });
+        Object.defineProperty(this, "start", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "travel", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "peak", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "lift", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "ticks", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
     }
     get done() { return this.ticks >= Math.round(this.fair.seconds * 60); }
     get secondsLeft() { return Math.max(0, this.fair.seconds - this.ticks / 60); }
     sample(runtime) {
+        var _a;
         if (this.done)
             return;
         this.ticks++;
@@ -82,18 +120,19 @@ export class FairRun {
                 this.start.set(s.id, { x: s.x, y: s.y });
                 continue;
             }
-            this.travel.set(s.id, Math.max(this.travel.get(s.id) ?? 0, Math.hypot(s.x - s0.x, s.y - s0.y)));
+            this.travel.set(s.id, Math.max((_a = this.travel.get(s.id)) !== null && _a !== void 0 ? _a : 0, Math.hypot(s.x - s0.x, s.y - s0.y)));
             const part = this.build.getPart(s.id);
-            if (part?.definitionId === "silly.bolt")
+            if ((part === null || part === void 0 ? void 0 : part.definitionId) === "silly.bolt")
                 this.lift = Math.max(this.lift, s0.y - s.y);
             this.peak = Math.max(this.peak, Math.hypot(s.vx, s.vy));
         }
     }
     evidence(runtime) {
+        var _a, _b, _c;
         const parts = this.build.allParts();
         const added = parts.filter(p => p.parameters.locked !== true && !this.seeded.has(p.id));
         const events = runtime.causalEvents;
-        const kindOf = (id) => this.build.getPart(id)?.definitionId;
+        const kindOf = (id) => { var _a; return (_a = this.build.getPart(id)) === null || _a === void 0 ? void 0 : _a.definitionId; };
         const working = new Set();
         for (const e of events)
             for (const id of [e.sourceId, e.targetId]) {
@@ -101,7 +140,7 @@ export class FairRun {
                     continue;
                 const d = kindOf(id);
                 const dom = d ? domainOf(d) : undefined;
-                if (dom && (e.kind !== "PHYSICS_CONTACT" || (this.travel.get(id) ?? 0) > 0.3))
+                if (dom && (e.kind !== "PHYSICS_CONTACT" || ((_a = this.travel.get(id)) !== null && _a !== void 0 ? _a : 0) > 0.3))
                     working.add(dom);
             }
         for (const [id, t] of this.travel) {
@@ -110,10 +149,10 @@ export class FairRun {
             if (dom === "Mechanics" && t > 0.5)
                 working.add(dom);
         }
-        const motionMoved = Math.max(0, ...[...this.travel].filter(([id]) => /^motion\./.test(kindOf(id) ?? "")).map(([, t]) => t));
-        const loadCarried = Math.max(0, ...[...this.travel].filter(([id]) => /^(sandbox\.weight|gear\.heavy-crate|builder\.sandbag)$/.test(kindOf(id) ?? "")).map(([, t]) => t));
-        const firstTick = (set) => events.find(e => set.has(e.kind))?.tick;
-        const wa = Math.min(firstTick(WATER) ?? Infinity, firstTick(AIR) ?? Infinity);
+        const motionMoved = Math.max(0, ...[...this.travel].filter(([id]) => { var _a; return /^motion\./.test((_a = kindOf(id)) !== null && _a !== void 0 ? _a : ""); }).map(([, t]) => t));
+        const loadCarried = Math.max(0, ...[...this.travel].filter(([id]) => { var _a; return /^(sandbox\.weight|gear\.heavy-crate|builder\.sandbag)$/.test((_a = kindOf(id)) !== null && _a !== void 0 ? _a : ""); }).map(([, t]) => t));
+        const firstTick = (set) => { var _a; return (_a = events.find(e => set.has(e.kind))) === null || _a === void 0 ? void 0 : _a.tick; };
+        const wa = Math.min((_b = firstTick(WATER)) !== null && _b !== void 0 ? _b : Infinity, (_c = firstTick(AIR)) !== null && _c !== void 0 ? _c : Infinity);
         const sense = firstTick(SENSE);
         const crafts = parts.filter(p => runtime.flight.craft(p.id)).map(p => runtime.flight.peakImpact(p.id)).filter((v) => v !== undefined && Number.isFinite(v));
         const s = runtime.structures;
@@ -156,7 +195,7 @@ export function measurableAwards(ev) { return MEASURABLE_AWARDS.flatMap(a => { c
 /** Campus visitors you've met cheer from the crowd. Cheers are fun, never a verdict. */
 const CHEERS = ["Wow, look at it go!", "I've never seen anything like it!", "Can I have a go next?", "Brilliant!", "What a clever idea!", "Again! Again!"];
 export function crowdCheers(save, random = Math.random) {
-    const met = VISITORS.filter(v => activeProfile(save)?.visitorsMet.includes(v.id));
+    const met = VISITORS.filter(v => { var _a; return (_a = activeProfile(save)) === null || _a === void 0 ? void 0 : _a.visitorsMet.includes(v.id); });
     const out = [];
     for (let k = 0; k < Math.min(2, met.length); k++) {
         const v = met[Math.floor(random() * met.length)];
@@ -182,4 +221,4 @@ export function withFairEntry(save, fair, result, title, nowMs = Date.now(), inv
     const entry = { id: newId("fair"), fairId: fair.id, savedAtMs: nowMs, title: title.slice(0, 40) || fair.title, awards: result.awards.map(a => a.label), ...(inventionId ? { inventionId } : {}) };
     return updateProfile(save, p.id, q => ({ ...q, fairs: [...q.fairs, entry].slice(-MAX_FAIR_ENTRIES) }));
 }
-export function fairHistory(save, fairId) { return (activeProfile(save)?.fairs ?? []).filter(e => !fairId || e.fairId === fairId); }
+export function fairHistory(save, fairId) { var _a, _b; return ((_b = (_a = activeProfile(save)) === null || _a === void 0 ? void 0 : _a.fairs) !== null && _b !== void 0 ? _b : []).filter(e => !fairId || e.fairId === fairId); }

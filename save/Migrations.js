@@ -6,6 +6,7 @@ function asArray(v) { return Array.isArray(v) ? v : []; }
 function asStrings(v) { return asArray(v).filter((x) => typeof x === "string"); }
 /** v1 (M7–M9): flat root, profiles were {id,name,avatarStyle?}, progress lived on the root. */
 const v1ToV2 = (v1) => {
+    var _a;
     const openingStep = Number.isInteger(v1.openingStep) ? v1.openingStep : 1;
     const openingComplete = v1.openingComplete === true;
     const motionDone = asStrings(v1.motionCompletedLevelIds);
@@ -17,12 +18,13 @@ const v1ToV2 = (v1) => {
     for (const id of motionDone)
         levels[id] = { completed: true, stars: ["solve"], completions: 1 };
     // v1 kept one shared progress set; it belongs to the active (or only/first) profile.
-    const owner = activeId ?? rawProfiles[0]?.id;
+    const owner = activeId !== null && activeId !== void 0 ? activeId : (_a = rawProfiles[0]) === null || _a === void 0 ? void 0 : _a.id;
     const profiles = rawProfiles.map((raw, index) => {
+        var _a, _b;
         const isOwner = raw.id === owner;
         const style = typeof raw.avatarStyle === "string" && ["ORANGE", "BLUE", "GREEN", "PURPLE"].includes(raw.avatarStyle) ? raw.avatarStyle : "ORANGE";
         const base = {
-            id: String(raw.id ?? `profile-migrated-${index}`), name: sanitizeProfileName(String(raw.name ?? "Inventor")), avatarStyle: style,
+            id: String((_a = raw.id) !== null && _a !== void 0 ? _a : `profile-migrated-${index}`), name: sanitizeProfileName(String((_b = raw.name) !== null && _b !== void 0 ? _b : "Inventor")), avatarStyle: style,
             createdAtMs: now, lastPlayedAtMs: isOwner ? now : now - 1,
             openingStep: isOwner ? openingStep : 1, openingComplete: isOwner ? openingComplete : false,
             levels: isOwner ? levels : {}, discoveries: isOwner ? discoveries : [],
@@ -106,6 +108,7 @@ const v3ToV4 = (v3) => {
  */
 const v4ToV5 = (v4) => {
     const profiles = asArray(v4.profiles).map(raw => {
+        var _a;
         if (!raw || typeof raw !== "object")
             return raw;
         const p = { ...raw };
@@ -126,7 +129,7 @@ const v4ToV5 = (v4) => {
             }
             const content = contentOf(b);
             const at = Number.isFinite(s.savedAtMs) ? s.savedAtMs : 0;
-            const inv = { id: s.id, name: cleanInventionName(String(s.title ?? "")), createdAtMs: at, environment: isSafeId(s.sourceLevelId) ? `lab:${s.sourceLevelId}` : "workshop", versions: [{ n: 1, savedAtMs: at, base: content, checksum: contentChecksum(content), partCount: content.parts.length }] };
+            const inv = { id: s.id, name: cleanInventionName(String((_a = s.title) !== null && _a !== void 0 ? _a : "")), createdAtMs: at, environment: isSafeId(s.sourceLevelId) ? `lab:${s.sourceLevelId}` : "workshop", versions: [{ n: 1, savedAtMs: at, base: content, checksum: contentChecksum(content), partCount: content.parts.length }] };
             if (!validateInvention(inv)) {
                 shelf.push(plain);
                 continue;

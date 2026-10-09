@@ -3,13 +3,14 @@ import { drawPartPicture } from "./PartPictures.js";
 import { fluidBehaviour, fluidPorts, pipeBehaviour, pipeEnds, targetBehaviour } from "../water/FluidSystem.js";
 /**
  * Water Works drawing (M16). Painted where the part-art map (PartPictures.ts) has a picture: water main tap, tank, valve,
- * pump, nozzle, drain, water wheel and pipe joint. Pipes, the pond, the sprinkler and the targets are code-drawn.
+ * pump, nozzle, drain, water wheel, pipe joint, sprinkler and spinning sprayer. Pipes, the pond and the targets are code-drawn.
  * Water drops, jets and puddles are drawing only — the FluidSystem decides where the water really goes. 100 px per metre.
  */
 const INK = "#203040", WATER = "#4dabf7", WATER_DARK = "#1c7ed6";
 export function isWaterPart(def) { return Boolean(fluidBehaviour(def) || pipeBehaviour(def) || targetBehaviour(def)); }
 /** Draws a water part. Returns false for the water wheel and spinning sprayer so the gear shaft is drawn on top. */
 export function drawWaterPart(c, part, def, selected, ctx) {
+    var _a, _b, _c, _d, _e;
     if (pipeBehaviour(def)) {
         drawPipe(c, part, def, selected, ctx);
         return true;
@@ -30,32 +31,34 @@ export function drawWaterPart(c, part, def, selected, ctx) {
     const painted = (opts = {}) => drawPartPicture(c, ctx.art, def.id, opts);
     if (t)
         drawTarget(c, part, def, t.width * 100, t.height * 100, ctx);
-    else if (f?.role === "SOURCE") {
-        if (Number(part.parameters.head ?? 1.5) < 0.6 || !painted())
+    else if ((f === null || f === void 0 ? void 0 : f.role) === "SOURCE") {
+        if (Number((_a = part.parameters.head) !== null && _a !== void 0 ? _a : 1.5) < 0.6 || !painted())
             drawSource(c, part);
     }
-    else if (f?.role === "TANK") {
+    else if ((f === null || f === void 0 ? void 0 : f.role) === "TANK") {
         if (painted())
             drawTankLevel(c, part, ctx);
         else
             drawTank(c, part, ctx);
     }
-    else if (f?.role === "VALVE") {
+    else if ((f === null || f === void 0 ? void 0 : f.role) === "VALVE") {
         c.rotate(part.rotation);
-        const open = ctx.water?.isOpen(part.id) ?? part.parameters.open === true;
+        const open = (_c = (_b = ctx.water) === null || _b === void 0 ? void 0 : _b.isOpen(part.id)) !== null && _c !== void 0 ? _c : part.parameters.open === true;
         if (painted())
             valveLabel(c, open);
         else
             drawValve(c, open);
     }
-    else if (f?.role === "PUMP") {
-        const running = (ctx.water?.flowThrough(part.id) ?? 0) > 0.05;
+    else if ((f === null || f === void 0 ? void 0 : f.role) === "PUMP") {
+        const running = ((_e = (_d = ctx.water) === null || _d === void 0 ? void 0 : _d.flowThrough(part.id)) !== null && _e !== void 0 ? _e : 0) > 0.05;
         if (!painted())
             drawPump(c, running, ctx.time);
         else if (running)
             drawDrips(c, ctx.time);
     }
-    else if (f?.role === "NOZZLE") {
+    // The spinning sprayer: the painted sprinkler stands upright and turning marks go round its head while the gears turn it.
+    else if (def.id === "plumb.rotor-nozzle" && painted({ spinAngle: ctx.gearAngle(part.id), spinning: Boolean(ctx.water) })) { /* painted spinning sprayer */ }
+    else if ((f === null || f === void 0 ? void 0 : f.role) === "NOZZLE") {
         const a = part.rotation + ctx.gearAngle(part.id);
         c.save();
         c.rotate(a);
@@ -64,12 +67,14 @@ export function drawWaterPart(c, part, def, selected, ctx) {
         if (!ok)
             drawNozzle(c, a, def.id === "plumb.rotor-nozzle");
     }
-    else if (f?.role === "SPRINKLER")
-        drawSprinkler(c);
-    else if (f?.role === "DRAIN" && painted()) { /* painted drain */ }
-    else if (f?.role === "WHEEL" && painted({ spinAngle: ctx.gearAngle(part.id) })) { /* painted wheel, turning with the water */ }
-    else if (f?.role === "JUNCTION" && painted()) { /* painted pipe joint */ }
-    else if (f?.role === "DRAIN") {
+    else if ((f === null || f === void 0 ? void 0 : f.role) === "SPRINKLER") {
+        if (!painted())
+            drawSprinkler(c);
+    }
+    else if ((f === null || f === void 0 ? void 0 : f.role) === "DRAIN" && painted()) { /* painted drain */ }
+    else if ((f === null || f === void 0 ? void 0 : f.role) === "WHEEL" && painted({ spinAngle: ctx.gearAngle(part.id) })) { /* painted wheel, turning with the water */ }
+    else if ((f === null || f === void 0 ? void 0 : f.role) === "JUNCTION" && painted()) { /* painted pipe joint */ }
+    else if ((f === null || f === void 0 ? void 0 : f.role) === "DRAIN") {
         c.fillStyle = "#495057";
         c.beginPath();
         c.roundRect(-34, -10, 68, 20, 6);
@@ -84,9 +89,9 @@ export function drawWaterPart(c, part, def, selected, ctx) {
             c.stroke();
         }
     }
-    else if (f?.role === "WHEEL")
+    else if ((f === null || f === void 0 ? void 0 : f.role) === "WHEEL")
         drawWheel(c, ctx.gearAngle(part.id));
-    else if (f?.role === "JUNCTION") {
+    else if ((f === null || f === void 0 ? void 0 : f.role) === "JUNCTION") {
         c.fillStyle = "#74c0fc";
         c.beginPath();
         c.arc(0, 0, 12, 0, Math.PI * 2);
@@ -94,10 +99,11 @@ export function drawWaterPart(c, part, def, selected, ctx) {
         c.stroke();
     }
     c.restore();
-    return !(f?.role === "WHEEL" || def.id === "plumb.rotor-nozzle");
+    return !((f === null || f === void 0 ? void 0 : f.role) === "WHEEL" || def.id === "plumb.rotor-nozzle");
 }
 function drawSource(c, part) {
-    const pond = Number(part.parameters.head ?? 1.5) < 0.6;
+    var _a;
+    const pond = Number((_a = part.parameters.head) !== null && _a !== void 0 ? _a : 1.5) < 0.6;
     if (pond) {
         c.fillStyle = WATER;
         c.beginPath();
@@ -137,8 +143,9 @@ function drawSource(c, part) {
 }
 /** Painted tank: the glass shows the real water level (from the FluidSystem), not the water painted in the picture. */
 function drawTankLevel(c, part, ctx) {
-    const st = ctx.water?.tank(part.id);
-    const frac = st ? st.fraction : Math.min(1, Number(part.parameters.startVolume ?? 0) / 5);
+    var _a, _b;
+    const st = (_a = ctx.water) === null || _a === void 0 ? void 0 : _a.tank(part.id);
+    const frac = st ? st.fraction : Math.min(1, Number((_b = part.parameters.startVolume) !== null && _b !== void 0 ? _b : 0) / 5);
     const gx = -37, gy = -36, gw = 74, gh = 78;
     c.save();
     c.shadowBlur = 0;
@@ -170,8 +177,9 @@ function drawDrips(c, time) { c.fillStyle = "#4dabf7"; for (let k = 0; k < 3; k+
     c.fill();
 } }
 function drawTank(c, part, ctx) {
-    const st = ctx.water?.tank(part.id);
-    const frac = st ? st.fraction : Math.min(1, Number(part.parameters.startVolume ?? 0) / 5);
+    var _a, _b;
+    const st = (_a = ctx.water) === null || _a === void 0 ? void 0 : _a.tank(part.id);
+    const frac = st ? st.fraction : Math.min(1, Number((_b = part.parameters.startVolume) !== null && _b !== void 0 ? _b : 0) / 5);
     c.fillStyle = "#e7f5ffcc";
     c.beginPath();
     c.roundRect(-45, -60, 90, 120, 12);
@@ -315,7 +323,8 @@ function drawWheel(c, angle) {
     c.restore();
 }
 function drawTarget(c, part, def, w, h, ctx) {
-    const got = ctx.water?.waterReceived(part.id) ?? 0;
+    var _a, _b;
+    const got = (_b = (_a = ctx.water) === null || _a === void 0 ? void 0 : _a.waterReceived(part.id)) !== null && _b !== void 0 ? _b : 0;
     if (def.id === "plumb.bed") {
         c.fillStyle = "#8d5524";
         c.beginPath();
@@ -397,9 +406,10 @@ function drawTarget(c, part, def, w, h, ctx) {
     }
 }
 function drawPipe(c, part, def, selected, ctx) {
+    var _a, _b;
     const e = pipeEnds(part, def);
     const narrow = def.id === "plumb.pipe-narrow";
-    const q = ctx.water?.flowThrough(part.id) ?? 0;
+    const q = (_b = (_a = ctx.water) === null || _a === void 0 ? void 0 : _a.flowThrough(part.id)) !== null && _b !== void 0 ? _b : 0;
     const broken = part.parameters.broken === true;
     const x1 = e.x1 * 100, y1 = e.y1 * 100, x2 = e.x2 * 100, y2 = e.y2 * 100;
     const wide = narrow ? 10 : 18;
@@ -485,12 +495,13 @@ export function drawWaterEffects(c, water, time) {
 }
 /** BUILD mode: port dots. Green = something joined, yellow = open (an open pipe end will spill!). */
 export function drawWaterPorts(c, layout) {
+    var _a, _b;
     c.save();
     const counts = new Map();
     for (const p of layout.ports)
-        counts.set(p.node, (counts.get(p.node) ?? 0) + 1);
+        counts.set(p.node, ((_a = counts.get(p.node)) !== null && _a !== void 0 ? _a : 0) + 1);
     for (const p of layout.ports) {
-        const joined = (counts.get(p.node) ?? 0) >= 2;
+        const joined = ((_b = counts.get(p.node)) !== null && _b !== void 0 ? _b : 0) >= 2;
         drawConnectionMark(c, p.x * 100, p.y * 100, joined, 8);
     }
     c.restore();

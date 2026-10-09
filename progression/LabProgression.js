@@ -1,6 +1,6 @@
-function ordinary(lab, n) { return lab.missions.find(m => m.slot === "ORDINARY" && m.ordinaryNumber === n)?.id; }
-function bySlot(lab, slot) { return lab.missions.find(m => m.slot === slot)?.id; }
-function choiceIds(lab) { return lab.missions.filter(m => m.slot === "ORDINARY" && (m.ordinaryNumber ?? 0) >= 4).map(m => m.id); }
+function ordinary(lab, n) { var _a; return (_a = lab.missions.find(m => m.slot === "ORDINARY" && m.ordinaryNumber === n)) === null || _a === void 0 ? void 0 : _a.id; }
+function bySlot(lab, slot) { var _a; return (_a = lab.missions.find(m => m.slot === slot)) === null || _a === void 0 ? void 0 : _a.id; }
+function choiceIds(lab) { return lab.missions.filter(m => { var _a; return m.slot === "ORDINARY" && ((_a = m.ordinaryNumber) !== null && _a !== void 0 ? _a : 0) >= 4; }).map(m => m.id); }
 export function labMissionUnlocked(lab, id, completed) {
     const meta = lab.missions.find(m => m.id === id);
     if (!meta)

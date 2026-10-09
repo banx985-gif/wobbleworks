@@ -15,56 +15,237 @@ import { CreatureSystem } from "../creatures/CreatureSystem.js";
 import { MusicSystem } from "../music/MusicSystem.js";
 import { SandboxSystem } from "../sandbox/SandboxSystem.js";
 export class RuntimeWorld {
-    snapshotSignature;
-    physics = new PhysicsWorld();
-    /** Gear Garage rotation (M12): constrained gear relationships, no tooth collisions. */
-    gears;
-    /** Builder Bay structures (M13): beams, ropes, braces, and the loads that cross them. */
-    structures;
-    /** Power Lab circuits (M14): batteries, wires, switches and loads, solved every tick. */
-    circuits;
-    /** Magnet Factory (M15): bar magnets, electromagnets and magnetic materials. */
-    magnets;
-    /** Water Works (M16): pipes, tanks, valves, pumps, nozzles and water wheels. */
-    water;
-    /** Flight Hangar (M17): gliders and their wings, tails, propellers, balloons and parachutes; fans' wind. */
-    flight;
-    /** Robot Lab (M18): programmed robots on the top-down arena floor. */
-    robots;
-    /** Space Centre (M19): gravity zones, rockets, rovers, toy planets and launchers. */
-    space;
-    /** Chain Reaction Workshop (M21): the chain counter and its toy mechanisms. */
-    chain;
-    creatures;
-    music;
-    /** Sandbox (M23): air drag, floating balloons, moving platforms, fragile things. */
-    sandbox;
-    reedWas = new Map();
-    /** Switches flipped and buttons held by a finger this tick (a child's starting action). */
-    fingerThisTick = [];
-    /** Buttons held down by a finger during this TEST, and switches flipped since the last tick. */
-    fingerPressed = new Set();
-    flips = new Set();
-    unmounted = new Set();
-    carried = new Set();
-    lifted = new Set();
-    flung = new Set();
-    magnetLoaded = new Set();
-    pipeline = new SimulationPipeline();
-    causalEvents = [];
-    signals = new Map();
-    power = new Map();
-    fluids = new Map();
-    actuatorCommands = new Map();
-    tick = 0;
-    elapsedTime = 0;
-    destroyed = false;
-    snapshot;
-    registry;
-    pendingEvents = [];
-    /** Parts by id (the snapshot never changes during a TEST). */
-    partById;
     constructor(snapshot, registry) {
+        var _a;
+        Object.defineProperty(this, "snapshotSignature", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "physics", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new PhysicsWorld()
+        });
+        /** Gear Garage rotation (M12): constrained gear relationships, no tooth collisions. */
+        Object.defineProperty(this, "gears", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        /** Builder Bay structures (M13): beams, ropes, braces, and the loads that cross them. */
+        Object.defineProperty(this, "structures", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        /** Power Lab circuits (M14): batteries, wires, switches and loads, solved every tick. */
+        Object.defineProperty(this, "circuits", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        /** Magnet Factory (M15): bar magnets, electromagnets and magnetic materials. */
+        Object.defineProperty(this, "magnets", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        /** Water Works (M16): pipes, tanks, valves, pumps, nozzles and water wheels. */
+        Object.defineProperty(this, "water", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        /** Flight Hangar (M17): gliders and their wings, tails, propellers, balloons and parachutes; fans' wind. */
+        Object.defineProperty(this, "flight", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        /** Robot Lab (M18): programmed robots on the top-down arena floor. */
+        Object.defineProperty(this, "robots", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        /** Space Centre (M19): gravity zones, rockets, rovers, toy planets and launchers. */
+        Object.defineProperty(this, "space", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        /** Chain Reaction Workshop (M21): the chain counter and its toy mechanisms. */
+        Object.defineProperty(this, "chain", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "creatures", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "music", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        /** Sandbox (M23): air drag, floating balloons, moving platforms, fragile things. */
+        Object.defineProperty(this, "sandbox", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "reedWas", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        /** Switches flipped and buttons held by a finger this tick (a child's starting action). */
+        Object.defineProperty(this, "fingerThisTick", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        /** Buttons held down by a finger during this TEST, and switches flipped since the last tick. */
+        Object.defineProperty(this, "fingerPressed", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Set()
+        });
+        Object.defineProperty(this, "flips", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Set()
+        });
+        Object.defineProperty(this, "unmounted", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Set()
+        });
+        Object.defineProperty(this, "carried", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Set()
+        });
+        Object.defineProperty(this, "lifted", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Set()
+        });
+        Object.defineProperty(this, "flung", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Set()
+        });
+        Object.defineProperty(this, "magnetLoaded", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Set()
+        });
+        Object.defineProperty(this, "pipeline", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new SimulationPipeline()
+        });
+        Object.defineProperty(this, "causalEvents", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "signals", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "power", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "fluids", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "actuatorCommands", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "tick", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "elapsedTime", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "destroyed", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: false
+        });
+        Object.defineProperty(this, "snapshot", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "registry", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "pendingEvents", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        /** Parts by id (the snapshot never changes during a TEST). */
+        Object.defineProperty(this, "partById", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
         if (!verifyBuildSnapshot(snapshot))
             throw new Error("BuildSnapshot signature invalid");
         this.snapshot = deepClone(snapshot);
@@ -77,9 +258,9 @@ export class RuntimeWorld {
         for (const part of this.snapshot.parts) {
             const rope = part.parameters.ropeTo;
             const out = registry.get(part.definitionId).behaviours.find(b => b.kind === "GEAR_OUTPUT");
-            if (typeof rope === "string" && out?.kind === "GEAR_OUTPUT" && out.output === "WINCH") {
+            if (typeof rope === "string" && (out === null || out === void 0 ? void 0 : out.kind) === "GEAR_OUTPUT" && out.output === "WINCH") {
                 try {
-                    extraLoads.set(part.id, this.physics.mass(rope) * 9.81 * (out.drum ?? 0.3));
+                    extraLoads.set(part.id, this.physics.mass(rope) * 9.81 * ((_a = out.drum) !== null && _a !== void 0 ? _a : 0.3));
                 }
                 catch { /* load missing */ }
             }
@@ -100,22 +281,23 @@ export class RuntimeWorld {
         this.installPipeline();
     }
     constructPhysics() {
+        var _a, _b, _c, _d, _e;
         for (const part of this.snapshot.parts) {
             const def = this.registry.get(part.definitionId);
             const rigid = def.behaviours.find(b => b.kind === "RIGID_BODY");
             if (!rigid || rigid.kind !== "RIGID_BODY")
                 continue;
-            const density = Number(part.parameters.density ?? rigid.density);
-            const friction = Number(part.parameters.friction ?? rigid.friction);
-            const restitution = Number(part.parameters.restitution ?? rigid.restitution);
+            const density = Number((_a = part.parameters.density) !== null && _a !== void 0 ? _a : rigid.density);
+            const friction = Number((_b = part.parameters.friction) !== null && _b !== void 0 ? _b : rigid.friction);
+            const restitution = Number((_c = part.parameters.restitution) !== null && _c !== void 0 ? _c : rigid.restitution);
             // Boxes collide as upright rectangles, so a magnet turned a quarter turn gets its width and height swapped instead of an angle.
             const quarter = rigid.shape === "BOX" && def.behaviours.some(b => b.kind === "MAGNET_BAR") && Math.abs(Math.sin(part.rotation)) > 0.99;
             this.physics.addBody({ id: part.id, type: rigid.bodyType, shape: rigid.shape, position: part.position, angle: quarter ? 0 : part.rotation, width: quarter ? rigid.height : rigid.width, height: quarter ? rigid.width : rigid.height, density, friction, restitution, ...(typeof part.parameters.collisionGroup === "string" ? { group: part.parameters.collisionGroup } : {}) });
-            const initialVx = Number(part.parameters.initialVx ?? 0), initialVy = Number(part.parameters.initialVy ?? 0);
+            const initialVx = Number((_d = part.parameters.initialVx) !== null && _d !== void 0 ? _d : 0), initialVy = Number((_e = part.parameters.initialVy) !== null && _e !== void 0 ? _e : 0);
             if ((initialVx !== 0 || initialVy !== 0) && rigid.bodyType === "DYNAMIC")
                 this.physics.setLinearVelocity(part.id, { x: initialVx, y: initialVy });
             const motor = def.behaviours.find(b => b.kind === "MOTOR");
-            if (motor?.kind === "MOTOR")
+            if ((motor === null || motor === void 0 ? void 0 : motor.kind) === "MOTOR")
                 this.physics.addMotor(part.id, motor.targetSpeed, motor.maxTorque);
         }
         for (const c of this.snapshot.connections) {
@@ -165,7 +347,7 @@ export class RuntimeWorld {
                 this.event(e.kind, e.sourceId, e.targetId, e.data);
         } this.collectPhysicsEvents(); });
         this.pipeline.on("DOMAIN_TRANSFER", ({ dt }) => { this.transferDomains(dt); if (this.music.active) {
-            this.music.observe(this.tick, this.physics, id => this.gears.state(id)?.angle, id => this.circuits.load(id)?.on === true, () => this.robots.anyLinkPressed(), this.pendingEvents, id => this.creatures.isClip(id), id => this.water.waterReceived(id));
+            this.music.observe(this.tick, this.physics, id => { var _a; return (_a = this.gears.state(id)) === null || _a === void 0 ? void 0 : _a.angle; }, id => { var _a; return ((_a = this.circuits.load(id)) === null || _a === void 0 ? void 0 : _a.on) === true; }, () => this.robots.anyLinkPressed(), this.pendingEvents, id => this.creatures.isClip(id), id => this.water.waterReceived(id));
             for (const e of this.music.drainEvents())
                 this.event(e.kind, e.sourceId, e.targetId, e.data);
         } });
@@ -182,11 +364,12 @@ export class RuntimeWorld {
         this.elapsedTime += dt;
     }
     resolveNetworks() {
+        var _a;
         for (const c of this.snapshot.connections) {
             if (c.config.kind === "ELECTRICAL") {
                 const source = this.definition(c.fromPartId).behaviours.find(b => b.kind === "BATTERY");
-                if (source?.kind === "BATTERY")
-                    this.power.set(c.config.channel, Math.max(this.power.get(c.config.channel) ?? 0, source.supply));
+                if ((source === null || source === void 0 ? void 0 : source.kind) === "BATTERY")
+                    this.power.set(c.config.channel, Math.max((_a = this.power.get(c.config.channel)) !== null && _a !== void 0 ? _a : 0, source.supply));
             }
         }
     }
@@ -199,6 +382,7 @@ export class RuntimeWorld {
     flipSwitch(id) { this.flips.add(id); }
     /** Is this button held down: by a finger, by Bolt's scheduled press, or by something resting on it? */
     buttonPressed(id) {
+        var _a;
         if (this.fingerPressed.has(id))
             return true;
         if (this.robots.linkPressed(id))
@@ -206,8 +390,8 @@ export class RuntimeWorld {
         if (this.chain.buttonHeld(id))
             return true;
         // A magnet switch closes when the magnetic field where it sits is strong enough (magnetism → electricity/logic).
-        const sensor = this.safeDefinition(id)?.behaviours.find(b => b.kind === "MAGNET_SENSOR");
-        if (sensor?.kind === "MAGNET_SENSOR") {
+        const sensor = (_a = this.safeDefinition(id)) === null || _a === void 0 ? void 0 : _a.behaviours.find(b => b.kind === "MAGNET_SENSOR");
+        if ((sensor === null || sensor === void 0 ? void 0 : sensor.kind) === "MAGNET_SENSOR") {
             const p = this.partById.get(id);
             if (!p)
                 return false;
@@ -220,20 +404,20 @@ export class RuntimeWorld {
         // A sensor contact closed by a Robot Lab box resting in its slot ("boxId:slotId").
         if (typeof part.parameters.closedWhenBoxAt === "string") {
             const [box, slot] = part.parameters.closedWhenBoxAt.split(":");
-            return this.robots.boxAt(box ?? "", slot ?? "");
+            return this.robots.boxAt(box !== null && box !== void 0 ? box : "", slot !== null && slot !== void 0 ? slot : "");
         }
         const from = Number(part.parameters.pressFrom), to = Number(part.parameters.pressTo);
         if (Number.isFinite(from) && this.elapsedTime >= from && (!Number.isFinite(to) || this.elapsedTime < to))
             return true;
         const rigid = this.definition(id).behaviours.find(b => b.kind === "RIGID_BODY");
-        if (rigid?.kind !== "RIGID_BODY")
+        if ((rigid === null || rigid === void 0 ? void 0 : rigid.kind) !== "RIGID_BODY")
             return false;
         const top = part.position.y - rigid.height / 2;
         return this.snapshot.parts.some(o => {
             if (o.id === id)
                 return false;
             const r = this.definition(o.id).behaviours.find(b => b.kind === "RIGID_BODY");
-            if (r?.kind !== "RIGID_BODY" || r.bodyType !== "DYNAMIC")
+            if ((r === null || r === void 0 ? void 0 : r.kind) !== "RIGID_BODY" || r.bodyType !== "DYNAMIC")
                 return false;
             const st = this.safeState(o.id);
             if (!st)
@@ -279,13 +463,14 @@ export class RuntimeWorld {
         if (!this.space.hasSpace())
             return;
         this.space.step(dt, this.physics, spec => {
+            var _a, _b;
             const [kind, source, target] = spec.split(":");
             if (kind === "POWERED")
-                return Math.abs(this.circuits.current(source ?? "")) > 0.3;
+                return Math.abs(this.circuits.current(source !== null && source !== void 0 ? source : "")) > 0.3;
             if (kind === "TURNED")
-                return Math.abs(this.gears.state(source ?? "")?.angle ?? 0) >= Number(target ?? 1.5);
+                return Math.abs((_b = (_a = this.gears.state(source !== null && source !== void 0 ? source : "")) === null || _a === void 0 ? void 0 : _a.angle) !== null && _b !== void 0 ? _b : 0) >= Number(target !== null && target !== void 0 ? target : 1.5);
             if (kind === "BOX_AT")
-                return this.robots.boxAt(source ?? "", target ?? "");
+                return this.robots.boxAt(source !== null && source !== void 0 ? source : "", target !== null && target !== void 0 ? target : "");
             return this.causalEvents.some(e => e.kind === kind && e.sourceId === source && (!target || e.targetId === target));
         }, (x, y) => this.flight.windAt(x, y));
         for (const e of this.space.drainEvents())
@@ -312,10 +497,11 @@ export class RuntimeWorld {
     }
     /** A robot listening for a signal: the part it listens to has power, is pressed, or has been set off by the chain. */
     robotSignal(robotId) {
-        const listen = this.partById.get(robotId)?.parameters.listen;
+        var _a, _b, _c;
+        const listen = (_a = this.partById.get(robotId)) === null || _a === void 0 ? void 0 : _a.parameters.listen;
         if (typeof listen !== "string")
             return false;
-        return (this.circuits.load(listen)?.level ?? 0) > 0.3 || this.buttonPressed(listen) || this.chain.inChain(listen);
+        return ((_c = (_b = this.circuits.load(listen)) === null || _b === void 0 ? void 0 : _b.level) !== null && _c !== void 0 ? _c : 0) > 0.3 || this.buttonPressed(listen) || this.chain.inChain(listen);
     }
     /** Chain Reaction Workshop: after this tick's events are recorded, grow the chain from what every system measured. */
     observeChain() {
@@ -325,10 +511,10 @@ export class RuntimeWorld {
         this.chain.observe({
             tick: this.tick, physics: this.physics, causalEvents: this.causalEvents,
             isDynamicBody: id => this.isDynamicBody(id), buttonPressed: id => this.buttonPressed(id),
-            loadLevel: id => this.circuits.load(id)?.level ?? 0,
+            loadLevel: id => { var _a, _b; return (_b = (_a = this.circuits.load(id)) === null || _a === void 0 ? void 0 : _a.level) !== null && _b !== void 0 ? _b : 0; },
             gearSpeed: id => this.gears.nodes.some(n => n.id === id) ? this.gears.omega(id) : Number.NaN,
             gearNeighbours: id => [...axleMates(id), ...this.gears.analysis.links.filter(l => l.a === id || l.b === id).map(l => l.a === id ? l.b : l.a)],
-            jetFlow: id => this.water.jetStates().find(j => j.id === id)?.flow ?? Number.NaN,
+            jetFlow: id => { var _a, _b; return (_b = (_a = this.water.jetStates().find(j => j.id === id)) === null || _a === void 0 ? void 0 : _a.flow) !== null && _b !== void 0 ? _b : Number.NaN; },
             fingerControls: () => this.fingerThisTick,
             circuitMates: id => this.circuitMates(id)
         });
@@ -345,13 +531,14 @@ export class RuntimeWorld {
     }
     /** Circuits first in the tick (network topology): then electric motors drive their gear trains at the current they get. */
     stepCircuits(dt) {
+        var _a, _b;
         if (!this.circuits.layout.elements.length && !this.water.layout.ports.length)
             return;
         for (const p of this.snapshot.parts) {
-            if (!this.safeDefinition(p.id)?.behaviours.some(b => b.kind === "MAGNET_SENSOR"))
+            if (!((_a = this.safeDefinition(p.id)) === null || _a === void 0 ? void 0 : _a.behaviours.some(b => b.kind === "MAGNET_SENSOR")))
                 continue;
             const on = this.buttonPressed(p.id);
-            if (on !== (this.reedWas.get(p.id) ?? false)) {
+            if (on !== ((_b = this.reedWas.get(p.id)) !== null && _b !== void 0 ? _b : false)) {
                 this.reedWas.set(p.id, on);
                 this.event(on ? "MAGNET_SWITCH_CLOSED" : "MAGNET_SWITCH_OPENED", p.id);
             }
@@ -359,7 +546,7 @@ export class RuntimeWorld {
         this.circuits.step(dt, id => this.buttonPressed(id), this.flips, id => this.gears.omega(id));
         // Water after electricity (pumps need current); valves tapped during the TEST flip here too.
         if (this.water.layout.ports.length) {
-            this.water.step(dt, id => Math.abs(this.circuits.motorDrive(id)), id => this.gears.state(id)?.angle ?? 0, this.flips);
+            this.water.step(dt, id => Math.abs(this.circuits.motorDrive(id)), id => { var _a, _b; return (_b = (_a = this.gears.state(id)) === null || _a === void 0 ? void 0 : _a.angle) !== null && _b !== void 0 ? _b : 0; }, this.flips);
             for (const n of this.gears.nodes)
                 if (this.gears.isHydraulic(n.id))
                     this.gears.setDriveScale(n.id, this.water.wheelDrive(n.id));
@@ -384,6 +571,7 @@ export class RuntimeWorld {
         }
     }
     evaluateLogic() {
+        var _a, _b;
         for (const part of this.snapshot.parts)
             for (const behaviour of this.definition(part.id).behaviours) {
                 if (behaviour.kind !== "LOGIC_CONTROLLER")
@@ -392,9 +580,9 @@ export class RuntimeWorld {
                     if (ins.op === "SET")
                         this.signals.set(ins.channel, ins.value);
                     else if (ins.op === "COPY")
-                        this.signals.set(ins.to, this.signals.get(ins.from) ?? false);
+                        this.signals.set(ins.to, (_a = this.signals.get(ins.from)) !== null && _a !== void 0 ? _a : false);
                     else if (ins.op === "IF_GT")
-                        this.signals.set(ins.thenChannel, Number(this.signals.get(ins.channel) ?? 0) > ins.threshold);
+                        this.signals.set(ins.thenChannel, Number((_b = this.signals.get(ins.channel)) !== null && _b !== void 0 ? _b : 0) > ins.threshold);
                 }
             }
     }
@@ -409,9 +597,10 @@ export class RuntimeWorld {
         }
     }
     applyCouplings() {
+        var _a, _b, _c, _d, _e;
         for (const part of this.snapshot.parts) {
-            const constantForceX = Number(part.parameters.constantForceX ?? 0);
-            const constantForceY = Number(part.parameters.constantForceY ?? 0);
+            const constantForceX = Number((_a = part.parameters.constantForceX) !== null && _a !== void 0 ? _a : 0);
+            const constantForceY = Number((_b = part.parameters.constantForceY) !== null && _b !== void 0 ? _b : 0);
             if (constantForceX !== 0 || constantForceY !== 0) {
                 try {
                     this.physics.applyForce(part.id, { x: constantForceX, y: constantForceY });
@@ -419,12 +608,12 @@ export class RuntimeWorld {
                 }
                 catch { /* non-physics part */ }
             }
-            const command = this.actuatorCommands.get(part.id) ?? 0;
+            const command = (_c = this.actuatorCommands.get(part.id)) !== null && _c !== void 0 ? _c : 0;
             if (command <= 0)
                 continue;
             const def = this.definition(part.id);
             const fan = def.behaviours.find(b => b.kind === "FAN");
-            if (fan?.kind === "FAN")
+            if ((fan === null || fan === void 0 ? void 0 : fan.kind) === "FAN")
                 for (const other of this.snapshot.parts)
                     if (other.id !== part.id) {
                         const a = this.safeState(part.id), b = this.safeState(other.id);
@@ -435,7 +624,7 @@ export class RuntimeWorld {
                             this.physics.applyForce(other.id, { x: dx / d * fan.force * (1 - d / fan.range), y: dy / d * fan.force * (1 - d / fan.range) });
                     }
             const actuator = def.behaviours.find(b => b.kind === "ACTUATOR");
-            if (actuator?.kind === "ACTUATOR") {
+            if ((actuator === null || actuator === void 0 ? void 0 : actuator.kind) === "ACTUATOR") {
                 try {
                     this.physics.applyForce(part.id, { x: actuator.strength, y: 0 });
                 }
@@ -454,8 +643,8 @@ export class RuntimeWorld {
                 const bMag = bDef.behaviours.find(b => b.kind === "MAGNET" || b.kind === "ELECTROMAGNET");
                 if (!aMag || !bMag)
                     continue;
-                const aStrength = aMag.kind === "MAGNET" ? aMag.strength : ((this.actuatorCommands.get(aPart.id) ?? 0) > 0 ? aMag.strength : 0);
-                const bStrength = bMag.kind === "MAGNET" ? bMag.strength : ((this.actuatorCommands.get(bPart.id) ?? 0) > 0 ? bMag.strength : 0);
+                const aStrength = aMag.kind === "MAGNET" ? aMag.strength : (((_d = this.actuatorCommands.get(aPart.id)) !== null && _d !== void 0 ? _d : 0) > 0 ? aMag.strength : 0);
+                const bStrength = bMag.kind === "MAGNET" ? bMag.strength : (((_e = this.actuatorCommands.get(bPart.id)) !== null && _e !== void 0 ? _e : 0) > 0 ? bMag.strength : 0);
                 if (aStrength <= 0 || bStrength <= 0)
                     continue;
                 const dx = bState.x - aState.x, dy = bState.y - aState.y, d = Math.max(0.35, Math.hypot(dx, dy));
@@ -474,7 +663,7 @@ export class RuntimeWorld {
             }
         for (const springPart of this.snapshot.parts) {
             const spring = this.definition(springPart.id).behaviours.find(b => b.kind === "SPRING_PAD");
-            if (spring?.kind !== "SPRING_PAD")
+            if ((spring === null || spring === void 0 ? void 0 : spring.kind) !== "SPRING_PAD")
                 continue;
             const springState = this.safeState(springPart.id);
             if (!springState)
@@ -483,7 +672,7 @@ export class RuntimeWorld {
                 if (other.id === springPart.id)
                     continue;
                 const rigid = this.definition(other.id).behaviours.find(b => b.kind === "RIGID_BODY");
-                if (rigid?.kind !== "RIGID_BODY" || rigid.bodyType !== "DYNAMIC")
+                if ((rigid === null || rigid === void 0 ? void 0 : rigid.kind) !== "RIGID_BODY" || rigid.bodyType !== "DYNAMIC")
                     continue;
                 const state = this.safeState(other.id);
                 if (!state)
@@ -509,6 +698,7 @@ export class RuntimeWorld {
     }
     /** Gear outputs reaching back into Motion: winches lift real bodies, conveyors carry them. */
     applyGearCouplings() {
+        var _a;
         for (const e of this.gears.drainEvents())
             this.event(e.kind, e.sourceId, e.targetId, e.data);
         for (const n of this.gears.nodes) {
@@ -522,7 +712,7 @@ export class RuntimeWorld {
                 if (!s || !start)
                     continue;
                 const rigid = this.definition(loadId).behaviours.find(b => b.kind === "RIGID_BODY");
-                const half = rigid?.kind === "RIGID_BODY" ? rigid.height / 2 : 0.4;
+                const half = (rigid === null || rigid === void 0 ? void 0 : rigid.kind) === "RIGID_BODY" ? rigid.height / 2 : 0.4;
                 const top = n.y + n.output.drum + half + 0.1;
                 const mass = this.physics.mass(loadId);
                 const liftedBy = start.position.y - s.y;
@@ -560,7 +750,7 @@ export class RuntimeWorld {
                 if (!belt)
                     continue;
                 const rigid = this.definition(beltId).behaviours.find(b => b.kind === "RIGID_BODY");
-                if (rigid?.kind !== "RIGID_BODY")
+                if ((rigid === null || rigid === void 0 ? void 0 : rigid.kind) !== "RIGID_BODY")
                     continue;
                 const surfaceSpeed = w * n.output.drum;
                 const topY = belt.position.y - rigid.height / 2;
@@ -571,7 +761,7 @@ export class RuntimeWorld {
                     if (!s)
                         continue;
                     const r = this.definition(part.id).behaviours.find(b => b.kind === "RIGID_BODY");
-                    if (r?.kind !== "RIGID_BODY" || r.bodyType !== "DYNAMIC")
+                    if ((r === null || r === void 0 ? void 0 : r.kind) !== "RIGID_BODY" || r.bodyType !== "DYNAMIC")
                         continue;
                     const bottom = s.y + r.height / 2;
                     if (Math.abs(s.x - belt.position.x) <= rigid.width / 2 && bottom >= topY - 0.12 && bottom <= topY + 0.15) {
@@ -583,7 +773,7 @@ export class RuntimeWorld {
                     }
                 }
             }
-            if (n.output.kind === "CAROUSEL" && Math.abs(w) > Number(n.parameters.flingAbove ?? 2.6) && !this.flung.has(n.id)) {
+            if (n.output.kind === "CAROUSEL" && Math.abs(w) > Number((_a = n.parameters.flingAbove) !== null && _a !== void 0 ? _a : 2.6) && !this.flung.has(n.id)) {
                 this.flung.add(n.id);
                 this.event("SPROCKET_FLUNG", n.id, undefined, { speed: Math.round(Math.abs(w) * 100) / 100 });
             }
@@ -591,9 +781,10 @@ export class RuntimeWorld {
     }
     /** Structures carry gravity loads, travellers and anything hanging from them (a crane winch's rope). */
     stepStructures(dt) {
+        var _a;
         const hanging = [];
         for (const n of this.gears.nodes) {
-            if (n.output?.kind !== "WINCH" || n.parameters.mountOnStructure !== true || typeof n.parameters.ropeTo !== "string")
+            if (((_a = n.output) === null || _a === void 0 ? void 0 : _a.kind) !== "WINCH" || n.parameters.mountOnStructure !== true || typeof n.parameters.ropeTo !== "string")
                 continue;
             const start = this.partById.get(n.parameters.ropeTo);
             const s = this.safeState(String(n.parameters.ropeTo));
@@ -627,25 +818,26 @@ export class RuntimeWorld {
             if (contact.tangentSpeedBefore - contact.tangentSpeedAfter > 0.005 && contact.friction >= 0.5)
                 this.event("FRICTION_SLOWED", contact.a, contact.b, { friction: contact.friction });
             const aDef = this.safeDefinition(contact.a), bDef = this.safeDefinition(contact.b);
-            if (aDef?.id === "motion.ramp" || bDef?.id === "motion.ramp")
+            if ((aDef === null || aDef === void 0 ? void 0 : aDef.id) === "motion.ramp" || (bDef === null || bDef === void 0 ? void 0 : bDef.id) === "motion.ramp")
                 this.event("RAMP_CONTACT", contact.a, contact.b);
-            if (aDef?.id === "motion.bounce-pad" || bDef?.id === "motion.bounce-pad")
+            if ((aDef === null || aDef === void 0 ? void 0 : aDef.id) === "motion.bounce-pad" || (bDef === null || bDef === void 0 ? void 0 : bDef.id) === "motion.bounce-pad")
                 this.event("BOUNCE_PAD_CONTACT", contact.a, contact.b);
         }
     }
     transferDomains(dt) {
+        var _a, _b, _c, _d;
         for (const part of this.snapshot.parts) {
             const def = this.definition(part.id);
             const pump = def.behaviours.find(b => b.kind === "PUMP");
-            if (pump?.kind === "PUMP" && (this.actuatorCommands.get(part.id) ?? 0) > 0) {
+            if ((pump === null || pump === void 0 ? void 0 : pump.kind) === "PUMP" && ((_a = this.actuatorCommands.get(part.id)) !== null && _a !== void 0 ? _a : 0) > 0) {
                 const moved = pump.maxFlow * dt;
-                this.fluids.set("water", (this.fluids.get("water") ?? 0) + moved);
+                this.fluids.set("water", ((_b = this.fluids.get("water")) !== null && _b !== void 0 ? _b : 0) + moved);
                 this.event("PUMP_MOVED_WATER", part.id, undefined, { amount: moved });
             }
             const generator = def.behaviours.find(b => b.kind === "GENERATOR");
-            if (generator?.kind === "GENERATOR") {
+            if ((generator === null || generator === void 0 ? void 0 : generator.kind) === "GENERATOR") {
                 const state = this.safeState(part.id);
-                const generated = Math.abs(state?.angularVelocity ?? 0) * generator.efficiency;
+                const generated = Math.abs((_c = state === null || state === void 0 ? void 0 : state.angularVelocity) !== null && _c !== void 0 ? _c : 0) * generator.efficiency;
                 if (generated > 0.001) {
                     for (const c of this.snapshot.connections)
                         if (c.fromPartId === part.id && c.config.kind === "ELECTRICAL")
@@ -654,8 +846,8 @@ export class RuntimeWorld {
                 }
             }
             const wheel = def.behaviours.find(b => b.kind === "WATER_WHEEL");
-            if (wheel?.kind === "WATER_WHEEL") {
-                const flow = this.fluids.get("water") ?? 0;
+            if ((wheel === null || wheel === void 0 ? void 0 : wheel.kind) === "WATER_WHEEL") {
+                const flow = (_d = this.fluids.get("water")) !== null && _d !== void 0 ? _d : 0;
                 if (flow > 0) {
                     try {
                         this.physics.setAngularVelocity(part.id, flow * wheel.efficiency);

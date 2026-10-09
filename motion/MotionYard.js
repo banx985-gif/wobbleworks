@@ -19,7 +19,7 @@ export const MOTION_MISSIONS = [
     { id: "motion.giant-marble-delivery", title: "The Giant Marble Delivery Machine", slot: "MEGA", objective: "Use multiple mechanisms to carry the marble across the yard.", requiredForProgression: true },
     { id: "motion.runaway-test-cart", title: "Runaway Test Cart", slot: "EMERGENCY", objective: "Stop the runaway cart before the hazard without wall-blocking it.", requiredForProgression: true }
 ];
-const CHOICE_IDS = MOTION_MISSIONS.filter(m => m.slot === "ORDINARY" && (m.ordinaryNumber ?? 0) >= 4).map(m => m.id);
+const CHOICE_IDS = MOTION_MISSIONS.filter(m => { var _a; return m.slot === "ORDINARY" && ((_a = m.ordinaryNumber) !== null && _a !== void 0 ? _a : 0) >= 4; }).map(m => m.id);
 export function createMotionProgress(completed = []) {
     const known = new Set(MOTION_MISSIONS.map(m => m.id));
     return { completed: [...new Set(completed.filter(id => known.has(id)))] };
@@ -72,7 +72,7 @@ function hasDefinition(build, id) { return build.allParts().some(part => part.de
 export function collectMotionObservations(_level, build, runtime) {
     const observations = new Set();
     const states = runtime.physics.states();
-    if (states.some(s => s.y > (build.getPart(s.id)?.position.y ?? s.y) + 0.2))
+    if (states.some(s => { var _a, _b; return s.y > ((_b = (_a = build.getPart(s.id)) === null || _a === void 0 ? void 0 : _a.position.y) !== null && _b !== void 0 ? _b : s.y) + 0.2; }))
         observations.add("gravity pulled an object downward");
     if (hasEvent(runtime, "RAMP_CONTACT"))
         observations.add("a slope changed motion");
@@ -84,7 +84,7 @@ export function collectMotionObservations(_level, build, runtime) {
         observations.add("a spring applied a push");
     if (hasEvent(runtime, "EXTERNAL_FORCE_APPLIED"))
         observations.add("the same push can create different acceleration when mass differs");
-    if (states.some(state => { const start = build.getPart(state.id)?.position; return start ? Math.hypot(state.x - start.x, state.y - start.y) > 1.5 && Math.hypot(state.vx, state.vy) > .15 : false; }))
+    if (states.some(state => { var _a; const start = (_a = build.getPart(state.id)) === null || _a === void 0 ? void 0 : _a.position; return start ? Math.hypot(state.x - start.x, state.y - start.y) > 1.5 && Math.hypot(state.vx, state.vy) > .15 : false; }))
         observations.add("moving objects keep moving until forces and contacts change them");
     return [...observations];
 }

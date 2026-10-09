@@ -18,7 +18,7 @@ export const INSTALLED_REGION_CONTENT = new Set(["workshop-hub", "motion-yard", 
 export const HIDDEN_LAB_KEY_PIECES = ["key.prototype-1", "key.prototype-2", "key.prototype-3"];
 /** The finale's badge: owning it means the Great WobbleWorks Machine ran and the whole campus is restored (M32). */
 export const CAMPAIGN_COMPLETE_BADGE = "badge.campus-restored";
-export function campaignComplete(save) { return activeProfile(save)?.rewards.includes(CAMPAIGN_COMPLETE_BADGE) ?? false; }
+export function campaignComplete(save) { var _a, _b; return (_b = (_a = activeProfile(save)) === null || _a === void 0 ? void 0 : _a.rewards.includes(CAMPAIGN_COMPLETE_BADGE)) !== null && _b !== void 0 ? _b : false; }
 export function ownsFullGame(entitlement) { return entitlement === "OWNED" || entitlement === "OFFLINE_GRACE"; }
 export function regionById(id) { return CAMPUS_REGIONS.find(r => r.id === id); }
 export function clearedLabIds(save) {
@@ -26,6 +26,7 @@ export function clearedLabIds(save) {
     return MAIN_LABS.filter(lab => labCleared(lab, done)).map(lab => lab.id);
 }
 function progressAllows(save, region) {
+    var _a, _b;
     if (region.kind === "HUB")
         return true;
     if (!currentOpening(save).complete)
@@ -38,7 +39,7 @@ function progressAllows(save, region) {
     if (region.kind === "FINALE")
         return MAIN_LABS.every(l => cleared.has(l.id));
     // SECRET: found through exploration — all prototype key pieces collected.
-    const rewards = new Set(activeProfile(save)?.rewards ?? []);
+    const rewards = new Set((_b = (_a = activeProfile(save)) === null || _a === void 0 ? void 0 : _a.rewards) !== null && _b !== void 0 ? _b : []);
     return HIDDEN_LAB_KEY_PIECES.every(k => rewards.has(k));
 }
 export function regionStatus(save, regionId, installed = INSTALLED_REGION_CONTENT) {
@@ -57,8 +58,9 @@ export function regionStatus(save, regionId, installed = INSTALLED_REGION_CONTEN
 }
 /** What tapping a region on the campus map does. Paid content routes to the grown-up gate, never a shop. */
 export function routeToRegion(save, regionId, installed = INSTALLED_REGION_CONTENT) {
+    var _a, _b;
     const status = regionStatus(save, regionId, installed);
-    const title = regionById(regionId)?.title ?? "That place";
+    const title = (_b = (_a = regionById(regionId)) === null || _a === void 0 ? void 0 : _a.title) !== null && _b !== void 0 ? _b : "That place";
     if (status === "OPEN" || status === "CLEARED")
         return { kind: "ENTER", regionId };
     if (status === "LOCKED_OWNERSHIP")
@@ -66,9 +68,9 @@ export function routeToRegion(save, regionId, installed = INSTALLED_REGION_CONTE
     if (status === "UNDER_REPAIR")
         return { kind: "NOT_YET", regionId, message: `Bolt is still fixing ${title}. It will open in a later update.` };
     const region = regionById(regionId);
-    if (region?.kind === "SECRET")
+    if ((region === null || region === void 0 ? void 0 : region.kind) === "SECRET")
         return { kind: "NOT_YET", regionId, message: "Something strange is behind this door… maybe some key pieces would help." };
-    if (region?.kind === "FINALE")
+    if ((region === null || region === void 0 ? void 0 : region.kind) === "FINALE")
         return { kind: "NOT_YET", regionId, message: "Repair every lab on campus to open the Grand Invention Hall." };
     const index = MAIN_LABS.findIndex(l => l.id === regionId);
     const before = index > 0 ? MAIN_LABS[index - 1].title : "the workshop";

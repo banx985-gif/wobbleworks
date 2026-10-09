@@ -41,7 +41,7 @@ export function withSavedExperiment(save, templateId, trials, prediction, nowMs 
     const record = { id: newId("exp"), templateId, ...(prediction ? { prediction } : {}), trials: trials.slice(-MAX_TRIALS).map(t => ({ a: t.a, b: t.b, valueA: round(t.valueA), valueB: round(t.valueB), verdict: t.verdict })), savedAtMs: nowMs };
     return { save: updateProfile(save, p.id, q => ({ ...q, experiments: [...q.experiments, record].slice(-MAX_EXPERIMENTS) })), record };
 }
-export function savedExperiments(save, templateId) { return (activeProfile(save)?.experiments ?? []).filter(e => !templateId || e.templateId === templateId); }
+export function savedExperiments(save, templateId) { var _a, _b; return ((_b = (_a = activeProfile(save)) === null || _a === void 0 ? void 0 : _a.experiments) !== null && _b !== void 0 ? _b : []).filter(e => !templateId || e.templateId === templateId); }
 function round(v) { return Math.round(v * 1000) / 1000; }
 export const EXPERIMENT_PARENT_MAPPINGS = Object.freeze([
     { concept: "Fair tests", evidence: "ran a fair test, changing only one thing between A and B", discoveryId: "experiment.fair-test" },

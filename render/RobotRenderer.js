@@ -10,6 +10,7 @@ const INK = "#203040";
 const COLOURS = { RED: "#fa5252", GREEN: "#40c057", BLUE: "#4dabf7", YELLOW: "#fcc419" };
 export function isRobotPart(def) { return isRobot(def) || arenaThing(def) !== undefined; }
 export function drawRobotPart(c, part, def, selected, ctx) {
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j;
     const thing = arenaThing(def);
     const sys = ctx.robots;
     let x = Math.round(part.position.x) * 100, y = Math.round(part.position.y) * 100;
@@ -22,15 +23,15 @@ export function drawRobotPart(c, part, def, selected, ctx) {
         c.shadowBlur = 20;
     }
     if (isRobot(def)) {
-        const v = sys?.robot(part.id);
+        const v = sys === null || sys === void 0 ? void 0 : sys.robot(part.id);
         if (v) {
             x = v.x * 100;
             y = v.y * 100;
         }
-        const angle = v?.angle ?? Math.round(Number(part.parameters.heading ?? 0)) * Math.PI / 2;
+        const angle = (_a = v === null || v === void 0 ? void 0 : v.angle) !== null && _a !== void 0 ? _a : Math.round(Number((_b = part.parameters.heading) !== null && _b !== void 0 ? _b : 0)) * Math.PI / 2;
         c.translate(x, y);
         c.rotate(angle);
-        c.fillStyle = v?.crashed ? "#ff8787" : "#63e6be";
+        c.fillStyle = (v === null || v === void 0 ? void 0 : v.crashed) ? "#ff8787" : "#63e6be";
         c.beginPath();
         c.roundRect(-38, -34, 76, 68, 16);
         c.fill();
@@ -60,25 +61,25 @@ export function drawRobotPart(c, part, def, selected, ctx) {
         c.stroke();
         c.rotate(-angle);
         c.shadowBlur = 0;
-        if (v?.holding) {
+        if (v === null || v === void 0 ? void 0 : v.holding) {
             c.fillStyle = "#d9a066";
             c.beginPath();
             c.roundRect(-16, -16, 32, 32, 4);
             c.fill();
             c.stroke();
         }
-        if (v?.crashed) {
+        if (v === null || v === void 0 ? void 0 : v.crashed) {
             c.fillStyle = "#e03131";
             c.font = "900 18px system-ui";
             c.textAlign = "center";
             c.fillText("BONK!", 0, -52);
         }
-        else if (v?.current) {
+        else if (v === null || v === void 0 ? void 0 : v.current) {
             const b = blockAt(parseProgram(part.parameters.program), v.current);
             if (b)
                 speech(c, describeBlock(b));
         }
-        else if (v?.done)
+        else if (v === null || v === void 0 ? void 0 : v.done)
             speech(c, "Done!");
         else if (!sys) {
             const n = parseProgram(part.parameters.program).length;
@@ -112,7 +113,7 @@ export function drawRobotPart(c, part, def, selected, ctx) {
             c.stroke();
             break;
         case "TILE":
-            c.fillStyle = COLOURS[String(part.parameters.colour)] ?? "#dee2e6";
+            c.fillStyle = (_c = COLOURS[String(part.parameters.colour)]) !== null && _c !== void 0 ? _c : "#dee2e6";
             c.globalAlpha = 0.8;
             c.beginPath();
             c.roundRect(-46, -46, 92, 92, 10);
@@ -150,7 +151,7 @@ export function drawRobotPart(c, part, def, selected, ctx) {
             c.fillText("DROP", 0, 5);
             break;
         case "BUTTON": {
-            const on = sys?.isPressed(part.id) ?? false;
+            const on = (_d = sys === null || sys === void 0 ? void 0 : sys.isPressed(part.id)) !== null && _d !== void 0 ? _d : false;
             if (drawPartPicture(c, ctx.art, def.id)) {
                 if (on) {
                     c.shadowBlur = 0;
@@ -175,7 +176,7 @@ export function drawRobotPart(c, part, def, selected, ctx) {
             break;
         }
         case "DOOR": {
-            const open = sys?.isOpen(part.id) ?? part.parameters.open === true;
+            const open = (_e = sys === null || sys === void 0 ? void 0 : sys.isOpen(part.id)) !== null && _e !== void 0 ? _e : part.parameters.open === true;
             c.fillStyle = open ? "#d3f9d8" : "#e8590c";
             c.beginPath();
             c.roundRect(-46, -46, 92, 92, 6);
@@ -200,7 +201,7 @@ export function drawRobotPart(c, part, def, selected, ctx) {
             break;
         }
         case "SWEEPER": {
-            const p = sys?.sweeperPosition(part.id);
+            const p = sys === null || sys === void 0 ? void 0 : sys.sweeperPosition(part.id);
             if (p)
                 c.translate((p.x - Math.round(part.position.x)) * 100, (p.y - Math.round(part.position.y)) * 100);
             c.fillStyle = "#ffa94d";
@@ -223,8 +224,8 @@ export function drawRobotPart(c, part, def, selected, ctx) {
             break;
         }
         case "CONVEYOR": {
-            const on = sys?.isOn(part.id) ?? part.parameters.on === true;
-            c.rotate(Math.round(Number(part.parameters.heading ?? 0)) * Math.PI / 2);
+            const on = (_f = sys === null || sys === void 0 ? void 0 : sys.isOn(part.id)) !== null && _f !== void 0 ? _f : part.parameters.on === true;
+            c.rotate(Math.round(Number((_g = part.parameters.heading) !== null && _g !== void 0 ? _g : 0)) * Math.PI / 2);
             c.fillStyle = "#495057";
             c.beginPath();
             c.roundRect(-48, -36, 96, 72, 8);
@@ -243,7 +244,7 @@ export function drawRobotPart(c, part, def, selected, ctx) {
             break;
         }
         case "MACHINE": {
-            const on = sys?.isOn(part.id) ?? false;
+            const on = (_h = sys === null || sys === void 0 ? void 0 : sys.isOn(part.id)) !== null && _h !== void 0 ? _h : false;
             c.fillStyle = "#748ffc";
             c.beginPath();
             c.roundRect(-46, -46, 92, 92, 12);
@@ -261,7 +262,24 @@ export function drawRobotPart(c, part, def, selected, ctx) {
             break;
         }
         case "LAMP": {
-            const on = sys?.isOn(part.id) ?? false;
+            const on = (_j = sys === null || sys === void 0 ? void 0 : sys.isOn(part.id)) !== null && _j !== void 0 ? _j : false;
+            if (on) {
+                c.fillStyle = "#fff3bf";
+                c.beginPath();
+                c.arc(0, 0, 46, 0, Math.PI * 2);
+                c.fill();
+            }
+            c.save();
+            if (on) {
+                c.shadowColor = "#ffd43b";
+                c.shadowBlur = 30;
+            }
+            else
+                c.globalAlpha = 0.85;
+            const lit = drawPartPicture(c, ctx.art, def.id);
+            c.restore();
+            if (lit)
+                break;
             if (on) {
                 c.fillStyle = "#fff3bf";
                 c.beginPath();
@@ -289,7 +307,7 @@ export function drawRobotPart(c, part, def, selected, ctx) {
             break;
         }
         case "BOX": {
-            const b = sys?.box(part.id);
+            const b = sys === null || sys === void 0 ? void 0 : sys.box(part.id);
             if (b) {
                 if (b.carried) {
                     c.restore();
@@ -297,14 +315,14 @@ export function drawRobotPart(c, part, def, selected, ctx) {
                 }
                 c.translate((b.x - Math.round(part.position.x)) * 100, (b.y - Math.round(part.position.y)) * 100);
             }
-            if (!b?.product && drawPartPicture(c, ctx.art, def.id))
+            if (!(b === null || b === void 0 ? void 0 : b.product) && drawPartPicture(c, ctx.art, def.id))
                 break;
-            c.fillStyle = b?.product ? "#ffd8a8" : "#d9a066";
+            c.fillStyle = (b === null || b === void 0 ? void 0 : b.product) ? "#ffd8a8" : "#d9a066";
             c.beginPath();
             c.roundRect(-30, -30, 60, 60, 6);
             c.fill();
             c.stroke();
-            if (b?.product) {
+            if (b === null || b === void 0 ? void 0 : b.product) {
                 c.strokeStyle = "#e64980";
                 c.lineWidth = 6;
                 c.beginPath();
@@ -345,6 +363,7 @@ function speech(c, text) {
 }
 /** The block at a path in a program (for the speech bubble while it runs). */
 export function blockAt(program, path) {
+    var _a;
     let list = program;
     let block;
     for (let i = 0; i < path.length; i++) {
@@ -356,7 +375,7 @@ export function blockAt(program, path) {
         }
         else {
             const b = block;
-            list = b[p] ?? [];
+            list = (_a = b[p]) !== null && _a !== void 0 ? _a : [];
         }
     }
     return block;

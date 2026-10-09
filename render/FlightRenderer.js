@@ -1,16 +1,18 @@
 import { aeroBehaviour, fanBehaviour, gateHeight, isCraft } from "../flight/FlightSystem.js";
 import { drawPartPicture } from "./PartPictures.js";
 /**
- * Flight Hangar drawing (M17). The fan, balloon and cargo box are painted (part-art map, PartPictures.ts); the rest is code-drawn
+ * Flight Hangar drawing (M17). The fan, balloon, cargo box, wings, tail, propeller, battery pack and parachute are painted
+ * (part-art map, PartPictures.ts); the rest is code-drawn
  * behind each part id until the flight art arrives (docs/ART_NEEDED.md, Batch F). Drawing only. 100 px per metre.
  */
 const INK = "#203040";
 const FLIGHT_IDS = new Set(["flight.paper-box", "flight.cliff"]);
 export function isFlightPart(def) { return Boolean(aeroBehaviour(def) || isCraft(def) || fanBehaviour(def) || gateHeight(def) !== undefined || FLIGHT_IDS.has(def.id)); }
 export function drawFlightPart(c, part, def, selected, ctx) {
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
     const st = ctx.states.get(part.id);
     const attached = ctx.pose(part.id);
-    const x = (attached?.x ?? st?.x ?? part.position.x) * 100, y = (attached?.y ?? st?.y ?? part.position.y) * 100, angle = attached?.angle ?? st?.angle ?? part.rotation;
+    const x = ((_b = (_a = attached === null || attached === void 0 ? void 0 : attached.x) !== null && _a !== void 0 ? _a : st === null || st === void 0 ? void 0 : st.x) !== null && _b !== void 0 ? _b : part.position.x) * 100, y = ((_d = (_c = attached === null || attached === void 0 ? void 0 : attached.y) !== null && _c !== void 0 ? _c : st === null || st === void 0 ? void 0 : st.y) !== null && _d !== void 0 ? _d : part.position.y) * 100, angle = (_f = (_e = attached === null || attached === void 0 ? void 0 : attached.angle) !== null && _e !== void 0 ? _e : st === null || st === void 0 ? void 0 : st.angle) !== null && _f !== void 0 ? _f : part.rotation;
     c.save();
     c.translate(x, y);
     c.lineJoin = "round";
@@ -45,7 +47,7 @@ export function drawFlightPart(c, part, def, selected, ctx) {
             drawBreeze(c, fanBehaviour(def).range * 100, ctx.time);
     }
     else if (gateHeight(def) !== undefined) {
-        const h = Number(part.parameters.height ?? gateHeight(def)) * 100;
+        const h = Number((_g = part.parameters.height) !== null && _g !== void 0 ? _g : gateHeight(def)) * 100;
         c.rotate(part.rotation);
         c.strokeStyle = "#e64980";
         c.lineWidth = 10;
@@ -62,7 +64,7 @@ export function drawFlightPart(c, part, def, selected, ctx) {
     else if (isCraft(def)) {
         c.rotate(angle);
         if (!drawPartPicture(c, ctx.art, def.id))
-            drawCraftBody(c, def, ctx.flight?.craft(part.id)?.thrust ?? 0);
+            drawCraftBody(c, def, (_k = (_j = (_h = ctx.flight) === null || _h === void 0 ? void 0 : _h.craft(part.id)) === null || _j === void 0 ? void 0 : _j.thrust) !== null && _k !== void 0 ? _k : 0);
     }
     else if (def.id === "flight.paper-box") {
         c.rotate(angle);
@@ -156,6 +158,22 @@ function drawCraftBody(c, def, thrust) {
     }
 }
 function drawAero(c, kind, def, ctx) {
+    var _a;
+    // Painted clip-on parts (wings tilt with their angle of attack; the propeller turns). The code shapes below are the stand-ins.
+    if (kind === "WING") {
+        c.save();
+        c.rotate(-((_a = def.behaviours.find(b => b.kind === "AERO").incidence) !== null && _a !== void 0 ? _a : 0));
+        const ok = drawPartPicture(c, ctx.art, def.id);
+        c.restore();
+        if (ok)
+            return;
+    }
+    else if (kind === "TAIL" || kind === "POWER_PACK" || kind === "PARACHUTE") {
+        if (drawPartPicture(c, ctx.art, def.id))
+            return;
+    }
+    else if (kind === "PROPELLER" && drawPartPicture(c, ctx.art, def.id, { spinAngle: ctx.time * 14 }))
+        return;
     if (kind === "WING") {
         const big = def.id !== "flight.wing-small";
         const w = big ? 70 : 46;

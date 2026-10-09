@@ -18,8 +18,8 @@ export const MAGNETIC_MATERIALS = new Set(["IRON", "STEEL", "NICKEL"]);
 const SUSCEPTIBILITY = { IRON: 1, STEEL: 0.85, NICKEL: 0.6 };
 /** Pole force constant, induced-pull constant, close-range smoothing, range and a safety cap (game units). Force ∝ 1/(d² + EPS²). */
 export const K_POLE = 4, K_INDUCED = 4, EPS = 0.2, RANGE = 3.2, MAX_FORCE = 120;
-export function magnetBehaviour(def) { const b = def?.behaviours.find(x => x.kind === "MAGNET_BAR"); return b?.kind === "MAGNET_BAR" ? b : undefined; }
-export function materialOf(def) { const b = def?.behaviours.find(x => x.kind === "MATERIAL"); return b?.kind === "MATERIAL" ? b.material : undefined; }
+export function magnetBehaviour(def) { const b = def === null || def === void 0 ? void 0 : def.behaviours.find(x => x.kind === "MAGNET_BAR"); return (b === null || b === void 0 ? void 0 : b.kind) === "MAGNET_BAR" ? b : undefined; }
+export function materialOf(def) { const b = def === null || def === void 0 ? void 0 : def.behaviours.find(x => x.kind === "MATERIAL"); return (b === null || b === void 0 ? void 0 : b.kind) === "MATERIAL" ? b.material : undefined; }
 export function isMagnetic(def) { const m = materialOf(def); return m !== undefined && MAGNETIC_MATERIALS.has(m); }
 /** Where a magnet's poles are: N at local +x, S at local −x. */
 export function polePositions(x, y, angle, length) {
@@ -27,28 +27,88 @@ export function polePositions(x, y, angle, length) {
     return { n: { x: x + c, y: y + s }, s: { x: x - c, y: y - s } };
 }
 export class MagnetSystem {
-    entries = [];
-    starts = new Map();
-    states = [];
-    pending = [];
-    once = new Set();
-    held = new Map();
-    floatTicks = new Map();
-    lastForce = new Map();
-    maxSpeed = new Map();
-    ticks = 0;
-    elapsed = 0;
-    /** Physics angle of each moving magnet before the first step (a quarter-turned magnet's body starts at 0). */
-    baseAngle = new Map();
     constructor(parts, definition) {
+        Object.defineProperty(this, "entries", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "starts", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "states", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "pending", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "once", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Set()
+        });
+        Object.defineProperty(this, "held", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "floatTicks", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "lastForce", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "maxSpeed", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "ticks", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "elapsed", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        /** Physics angle of each moving magnet before the first step (a quarter-turned magnet's body starts at 0). */
+        Object.defineProperty(this, "baseAngle", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
         for (const p of parts) {
             const def = definition(p.definitionId);
             const bar = magnetBehaviour(def);
             const material = materialOf(def);
             if (!bar && !material)
                 continue;
-            const r = def?.behaviours.find(b => b.kind === "RIGID_BODY");
-            const height = r?.kind === "RIGID_BODY" ? r.height : 0.3;
+            const r = def === null || def === void 0 ? void 0 : def.behaviours.find(b => b.kind === "RIGID_BODY");
+            const height = (r === null || r === void 0 ? void 0 : r.kind) === "RIGID_BODY" ? r.height : 0.3;
             this.entries.push({ part: p, ...(bar ? { bar } : {}), ...(material ? { material } : {}), height });
             this.starts.set(p.id, { x: p.position.x, y: p.position.y });
         }
@@ -60,6 +120,7 @@ export class MagnetSystem {
      * Forces go to dynamic bodies through the physics world; static magnets never move.
      */
     step(dt, physics, drive) {
+        var _a, _b;
         this.elapsed += dt;
         const pose = (e) => { try {
             const s = physics.state(e.part.id);
@@ -75,18 +136,19 @@ export class MagnetSystem {
         // Magnet states this tick.
         const prevOn = new Map(this.states.map(s => [s.id, s.on]));
         this.states = this.entries.filter(e => e.bar).map(e => {
+            var _a;
             const p = poses.get(e.part.id);
             const k = e.bar.electric ? drive(e.part.id) : 1;
             const strength = e.bar.strength * Math.min(2, Math.abs(k));
-            const flip = (k < 0 ? Math.PI : 0) + (e.bar.poleAngle ?? 0);
+            const flip = (k < 0 ? Math.PI : 0) + ((_a = e.bar.poleAngle) !== null && _a !== void 0 ? _a : 0);
             const poles = polePositions(p.x, p.y, p.angle + flip, e.bar.length);
             return { id: e.part.id, x: p.x, y: p.y, angle: p.angle + flip, strength, on: strength > 0.05, ...poles, dynamic: p.dynamic };
         });
         for (const m of this.states)
-            if (this.entries.find(e => e.part.id === m.id).bar.electric && m.on !== (prevOn.get(m.id) ?? false))
+            if (this.entries.find(e => e.part.id === m.id).bar.electric && m.on !== ((_a = prevOn.get(m.id)) !== null && _a !== void 0 ? _a : false))
                 this.pending.push({ kind: m.on ? "ELECTROMAGNET_ON" : "ELECTROMAGNET_OFF", sourceId: m.id, data: { strength: round(m.strength) } });
         const forces = new Map();
-        const add = (id, fx, fy) => { const f = forces.get(id) ?? { x: 0, y: 0 }; f.x += fx; f.y += fy; forces.set(id, f); };
+        const add = (id, fx, fy) => { var _a; const f = (_a = forces.get(id)) !== null && _a !== void 0 ? _a : { x: 0, y: 0 }; f.x += fx; f.y += fy; forces.set(id, f); };
         // Pole on pole: like repel, unlike attract.
         for (let i = 0; i < this.states.length; i++)
             for (let j = i + 1; j < this.states.length; j++) {
@@ -132,7 +194,7 @@ export class MagnetSystem {
             const p = poses.get(e.part.id);
             if (!p.dynamic)
                 continue;
-            const chi = SUSCEPTIBILITY[e.material] ?? 0;
+            const chi = (_b = SUSCEPTIBILITY[e.material]) !== null && _b !== void 0 ? _b : 0;
             for (const m of this.states) {
                 if (!m.on || m.id === e.part.id)
                     continue;
@@ -204,17 +266,18 @@ export class MagnetSystem {
     }
     /** After the physics step: guided things stay on their rod (no sliding or flipping), with a little rod friction. */
     applyGuides(physics) {
+        var _a, _b, _c, _d, _e;
         for (const e of this.entries) {
             const gx = Number(e.part.parameters.guideX);
             if (!Number.isFinite(gx))
                 continue;
             try {
                 const s = physics.state(e.part.id);
-                physics.setPose(e.part.id, gx, s.y, this.baseAngle.get(e.part.id) ?? s.angle);
+                physics.setPose(e.part.id, gx, s.y, (_a = this.baseAngle.get(e.part.id)) !== null && _a !== void 0 ? _a : s.angle);
                 physics.setLinearVelocity(e.part.id, { x: 0, y: s.vy * 0.97 });
                 const f = this.lastForce.get(e.part.id);
-                const lifted = (f?.y ?? 0) < -0.5;
-                const n = lifted && Math.abs(s.vy) < 0.15 ? (this.floatTicks.get(e.part.id) ?? 0) + 1 : 0;
+                const lifted = ((_b = f === null || f === void 0 ? void 0 : f.y) !== null && _b !== void 0 ? _b : 0) < -0.5;
+                const n = lifted && Math.abs(s.vy) < 0.15 ? ((_c = this.floatTicks.get(e.part.id)) !== null && _c !== void 0 ? _c : 0) + 1 : 0;
                 this.floatTicks.set(e.part.id, n);
                 if (n === 60)
                     this.pending.push({ kind: "MAGNET_FLOATING", sourceId: e.part.id, data: { y: round(s.y) } });
@@ -226,7 +289,7 @@ export class MagnetSystem {
         for (const e of this.entries) {
             const gx = Number(e.part.parameters.guideX);
             if (Number.isFinite(gx)) {
-                const list = rods.get(gx) ?? [];
+                const list = (_d = rods.get(gx)) !== null && _d !== void 0 ? _d : [];
                 list.push(e);
                 rods.set(gx, list);
             }
@@ -249,7 +312,7 @@ export class MagnetSystem {
         for (const e of this.entries) {
             try {
                 const s = physics.state(e.part.id);
-                this.maxSpeed.set(e.part.id, Math.max(this.maxSpeed.get(e.part.id) ?? 0, Math.hypot(s.vx, s.vy)));
+                this.maxSpeed.set(e.part.id, Math.max((_e = this.maxSpeed.get(e.part.id)) !== null && _e !== void 0 ? _e : 0, Math.hypot(s.vx, s.vy)));
             }
             catch { /* static */ }
         }
@@ -275,9 +338,9 @@ export class MagnetSystem {
     magnet(id) { return this.states.find(s => s.id === id); }
     force(id) { return this.lastForce.get(id); }
     isHeld(id) { return this.held.has(id); }
-    floatingTicks(id) { return this.floatTicks.get(id) ?? 0; }
+    floatingTicks(id) { var _a; return (_a = this.floatTicks.get(id)) !== null && _a !== void 0 ? _a : 0; }
     startOf(id) { return this.starts.get(id); }
-    peakSpeed(id) { return this.maxSpeed.get(id) ?? 0; }
+    peakSpeed(id) { var _a; return (_a = this.maxSpeed.get(id)) !== null && _a !== void 0 ? _a : 0; }
     /** Field direction and strength at a point (for the Magnet Scanner's field view). */
     fieldAt(x, y) {
         let fx = 0, fy = 0;

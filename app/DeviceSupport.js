@@ -6,13 +6,12 @@ export function detectDeviceSupport() {
         reasons.push("Pointer Events are unavailable");
     if (typeof indexedDB === "undefined")
         reasons.push("IndexedDB is unavailable");
-    if (typeof structuredClone !== "function")
-        reasons.push("structuredClone is unavailable");
     return { supported: reasons.length === 0, reasons };
 }
 export async function storageWarningNeeded() {
+    var _a;
     try {
-        if (!navigator.storage?.estimate)
+        if (!((_a = navigator.storage) === null || _a === void 0 ? void 0 : _a.estimate))
             return false;
         const estimate = await navigator.storage.estimate();
         if (!estimate.quota || !estimate.usage)

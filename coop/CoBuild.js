@@ -9,24 +9,67 @@ export const CO_PATTERNS = [
 /** Who can build with the inventor: other inventors on this device, or a grown-up or friend (no profile needed). */
 export function partnerChoices(save) {
     const me = activeProfile(save);
-    const others = save.profiles.filter(p => p.id !== me?.id).map(p => ({ id: `profile:${p.id}`, name: p.name, colour: AVATAR_COLOURS[p.avatarStyle] ?? "#339af0", profileId: p.id }));
+    const others = save.profiles.filter(p => p.id !== (me === null || me === void 0 ? void 0 : me.id)).map(p => { var _a; return ({ id: `profile:${p.id}`, name: p.name, colour: (_a = AVATAR_COLOURS[p.avatarStyle]) !== null && _a !== void 0 ? _a : "#339af0", profileId: p.id }); });
     return [...others, { id: "guest:grown-up", name: "Grown-up", colour: "#868e96" }, { id: "guest:friend", name: "Friend", colour: "#20c997" }];
 }
-export function sessionOwner(save) { const p = activeProfile(save); return p ? { id: `profile:${p.id}`, name: p.name, colour: AVATAR_COLOURS[p.avatarStyle] ?? "#ff922b", profileId: p.id } : undefined; }
+export function sessionOwner(save) { var _a; const p = activeProfile(save); return p ? { id: `profile:${p.id}`, name: p.name, colour: (_a = AVATAR_COLOURS[p.avatarStyle]) !== null && _a !== void 0 ? _a : "#ff922b", profileId: p.id } : undefined; }
 export class CoBuildSession {
-    players;
-    pattern;
-    active = 0;
-    turn = 1;
-    /** Part Picker: who is picking right now (the other one places). */
-    phase = "PICK";
-    picked;
-    cameras = [undefined, undefined];
-    guesses = [];
-    pendingGuess;
     constructor(players, pattern) {
-        this.players = players;
-        this.pattern = pattern;
+        Object.defineProperty(this, "players", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: players
+        });
+        Object.defineProperty(this, "pattern", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: pattern
+        });
+        Object.defineProperty(this, "active", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "turn", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 1
+        });
+        /** Part Picker: who is picking right now (the other one places). */
+        Object.defineProperty(this, "phase", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: "PICK"
+        });
+        Object.defineProperty(this, "picked", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "cameras", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: [undefined, undefined]
+        });
+        Object.defineProperty(this, "guesses", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "pendingGuess", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
     }
     get current() { return this.players[this.active]; }
     get waiting() { return this.players[this.active === 0 ? 1 : 0]; }
@@ -77,9 +120,26 @@ export function togetherName(name, partner) { const tag = ` (with ${partner.name
  * after a full second of both holding together, the rocket launches. Letting go starts the count again.
  */
 export class TogetherLaunch {
-    held = [false, false];
-    ticks = 0;
-    launched = false;
+    constructor() {
+        Object.defineProperty(this, "held", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: [false, false]
+        });
+        Object.defineProperty(this, "ticks", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "launched", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: false
+        });
+    }
     press(side, down) { this.held[side] = down; if (!down)
         this.ticks = 0; }
     tick() { if (this.launched)

@@ -6,22 +6,70 @@
 /** One shared error for "no such body": callers only ever catch it and move on, so no new error (and stack) per miss. */
 const UNKNOWN_BODY = new Error("Unknown physics body");
 export class PhysicsWorld {
-    bodies = new Map();
-    springs = [];
-    ropes = [];
-    motors = [];
-    hinges = [];
-    breakables = [];
-    gravity;
-    brokenJointEvents = [];
-    contactEvents = [];
-    constructor(gravity = { x: 0, y: 9.81 }) { this.gravity = gravity; }
+    constructor(gravity = { x: 0, y: 9.81 }) {
+        Object.defineProperty(this, "bodies", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "springs", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "ropes", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "motors", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "hinges", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "breakables", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "gravity", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "brokenJointEvents", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "contactEvents", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        this.gravity = gravity;
+    }
     addBody(spec) {
-        const mass = spec.type === "STATIC" ? Number.POSITIVE_INFINITY : Math.max(0.05, (spec.density ?? 1) * spec.width * spec.height);
+        var _a, _b, _c, _d;
+        const mass = spec.type === "STATIC" ? Number.POSITIVE_INFINITY : Math.max(0.05, ((_a = spec.density) !== null && _a !== void 0 ? _a : 1) * spec.width * spec.height);
         this.bodies.set(spec.id, {
             id: spec.id, type: spec.type, shape: spec.shape, x: spec.position.x, y: spec.position.y,
-            angle: spec.angle ?? 0, width: spec.width, height: spec.height, vx: 0, vy: 0,
-            angularVelocity: 0, mass, friction: spec.friction ?? 0.4, restitution: spec.restitution ?? 0.2,
+            angle: (_b = spec.angle) !== null && _b !== void 0 ? _b : 0, width: spec.width, height: spec.height, vx: 0, vy: 0,
+            angularVelocity: 0, mass, friction: (_c = spec.friction) !== null && _c !== void 0 ? _c : 0.4, restitution: (_d = spec.restitution) !== null && _d !== void 0 ? _d : 0.2,
             forceX: 0, forceY: 0, lastForceX: 0, lastForceY: 0, ...(spec.group ? { group: spec.group } : {})
         });
     }
@@ -51,7 +99,7 @@ export class PhysicsWorld {
     } }
     /** Flight Hangar: a craft weighs its body plus everything attached to it (set once at the start of a TEST). */
     /** True for a body that moves freely (not fixed, not driven along a path). Read-only. */
-    isDynamic(id) { return this.bodies.get(id)?.type === "DYNAMIC"; }
+    isDynamic(id) { var _a; return ((_a = this.bodies.get(id)) === null || _a === void 0 ? void 0 : _a.type) === "DYNAMIC"; }
     setMass(id, mass) { const b = this.mustBody(id); if (b.type === "DYNAMIC")
         b.mass = Math.max(0.02, mass); }
     /** Sandbox (M23): move a fixed body (a moving platform), remembering how fast it moved for whatever it carries. */

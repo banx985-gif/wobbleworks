@@ -19,10 +19,10 @@ export const FLIGHT_TRUTH_CONTRACT = Object.freeze({
 const RHO = 1.2, G = 9.81, ATTACH_REACH = 0.75;
 /** Seconds of propeller thrust in one battery pack. */
 export const PACK_SECONDS = 2.0;
-export function aeroBehaviour(def) { const b = def?.behaviours.find(x => x.kind === "AERO"); return b?.kind === "AERO" ? b : undefined; }
-export function isCraft(def) { return Boolean(def?.behaviours.some(b => b.kind === "CRAFT")); }
-export function fanBehaviour(def) { const b = def?.behaviours.find(x => x.kind === "WIND_FAN"); return b?.kind === "WIND_FAN" ? b : undefined; }
-export function gateHeight(def) { const b = def?.behaviours.find(x => x.kind === "GATE"); return b?.kind === "GATE" ? b.height : undefined; }
+export function aeroBehaviour(def) { const b = def === null || def === void 0 ? void 0 : def.behaviours.find(x => x.kind === "AERO"); return (b === null || b === void 0 ? void 0 : b.kind) === "AERO" ? b : undefined; }
+export function isCraft(def) { return Boolean(def === null || def === void 0 ? void 0 : def.behaviours.some(b => b.kind === "CRAFT")); }
+export function fanBehaviour(def) { const b = def === null || def === void 0 ? void 0 : def.behaviours.find(x => x.kind === "WIND_FAN"); return (b === null || b === void 0 ? void 0 : b.kind) === "WIND_FAN" ? b : undefined; }
+export function gateHeight(def) { const b = def === null || def === void 0 ? void 0 : def.behaviours.find(x => x.kind === "GATE"); return (b === null || b === void 0 ? void 0 : b.kind) === "GATE" ? b.height : undefined; }
 /** Where a part dropped near a craft clips on: its slot offset in the craft's own frame (x forward, y down). */
 export const CRAFT_SLOTS = {
     WING: { x: 0.1, y: -0.12 }, TAIL: { x: -0.5, y: -0.16 }, PROPELLER: { x: 0.58, y: 0 }, POWER_PACK: { x: -0.1, y: 0.2 }, PARACHUTE: { x: 0, y: -0.7 }, BALLOON: { x: 0, y: -1.0 }, WEIGHT: { x: 0.42, y: 0.12 }, PAYLOAD: { x: 0, y: 0.32 }
@@ -32,30 +32,109 @@ export function craftSnap(x, y, part, craft, slotX) {
     if (Math.hypot(x - craft.x, y - craft.y) > 1.6)
         return undefined;
     const slot = CRAFT_SLOTS[part];
-    const sx = part === "WING" || part === "WEIGHT" ? (slotX ?? slot.x) : slot.x;
+    const sx = part === "WING" || part === "WEIGHT" ? (slotX !== null && slotX !== void 0 ? slotX : slot.x) : slot.x;
     const c = Math.cos(craft.angle), s = Math.sin(craft.angle);
     return { x: craft.x + sx * c - slot.y * s, y: craft.y + sx * s + slot.y * c };
 }
 export class FlightSystem {
-    parts;
-    definition;
-    crafts = [];
-    fans = [];
-    gates = [];
-    windZones = [];
-    passed = new Map();
-    impacts = new Map();
-    landed = new Map();
-    lastV = new Map();
-    forces = new Map();
-    pending = [];
-    once = new Set();
-    started = false;
-    ticks = 0;
-    elapsed = 0;
     constructor(parts, definition) {
-        this.parts = parts;
-        this.definition = definition;
+        var _a;
+        Object.defineProperty(this, "parts", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: parts
+        });
+        Object.defineProperty(this, "definition", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: definition
+        });
+        Object.defineProperty(this, "crafts", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "fans", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "gates", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "windZones", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "passed", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "impacts", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "landed", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "lastV", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "forces", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Map()
+        });
+        Object.defineProperty(this, "pending", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: []
+        });
+        Object.defineProperty(this, "once", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: new Set()
+        });
+        Object.defineProperty(this, "started", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: false
+        });
+        Object.defineProperty(this, "ticks", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
+        Object.defineProperty(this, "elapsed", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: 0
+        });
         // Each clip-on part belongs to the nearest craft within reach.
         const craftParts = parts.filter(p => isCraft(definition(p.definitionId)));
         const owner = new Map();
@@ -79,11 +158,11 @@ export class FlightSystem {
             const fan = fanBehaviour(def);
             if (fan)
                 this.fans.push({ part: p, fan });
-            if (def?.behaviours.some(b => b.kind === "WIND_ZONE"))
+            if (def === null || def === void 0 ? void 0 : def.behaviours.some(b => b.kind === "WIND_ZONE"))
                 this.windZones.push(p);
             const gh = gateHeight(def);
             if (gh !== undefined)
-                this.gates.push({ part: p, height: Number(p.parameters.height ?? gh) });
+                this.gates.push({ part: p, height: Number((_a = p.parameters.height) !== null && _a !== void 0 ? _a : gh) });
             if (!isCraft(def))
                 continue;
             const c = Math.cos(p.rotation), s = Math.sin(p.rotation);
@@ -97,11 +176,11 @@ export class FlightSystem {
                 attached.push({ part: q, aero, lx: dx * c + dy * s, ly: -dx * s + dy * c });
             }
             const r = def.behaviours.find(b => b.kind === "RIGID_BODY");
-            const bodyMass = r?.kind === "RIGID_BODY" ? r.density * r.width * r.height : 0.15;
+            const bodyMass = (r === null || r === void 0 ? void 0 : r.kind) === "RIGID_BODY" ? r.density * r.width * r.height : 0.15;
             const mass = bodyMass + attached.reduce((t, a) => t + a.aero.mass, 0);
             const comX = attached.reduce((t, a) => t + a.aero.mass * a.lx, 0) / mass;
             const craftDrag = def.behaviours.find(b => b.kind === "CRAFT");
-            const bodyDrag = craftDrag?.kind === "CRAFT" ? craftDrag.dragArea : 0.05;
+            const bodyDrag = (craftDrag === null || craftDrag === void 0 ? void 0 : craftDrag.kind) === "CRAFT" ? craftDrag.dragArea : 0.05;
             this.crafts.push({ id: p.id, body: p, parts: attached, mass, comX, inertia: mass * 0.12, bodyDrag, omega: 0, thrustTime: 0, flying: false, pitchMin: p.rotation, pitchMax: p.rotation, startX: p.position.x, maxX: p.position.x, airborneTicks: 0 });
         }
     }
@@ -109,12 +188,13 @@ export class FlightSystem {
     isAttached(partId) { return this.crafts.some(c => c.parts.some(a => a.part.id === partId)); }
     /** Wind at a point from every fan (m/s). */
     windAt(x, y) {
+        var _a, _b, _c, _d;
         let wx = 0, wy = 0;
         // A wind zone (sandbox weather): the same steady wind everywhere inside its box.
         for (const z of this.windZones) {
-            const w = Number(z.parameters.width ?? 6), h = Number(z.parameters.height ?? 4);
+            const w = Number((_a = z.parameters.width) !== null && _a !== void 0 ? _a : 6), h = Number((_b = z.parameters.height) !== null && _b !== void 0 ? _b : 4);
             if (Math.abs(x - z.position.x) <= w / 2 && Math.abs(y - z.position.y) <= h / 2) {
-                const a = Number(z.parameters.angle ?? 0), s = Number(z.parameters.speed ?? 4);
+                const a = Number((_c = z.parameters.angle) !== null && _c !== void 0 ? _c : 0), s = Number((_d = z.parameters.speed) !== null && _d !== void 0 ? _d : 4);
                 wx += Math.cos(a) * s;
                 wy += Math.sin(a) * s;
             }
@@ -139,6 +219,7 @@ export class FlightSystem {
     }
     /** One tick (force phase): aerodynamic forces on every craft and wind on everything in a fan's breeze. */
     step(dt, physics, poweredDrive = () => 1) {
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
         if (!this.started) {
             this.started = true;
             for (const c of this.crafts) {
@@ -164,14 +245,14 @@ export class FlightSystem {
                 }
                 else if (!this.once.has(`release:${p.id}`)) {
                     this.once.add(`release:${p.id}`);
-                    physics.setLinearVelocity(p.id, { x: Number(p.parameters.launchVx ?? 0), y: Number(p.parameters.launchVy ?? 0) });
+                    physics.setLinearVelocity(p.id, { x: Number((_a = p.parameters.launchVx) !== null && _a !== void 0 ? _a : 0), y: Number((_b = p.parameters.launchVy) !== null && _b !== void 0 ? _b : 0) });
                     this.pending.push({ kind: "RELEASED", sourceId: p.id });
                 }
             }
             catch { /* not simulated */ }
         }
         for (const c of this.crafts) {
-            if (this.elapsed < Number(c.body.parameters.releaseAt ?? 0))
+            if (this.elapsed < Number((_c = c.body.parameters.releaseAt) !== null && _c !== void 0 ? _c : 0))
                 continue;
             if (!physics.has(c.id))
                 continue;
@@ -183,7 +264,7 @@ export class FlightSystem {
             const hx = Math.cos(heading), hy = Math.sin(heading);
             let fx = 0, fy = 0, torque = 0, lift = 0, drag = 0, thrust = 0, stalled = false;
             // Drag of the body and of every attached surface; lift from wings and tail.
-            const dragArea = c.bodyDrag + c.parts.reduce((t, a) => t + (a.aero.part === "PARACHUTE" ? (a.aero.area ?? 2) * 1.4 : a.aero.part === "BALLOON" ? 0.25 : a.aero.part === "WING" || a.aero.part === "TAIL" ? (a.aero.area ?? 0.3) * 0.04 : 0.02), 0);
+            const dragArea = c.bodyDrag + c.parts.reduce((t, a) => { var _a, _b; return t + (a.aero.part === "PARACHUTE" ? ((_a = a.aero.area) !== null && _a !== void 0 ? _a : 2) * 1.4 : a.aero.part === "BALLOON" ? 0.25 : a.aero.part === "WING" || a.aero.part === "TAIL" ? ((_b = a.aero.area) !== null && _b !== void 0 ? _b : 0.3) * 0.04 : 0.02); }, 0);
             if (v > 0.01) {
                 const d = 0.5 * RHO * dragArea * v * v;
                 fx -= d * rvx / v;
@@ -194,12 +275,12 @@ export class FlightSystem {
                     if (a.aero.part !== "WING" && a.aero.part !== "TAIL")
                         continue;
                     // Screen y points down, so the angle of attack is the flight path angle minus the nose angle (plus the wing's own nose-up tilt).
-                    const alpha = wrap(gamma - heading + (a.aero.incidence ?? 0));
+                    const alpha = wrap(gamma - heading + ((_d = a.aero.incidence) !== null && _d !== void 0 ? _d : 0));
                     const isStall = Math.abs(alpha) > 0.35;
                     if (isStall && a.aero.part === "WING")
                         stalled = true;
                     const cl = Math.max(-1.1, Math.min(1.1, 2 * Math.PI * alpha * 0.8)) * (isStall ? 0.4 : 1);
-                    const L = 0.5 * RHO * (a.aero.area ?? 0.3) * cl * v * v;
+                    const L = 0.5 * RHO * ((_e = a.aero.area) !== null && _e !== void 0 ? _e : 0.3) * cl * v * v;
                     // Lift is sideways to the airflow: rotate the airflow direction a quarter turn towards "up" for a nose-level wing.
                     const lxDir = rvy / v, lyDir = -rvx / v;
                     fx += L * lxDir;
@@ -208,7 +289,7 @@ export class FlightSystem {
                         lift += Math.abs(L);
                     // Pitching: lift acting ahead of the balance point raises the nose; behind it lowers the nose.
                     torque -= (a.lx - c.comX) * L;
-                    const ind = 0.5 * RHO * (a.aero.area ?? 0.3) * 0.08 * cl * cl * v * v;
+                    const ind = 0.5 * RHO * ((_f = a.aero.area) !== null && _f !== void 0 ? _f : 0.3) * 0.08 * cl * cl * v * v;
                     fx -= ind * rvx / v;
                     fy -= ind * rvy / v;
                     drag += ind;
@@ -223,7 +304,7 @@ export class FlightSystem {
             const charged = packs > 0 && c.thrustTime < PACK_SECONDS * packs;
             for (const a of c.parts)
                 if (a.aero.part === "PROPELLER" && charged) {
-                    const t = (a.aero.thrust ?? 2) * poweredDrive(c.id);
+                    const t = ((_g = a.aero.thrust) !== null && _g !== void 0 ? _g : 2) * poweredDrive(c.id);
                     fx += hx * t;
                     fy += hy * t;
                     thrust += t;
@@ -238,7 +319,7 @@ export class FlightSystem {
             // Balloons push up (buoyancy), the same whatever the speed.
             for (const a of c.parts)
                 if (a.aero.part === "BALLOON")
-                    fy -= a.aero.buoyancy ?? 1.5;
+                    fy -= (_h = a.aero.buoyancy) !== null && _h !== void 0 ? _h : 1.5;
             try {
                 physics.applyForce(c.id, { x: fx, y: fy });
             }
@@ -265,7 +346,7 @@ export class FlightSystem {
         if (this.fans.length || this.windZones.length)
             for (const p of this.parts) {
                 // Rockets and rovers feel the wind through the Space Centre's own airflow model.
-                if (this.crafts.some(c => c.id === p.id) || this.isAttached(p.id) || this.definition(p.definitionId)?.behaviours.some(b => b.kind === "VESSEL"))
+                if (this.crafts.some(c => c.id === p.id) || this.isAttached(p.id) || ((_j = this.definition(p.definitionId)) === null || _j === void 0 ? void 0 : _j.behaviours.some(b => b.kind === "VESSEL")))
                     continue;
                 if (!physics.has(p.id))
                     continue;
@@ -275,8 +356,8 @@ export class FlightSystem {
                 const wind = this.windAt(st.x, st.y);
                 if (wind.x === 0 && wind.y === 0)
                     continue;
-                const r = this.definition(p.definitionId)?.behaviours.find(b => b.kind === "RIGID_BODY");
-                const area = r?.kind === "RIGID_BODY" ? Math.max(r.width, r.height) * 0.6 : 0.3;
+                const r = (_k = this.definition(p.definitionId)) === null || _k === void 0 ? void 0 : _k.behaviours.find(b => b.kind === "RIGID_BODY");
+                const area = (r === null || r === void 0 ? void 0 : r.kind) === "RIGID_BODY" ? Math.max(r.width, r.height) * 0.6 : 0.3;
                 const rvx = wind.x - st.vx, rvy = wind.y - st.vy, v = Math.hypot(rvx, rvy);
                 if (v < 0.01)
                     continue;
@@ -290,6 +371,7 @@ export class FlightSystem {
     }
     /** After the physics step: landings, bumps, gates, how far and how steadily each craft flew. */
     observe(physics) {
+        var _a, _b;
         for (const p of this.parts) {
             if (!physics.has(p.id))
                 continue;
@@ -302,7 +384,7 @@ export class FlightSystem {
                 continue;
             const dv = Math.hypot(st.vx - prev.vx, st.vy - prev.vy);
             if (dv > 1.0 && prev.vy > 0.5) {
-                this.impacts.set(p.id, Math.max(this.impacts.get(p.id) ?? 0, Math.abs(prev.vy)));
+                this.impacts.set(p.id, Math.max((_a = this.impacts.get(p.id)) !== null && _a !== void 0 ? _a : 0, Math.abs(prev.vy)));
                 if (!this.landed.get(p.id))
                     this.pending.push({ kind: "LANDING", sourceId: p.id, data: { impact: round(Math.abs(prev.vy)) } });
                 this.landed.set(p.id, true);
@@ -316,7 +398,7 @@ export class FlightSystem {
                 const flat = Math.abs(Math.sin(g.part.rotation)) > 0.7;
                 const crossed = flat ? (prev.y - gy) * (st.y - gy) <= 0 && prev.y !== st.y && Math.abs(st.x - gx) <= g.height / 2 : (prev.x - gx) * (st.x - gx) <= 0 && prev.x !== st.x && st.y >= top && st.y <= bottom;
                 if (crossed) {
-                    const set = this.passed.get(p.id) ?? new Set();
+                    const set = (_b = this.passed.get(p.id)) !== null && _b !== void 0 ? _b : new Set();
                     if (!set.has(g.part.id)) {
                         set.add(g.part.id);
                         this.passed.set(p.id, set);
@@ -355,14 +437,15 @@ export class FlightSystem {
         }
         this.ticks += 1;
     }
-    halfHeight(id) { const p = this.parts.find(q => q.id === id); const r = p ? this.definition(p.definitionId)?.behaviours.find(b => b.kind === "RIGID_BODY") : undefined; return r?.kind === "RIGID_BODY" ? r.height / 2 : 0.1; }
+    halfHeight(id) { var _a; const p = this.parts.find(q => q.id === id); const r = p ? (_a = this.definition(p.definitionId)) === null || _a === void 0 ? void 0 : _a.behaviours.find(b => b.kind === "RIGID_BODY") : undefined; return (r === null || r === void 0 ? void 0 : r.kind) === "RIGID_BODY" ? r.height / 2 : 0.1; }
     // ---------------------------------------------------------------- read-only views
     craft(id) {
+        var _a, _b, _c, _d, _e;
         const c = this.crafts.find(x => x.id === id);
         if (!c)
             return undefined;
         const f = this.forces.get(id);
-        return { id, lift: f?.lift ?? 0, drag: f?.drag ?? 0, thrust: f?.thrust ?? 0, weight: c.mass * G, airspeed: f?.airspeed ?? 0, flying: c.flying, maxX: c.maxX, ...(c.landedX !== undefined ? { landedX: c.landedX } : {}), pitchSpread: c.pitchMax - c.pitchMin, attached: c.parts.map(a => a.part.id), stalled: f?.stalled ?? false };
+        return { id, lift: (_a = f === null || f === void 0 ? void 0 : f.lift) !== null && _a !== void 0 ? _a : 0, drag: (_b = f === null || f === void 0 ? void 0 : f.drag) !== null && _b !== void 0 ? _b : 0, thrust: (_c = f === null || f === void 0 ? void 0 : f.thrust) !== null && _c !== void 0 ? _c : 0, weight: c.mass * G, airspeed: (_d = f === null || f === void 0 ? void 0 : f.airspeed) !== null && _d !== void 0 ? _d : 0, flying: c.flying, maxX: c.maxX, ...(c.landedX !== undefined ? { landedX: c.landedX } : {}), pitchSpread: c.pitchMax - c.pitchMin, attached: c.parts.map(a => a.part.id), stalled: (_e = f === null || f === void 0 ? void 0 : f.stalled) !== null && _e !== void 0 ? _e : false };
     }
     craftStates() { return this.crafts.map(c => this.craft(c.id)); }
     attachedPose(partId, physics) {
@@ -381,9 +464,9 @@ export class FlightSystem {
         }
         return undefined;
     }
-    peakImpact(id) { return this.impacts.get(id) ?? 0; }
+    peakImpact(id) { var _a; return (_a = this.impacts.get(id)) !== null && _a !== void 0 ? _a : 0; }
     hasLanded(id) { return this.landed.get(id) === true; }
-    gatesPassed(id) { return [...(this.passed.get(id) ?? [])]; }
+    gatesPassed(id) { var _a; return [...((_a = this.passed.get(id)) !== null && _a !== void 0 ? _a : [])]; }
     forceArrows(id) { const f = this.forces.get(id); return f ? { lift: f.lift, drag: f.drag, thrust: f.thrust, weight: f.weight } : undefined; }
     fanStates() { return this.fans.map(f => ({ id: f.part.id, x: f.part.position.x, y: f.part.position.y, angle: f.part.rotation, range: f.fan.range, spread: f.fan.spread, speed: f.fan.speed })); }
     drainEvents() { const out = this.pending; this.pending = []; return out; }
