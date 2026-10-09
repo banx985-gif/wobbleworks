@@ -23,7 +23,7 @@ export const MOTION_HINTS = {
     "motion.make-it-farther": { concept: "The cart slows down because the ground rubs it. Could the ground be slippier?", usefulParts: ["motion.friction-low"], solution: [g("motion.friction-low", 2.8, 8.32), g("motion.friction-low", 5.0, 8.32), g("motion.friction-low", 7.2, 8.32), g("motion.friction-low", 9.4, 8.32)], ghostCount: 2 },
     "motion.which-ramp-wins": { concept: "Two slopes, two balls. Guess which goes farther, then TEST!", usefulParts: [], solution: [], ghostCount: 0, noPartsLine: "Make a guess, then press TEST and compare." },
     "motion.duck-cannon": { concept: "Ducks can't fly far on their own. What could fling it?", usefulParts: ["motion.spring"], solution: [g("motion.spring", 2.5, 8.15)], ghostCount: 1 },
-    "motion.giant-marble-delivery": { concept: "Mix machines: one part to get the marble rolling, one to send it flying.", usefulParts: ["motion.ramp", "motion.spring"], solution: [g("motion.ramp", 2.5, 4, 0.15), g("motion.spring", 4.0, 8.0)], ghostCount: 1 },
+    "motion.giant-marble-delivery": { concept: "Mix machines: one part to get the marble rolling, one to send it flying.", usefulParts: ["motion.ramp", "motion.spring"], solution: [g("motion.ramp", 2.0, 4.0, -0.18 + Math.PI / 6), g("motion.spring", 4.2, 8.0)], ghostCount: 1 },
     "motion.runaway-test-cart": { concept: "Stop it gently — no walls! What slows things without crashing?", usefulParts: ["motion.friction-high"], solution: [g("motion.friction-high", 6.5, 8.32)], ghostCount: 1 }
 };
 export const GEAR_HINTS = {

@@ -3,7 +3,8 @@
  * tests/m33-prototype-lab.test.mjs: it really completes its room, and an empty build never does.
  */
 const g = (definitionId, x, y, rotation = 0, length) => ({ definitionId, x, y, rotation, ...(length !== undefined ? { length } : {}) });
-const UP_TO_CEILING = Math.PI - 0.35;
+/** A ramp turned upside down with the Rotate button (labs start a ramp at −0.18; eleven 15° turns). */
+const UP_TO_CEILING = -0.18 + 11 * Math.PI / 12;
 export const PROTOTYPE_HINTS = {
     "prototype.reverse-conveyor": { concept: "Each pair of meshing gears swaps the turning direction. A backwards drum needs the motor's direction swapped an odd number of times.", usefulParts: ["gear.large", "gear.small", "gear.medium"],
         solution: [g("gear.large", 2.5, 6), g("gear.small", 3.6, 6), g("gear.medium", 4.4, 6), g("gear.small", 5.2, 6)], ghostCount: 2 },
@@ -19,7 +20,7 @@ export const PROTOTYPE_HINTS = {
     "prototype.no-wheels-allowed": { concept: "A slope turns Bolt's fall into speed, and slippery pads let him slide a long way.", usefulParts: ["motion.ramp", "motion.friction-low"],
         solution: [g("motion.ramp", 4.4, 5.1, 0.45), g("motion.friction-low", 6.6, 8.3), g("motion.friction-low", 9, 8.3), g("motion.friction-low", 11.4, 8.3)], ghostCount: 2 },
     "prototype.upside-down-test": { concept: "Under the ceiling, a balloon slides UP a slope the way a ball slides down one.", usefulParts: ["motion.ramp"],
-        solution: [g("motion.ramp", 2.9, 2.6, UP_TO_CEILING), g("motion.ramp", 5, 1.92, UP_TO_CEILING), g("motion.ramp", 7.1, 1.24, UP_TO_CEILING)], ghostCount: 2 },
+        solution: [g("motion.ramp", 2.9, 3.0, UP_TO_CEILING), g("motion.ramp", 5, 2.15, UP_TO_CEILING), g("motion.ramp", 7.1, 1.31, UP_TO_CEILING)], ghostCount: 2 },
     "prototype.five-systems": { concept: "Send the pumped water to the squirter, and give the magnet something made of steel to pull.", usefulParts: ["plumb.pipe", "scrap.steel-ball"],
         solution: [g("plumb.pipe", 8.425, 7.125, -1.297788, 1.298075), g("scrap.steel-ball", 13.6, 8.22)], ghostCount: 1 },
     "prototype.maximum-wobble": { concept: "Two long beams leaning together make the tallest A-frame — almost as long as a beam can be.", usefulParts: ["builder.beam-metal"],
