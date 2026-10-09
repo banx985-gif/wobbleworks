@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "id": "challenge.fastest-vehicle",
+  "title": "Fastest Vehicle",
+  "environmentId": "env.motion-yard",
+  "availablePartIds": [
+    "motion.spring",
+    "motion.ramp",
+    "motion.friction-low",
+    "motion.wheel"
+  ],
+  "starterParts": [
+    {
+      "id": "cart",
+      "definitionId": "motion.cart",
+      "position": {
+        "x": 2.2,
+        "y": 7.78
+      },
+      "rotation": 0,
+      "parameters": {
+        "initialVx": 1,
+        "friction": 0.3
+      },
+      "tags": [
+        "subject.cart"
+      ]
+    }
+  ],
+  "starterConnections": [],
+  "staticObjects": [
+    {
+      "id": "finish",
+      "definitionId": "motion.goal-zone",
+      "position": {
+        "x": 7.7,
+        "y": 7.6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "finish"
+      ]
+    }
+  ],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "outcomeRules": [
+    {
+      "kind": "DISTANCE_FROM_START",
+      "objectTag": "subject.cart",
+      "minDistance": 5.5
+    },
+    {
+      "kind": "MECHANISM_FAMILY_COUNT",
+      "definitionIds": [
+        "motion.spring",
+        "motion.ramp",
+        "motion.friction-low",
+        "motion.wheel"
+      ],
+      "minimum": 1
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "momentum-evidence",
+      "conceptId": "motion.momentum",
+      "eventKind": "PHYSICS_CONTACT",
+      "minimumCount": 1,
+      "truthContractId": "truth.motion.v1"
+    }
+  ],
+  "hints": [
+    "Change one thing, TEST, then improve it again.",
+    "A spring, ramp or lower-friction route can help distance."
+  ],
+  "narrationCues": [
+    "Get the cart past the finish flag as fast as you can!"
+  ]
+}

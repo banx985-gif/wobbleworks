@@ -209,6 +209,8 @@ export function renderHub(root, save, cb) {
     ];
     if (cb.openExperiments)
         stations.push({ id: "experiments", label: "Experiment Lab", x: 52, y: 22, w: 9, h: 18, onTap: cb.openExperiments, art: () => { const img = el("img", "hub-prop"); img.src = "./assets/icons/icon.energy-flask.webp"; img.alt = ""; img.draggable = false; return img; } });
+    if (cb.openChallenges)
+        stations.push({ id: "challenges", label: "Challenge Lab", x: 20, y: 24, w: 12, h: 17, onTap: cb.openChallenges, art: () => { const img = el("img", "hub-prop"); img.src = "./assets/icons/icon.speed.webp"; img.alt = ""; img.draggable = false; return img; } });
     if (cb.openChain)
         stations.push({ id: "chain", label: "Chain Reactions", x: 27, y: 64, w: 12, h: 22, onTap: cb.openChain, art: () => { const img = el("img", "hub-prop"); img.src = "./assets/level/level.marble-run.webp"; img.alt = ""; img.draggable = false; return img; } });
     if (p.freeBuildUnlocked)

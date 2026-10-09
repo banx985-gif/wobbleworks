@@ -164,4 +164,13 @@ export const FREE_BUILD_ROOMS = { id: "free-build", title: "Free Build", concept
         ["sandbox.robot-arena", "Robot Arena"], ["sandbox.construction-yard", "Construction Yard"], ["sandbox.toy-city", "Toy City"], ["sandbox.windy-mountain", "Windy Mountain"], ["sandbox.water-test-tank", "Water Test Tank"],
         ["sandbox.moon-lab", "Moon Lab"], ["sandbox.crazy-lab", "Crazy Lab"], ["sandbox.everything-lab", "Everything Lab"]
     ].map(([id, title]) => ({ id: id, title: title, slot: "CHALLENGE", objective: "Build anything.", requiredForProgression: false })) };
-export const CREATIVE_MODES = [CHAIN_WORKSHOP, EXPERIMENT_LAB, FREE_BUILD_ROOMS];
+/** Challenge Lab (M26): the 12 locked metric-scored challenges (scoring rules in src/challenge/Challenges.ts). */
+export const CHALLENGE_LAB = { id: "challenge-lab", title: "Challenge Lab", concepts: "Measure it, beat your best", colour: "#ffd43b", icon: "🏆", missions: [
+        ["challenge.fastest-vehicle", "Fastest Vehicle", "Reach the finish with the lowest elapsedTime."], ["challenge.tallest-tower", "Tallest Tower", "Maximise maximumHeight while surviving the test window."],
+        ["challenge.longest-jump", "Longest Jump", "Maximise horizontal distance before first stable landing."], ["challenge.longest-glide", "Longest Glide", "Maximise distanceTravelled while remaining airborne/gliding."],
+        ["challenge.heavy-hauler", "Heavy Hauler", "Maximise supportedLoad while reaching the delivery zone."], ["challenge.low-power-lift", "Low Power Lift", "Complete a lift with minimum energyUsed."],
+        ["challenge.fewest-parts", "Fewest Parts", "Complete the target using minimum partCount."], ["challenge.budget-builder", "Budget Builder", "Complete the target using minimum buildCost."],
+        ["challenge.egg-drop", "Egg Drop", "Keep survivalState true while minimising peakImpact."], ["challenge.chain-master", "Chain Master", "Maximise valid chainLength under anti-loop rules."],
+        ["challenge.robot-efficiency", "Robot Efficiency", "Reach the robot goal with minimum programBlockCount, tie-break elapsedTime."], ["challenge.stable-platform", "Stable Platform", "Minimise stabilityVariance while supporting the specified load."]
+    ].map(([id, title, objective]) => ({ id: id, title: title, slot: "CHALLENGE", objective: objective, requiredForProgression: false })) };
+export const CREATIVE_MODES = [CHAIN_WORKSHOP, EXPERIMENT_LAB, FREE_BUILD_ROOMS, CHALLENGE_LAB];

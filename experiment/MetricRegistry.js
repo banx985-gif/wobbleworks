@@ -16,12 +16,17 @@ export const METRIC_WORDS = {
     supportedLoad: { more: "held more", less: "held less", unit: "load", decimals: 1 },
     energyUsed: { more: "used more power", less: "used less power", unit: "energy", decimals: 1 },
     programBlockCount: { more: "used more blocks", less: "used fewer blocks", unit: "blocks", decimals: 0 },
-    peakImpact: { more: "hit harder", less: "landed softer", unit: "m/s", decimals: 1 }
+    peakImpact: { more: "hit harder", less: "landed softer", unit: "m/s", decimals: 1 },
+    partCount: { more: "used more parts", less: "used fewer parts", unit: "parts", decimals: 0 },
+    buildCost: { more: "cost more", less: "cost less", unit: "coins", decimals: 0 },
+    chainLength: { more: "made a longer chain", less: "made a shorter chain", unit: "steps", decimals: 0 },
+    stabilityVariance: { more: "wobbled more", less: "was steadier", unit: "m", decimals: 3 }
 };
 /** Watches subjects during a TEST, tick by tick, and turns what happened into registered metrics. */
 export class MetricRecorder {
     subjects;
     finishLines;
+    prices;
     start = new Map();
     far = new Map();
     low = new Map();
@@ -34,9 +39,11 @@ export class MetricRecorder {
     crossed = new Map();
     ticks = 0;
     /** `finishLines`: a subject's time is when it first reaches this x (a finish flag), if it has one. */
-    constructor(subjects, finishLines = {}) {
+    /** `prices`: a challenge's own price list (part id → coins); buildCost can only be measured where one is configured. */
+    constructor(subjects, finishLines = {}, prices) {
         this.subjects = subjects;
         this.finishLines = finishLines;
+        this.prices = prices;
     }
     sample(runtime) {
         this.ticks++;
@@ -124,13 +131,18 @@ export class MetricRecorder {
             case "programBlockCount": return runtime.robots.robot(id)?.blocks;
             case "peakImpact": return runtime.flight.peakImpact(id);
             case "partCount": return build.allParts().length;
+            // Only the parts the player placed (room parts are locked), at the configured prices.
+            case "buildCost": return this.prices ? build.allParts().filter(p => p.parameters.locked !== true).reduce((t, p) => t + (this.prices[p.definitionId] ?? 0), 0) : undefined;
             case "chainLength": return runtime.chain.longest();
             case "uniqueMechanismCount": return runtime.chain.families().length;
             case "survivalState": return runtime.causalEvents.some(e => e.kind === "STRUCTURE_BROKE" && (e.sourceId === id || e.targetId === id)) ? 0 : 1;
             case "forbiddenContactCount": return runtime.causalEvents.filter(e => e.kind === "PHYSICS_CONTACT" && (e.sourceId === id || e.targetId === id)).length;
+            // A glider: how much its nose swung up and down. A structure: the biggest wobble it had.
             case "stabilityVariance": {
                 const c = runtime.flight.craft(id);
-                return c ? c.pitchSpread : undefined;
+                if (c)
+                    return c.pitchSpread;
+                return runtime.structures.memberStates().length ? runtime.structures.maxWobble() : undefined;
             }
             default: return undefined;
         }
@@ -150,5 +162,5 @@ function finishTime(id, runtime) {
     return undefined;
 }
 /** Which registered metrics have a measuring rule (an experiment or challenge may only use these). */
-export const MEASURABLE_METRICS = ["distanceTravelled", "maximumHeight", "peakSpeed", "averageSpeed", "elapsedTime", "supportedLoad", "energyUsed", "programBlockCount", "peakImpact", "partCount", "chainLength", "uniqueMechanismCount", "survivalState", "forbiddenContactCount", "stabilityVariance"];
+export const MEASURABLE_METRICS = ["distanceTravelled", "maximumHeight", "peakSpeed", "averageSpeed", "elapsedTime", "supportedLoad", "energyUsed", "programBlockCount", "peakImpact", "partCount", "chainLength", "uniqueMechanismCount", "survivalState", "forbiddenContactCount", "stabilityVariance", "buildCost"];
 export function canMeasure(metric) { return isRegisteredMetric(metric) && MEASURABLE_METRICS.includes(metric); }

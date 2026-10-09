@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "id": "challenge.longest-glide",
+  "title": "Longest Glide",
+  "environmentId": "env.flight-hangar",
+  "availablePartIds": [
+    "flight.wing-small",
+    "flight.wing-large",
+    "flight.tail"
+  ],
+  "starterParts": [
+    {
+      "id": "glider",
+      "definitionId": "flight.glider",
+      "position": {
+        "x": 2,
+        "y": 4.5
+      },
+      "rotation": 0,
+      "parameters": {
+        "initialVx": 4
+      },
+      "tags": [
+        "craft"
+      ]
+    }
+  ],
+  "starterConnections": [],
+  "staticObjects": [
+    {
+      "id": "deck",
+      "definitionId": "motion.platform",
+      "position": {
+        "x": 0.7,
+        "y": 4.8
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    }
+  ],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "outcomeRules": [
+    {
+      "kind": "FLIGHT_DISTANCE",
+      "craftTag": "craft",
+      "minX": 5
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "flight.lift",
+      "conceptId": "flight.lift",
+      "eventKind": "WING_LIFT",
+      "minimumCount": 1,
+      "truthContractId": "truth.flight.v1"
+    }
+  ],
+  "hints": [
+    "Without wings it just drops.",
+    "Wings make lift — and something at the back keeps the nose steady."
+  ],
+  "narrationCues": [
+    "Give the glider wings that carry it as far as possible!"
+  ]
+}

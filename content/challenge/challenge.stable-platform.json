@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "id": "challenge.stable-platform",
+  "title": "Stable Platform",
+  "environmentId": "env.builder-bay",
+  "availablePartIds": [
+    "builder.beam-wood",
+    "builder.beam-metal",
+    "builder.brace",
+    "builder.column",
+    "builder.rope"
+  ],
+  "starterParts": [
+    {
+      "id": "leg-l",
+      "definitionId": "builder.beam-wood",
+      "position": {
+        "x": 5,
+        "y": 7.2
+      },
+      "rotation": -1.570796,
+      "parameters": {
+        "length": 2,
+        "locked": true
+      },
+      "tags": []
+    },
+    {
+      "id": "leg-r",
+      "definitionId": "builder.beam-wood",
+      "position": {
+        "x": 7,
+        "y": 7.2
+      },
+      "rotation": -1.570796,
+      "parameters": {
+        "length": 2,
+        "locked": true
+      },
+      "tags": []
+    },
+    {
+      "id": "top",
+      "definitionId": "builder.beam-wood",
+      "position": {
+        "x": 6,
+        "y": 6.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "length": 2,
+        "locked": true
+      },
+      "tags": []
+    }
+  ],
+  "starterConnections": [],
+  "staticObjects": [
+    {
+      "id": "bag",
+      "definitionId": "builder.sandbag",
+      "position": {
+        "x": 6,
+        "y": 5.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "load.bag"
+      ]
+    }
+  ],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "outcomeRules": [
+    {
+      "kind": "STRUCT_STABLE",
+      "maxWobble": 0.05,
+      "sustainSeconds": 2
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "structure.brace",
+      "conceptId": "structure.brace",
+      "eventKind": "STRUCT_COLLAPSE",
+      "minimumCount": 1,
+      "truthContractId": "truth.structures.v1"
+    }
+  ],
+  "hints": [
+    "A square frame can lean over like a falling bookshelf.",
+    "Something going corner to corner could stop it leaning."
+  ],
+  "narrationCues": [
+    "Hold the sandbag up and keep the platform as steady as you can."
+  ]
+}

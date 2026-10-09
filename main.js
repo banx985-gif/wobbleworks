@@ -30,7 +30,8 @@ import { OpeningDirector, evaluateOpeningSuccess } from "./opening/OpeningDirect
 import { loadMotionYardLevels } from "./motion/MotionContent.js";
 import { MOTION_PERFORMANCE_BUDGET } from "./motion/MotionPerformanceBudget.js";
 import { evaluateMotionMission, MOTION_REAL_WORLD_CARDS } from "./motion/MotionYard.js";
-import { CHAIN_WORKSHOP, EXPERIMENT_LAB, FREE_BUILD_ROOMS, MAIN_LABS } from "./progression/CampaignData.js";
+import { CHAIN_WORKSHOP, CHALLENGE_LAB, EXPERIMENT_LAB, FREE_BUILD_ROOMS, MAIN_LABS } from "./progression/CampaignData.js";
+import { ChallengeRun, challengeBest, challengeById, challengeLabOpen, challengeOpen, earnedRatings, formatScore, personalityLabel, playerParts, withChallengeResult } from "./challenge/Challenges.js";
 import { activeModifiers, sandboxTrayParts, capStatus, CAMPAIGN_PART_CAP, MODIFIER_LABELS, placeTemplate, sandboxById, sandboxOpen, SANDBOX_PART_CAP, SPAWN_CATALOGUE, templateById, withModifier } from "./sandbox/Sandboxes.js";
 import { buildExperimentRig, experimentTemplate, verdict, verdictLine } from "./experiment/ExperimentTemplates.js";
 import { changedOne, experimentDiscoveries, experimentLabOpen, experimentUnlocked, savedExperiments, withSavedExperiment, EXPERIMENT_CONCEPT_EVIDENCE } from "./experiment/ExperimentLab.js";
@@ -276,7 +277,7 @@ function readSettingsForm() {
     return { textScale: Number.isFinite(num) ? Math.max(0.9, Math.min(1.4, num)) : 1, reducedMotion: chk("#setting-reduced-motion"), highContrast: chk("#setting-high-contrast"), narration: chk("#setting-narration"), subtitles: chk("#setting-subtitles"), soundEffects: chk("#setting-sfx"), music: chk("#setting-music"), vibration: chk("#setting-vibration") };
 }
 /** The nine campaign labs plus the creative modes that use the same mission menu (the Chain Reaction Workshop). */
-const PLAY_SETS = [...MAIN_LABS, CHAIN_WORKSHOP, EXPERIMENT_LAB, FREE_BUILD_ROOMS];
+const PLAY_SETS = [...MAIN_LABS, CHAIN_WORKSHOP, EXPERIMENT_LAB, FREE_BUILD_ROOMS, CHALLENGE_LAB];
 function labDef(id = currentLabId) { return PLAY_SETS.find(l => l.id === id); }
 function labOfLevel(levelId) { return PLAY_SETS.find(l => l.missions.some(m => m.id === levelId))?.id ?? "motion-yard"; }
 function completedSet() { return new Set(completedLevelIds(appSave)); }
@@ -290,6 +291,9 @@ function evaluateLevel(level, runtime) {
     }
     if (lab === EXPERIMENT_LAB.id)
         return { levelId: level.id, success: false, discoveries: [] };
+    // Challenge Lab: finishing is decided by the challenge's own scoring (finishChallenge), on an exact tick.
+    if (lab === CHALLENGE_LAB.id)
+        return { levelId: level.id, success: false, discoveries: [] };
     if (lab === CHAIN_WORKSHOP.id)
         return { levelId: level.id, success: runtime ? evaluateLevelOutcome(level, build, runtime).complete : false, discoveries: runtime ? collectChainDiscoveries(build, runtime) : [] };
     const module = labModule(lab);
@@ -300,7 +304,8 @@ function evaluateLevel(level, runtime) {
 /** Remember this run so the next TEST can show whether a change (like a brace) really helped. */
 function rememberRun() { const runtime = tests.active(); if (runtime && activeLevel)
     lastRuns.set(activeLevel.id, runSummary(build, runtime)); }
-function labIsOpen(labId) { if (labId === FREE_BUILD_ROOMS.id)
+function labIsOpen(labId) { if (labId === CHALLENGE_LAB.id)
+    return labLevels.has(labId) && (challengeLabOpen(appSave) || testingLabs.has(labId)); if (labId === FREE_BUILD_ROOMS.id)
     return labLevels.has(labId) && Boolean(activeProfile(appSave)?.freeBuildUnlocked); if (labId === EXPERIMENT_LAB.id)
     return labLevels.has(labId) && (experimentLabOpen(appSave) || testingLabs.has(labId)); if (labId === CHAIN_WORKSHOP.id)
     return labLevels.has(labId) && (chainWorkshopOpen(appSave) || testingLabs.has(labId)); return labLevels.has(labId) && (routeToRegion(appSave, labId).kind === "ENTER" || testingLabs.has(labId)); }
@@ -360,7 +365,7 @@ function renderLabMenu() {
     document.querySelector("#lab-lead").textContent = `${lab.concepts}. Build, TEST, watch what happens, then change it.`;
     motionProgressLabel.textContent = `${lab.missions.filter(m => completed.has(m.id)).length} / ${lab.missions.length} ${lab.title} experiences completed`;
     for (const meta of lab.missions) {
-        const unlocked = labMissionUnlocked(lab, meta.id, completed) && (lab.id !== EXPERIMENT_LAB.id || experimentUnlocked(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== FREE_BUILD_ROOMS.id || sandboxOpen(appSave, meta.id) || testingLabs.has(lab.id));
+        const unlocked = labMissionUnlocked(lab, meta.id, completed) && (lab.id !== EXPERIMENT_LAB.id || experimentUnlocked(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== FREE_BUILD_ROOMS.id || sandboxOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== CHALLENGE_LAB.id || challengeOpen(appSave, meta.id) || testingLabs.has(lab.id));
         const button = document.createElement("button");
         button.className = `motion-mission${completed.has(meta.id) ? " done" : ""}${!unlocked ? " locked" : ""}${requiredNext === meta.id ? " required" : ""}`;
         button.disabled = !unlocked;
@@ -372,7 +377,12 @@ function renderLabMenu() {
         const objective = document.createElement("span");
         const tpl = lab.id === EXPERIMENT_LAB.id ? experimentTemplate(meta.id) : undefined;
         const room = lab.id === FREE_BUILD_ROOMS.id ? sandboxById(meta.id) : undefined;
-        if (room)
+        const ch = lab.id === CHALLENGE_LAB.id ? challengeById(meta.id) : undefined;
+        if (ch) {
+            const best = challengeBest(appSave, ch.id);
+            objective.textContent = unlocked ? `${ch.icon} ${ch.goal}${best ? ` · Best: ${formatScore(ch, best.value)}` : ""}` : `Opens with the ${regionById(ch.labId)?.title ?? "lab"}`;
+        }
+        else if (room)
             objective.textContent = unlocked ? `${room.icon} ${room.prompts[0]}` : room.free ? "Finish the opening first." : room.needs === "ALL" ? "Opens when every lab is restored." : `Opens with the ${regionById(room.needs ?? "")?.title ?? "lab"}`;
         else
             objective.textContent = tpl ? (unlocked ? `${tpl.question} ${savedExperiments(appSave, meta.id).length ? `· ${savedExperiments(appSave, meta.id).length} saved` : ""}` : `Opens with the ${regionById(tpl.labId)?.title ?? "lab"}`) : meta.objective;
@@ -458,6 +468,7 @@ function loadMission(id) {
     resetGuidance(level.id);
     enterWorkshop();
     startExperiment(labId === EXPERIMENT_LAB.id ? level : undefined);
+    setupChallenge(labId === CHALLENGE_LAB.id ? challengeById(level.id) : undefined);
 }
 function showMotionResult(success, body, stars = [], newStars = [], rewards = []) {
     resultShown = true;
@@ -475,7 +486,7 @@ function showMotionResult(success, body, stars = [], newStars = [], rewards = []
     shelfButton.textContent = "Put on Shelf";
     motionBackButton.textContent = resultReturnsToHub ? "Workshop" : labDef().title;
     whyButton.classList.toggle("hidden", success || !lastWhy);
-    keepBuildingButton.classList.toggle("hidden", success);
+    keepBuildingButton.classList.toggle("hidden", success && !challenge);
     watchReplayButton.classList.toggle("hidden", !recorder || recorder.length < 30);
     watchReplayButton.textContent = !success && recorder?.markers.length ? "🎬 See where it went wrong" : "🎬 Watch replay";
     if (success) {
@@ -781,6 +792,8 @@ function stopToBuild() {
     recorder = undefined;
     setSlow(false);
     setFollow(undefined);
+    challengeRun = undefined;
+    cargoBox.classList.remove("locked");
     if (activeLevel && labOfLevel(activeLevel.id) === CHAIN_WORKSHOP.id && !resultShown)
         noteChainRun();
     tests.stop();
@@ -825,6 +838,7 @@ async function loadAppState() {
         labLevels.set(CHAIN_WORKSHOP.id, await loadLabLevels(registry, CHAIN_WORKSHOP.id, "chain"));
         labLevels.set(EXPERIMENT_LAB.id, await loadLabLevels(registry, EXPERIMENT_LAB.id, "experiment"));
         labLevels.set(FREE_BUILD_ROOMS.id, await loadLabLevels(registry, FREE_BUILD_ROOMS.id, "sandbox"));
+        labLevels.set(CHALLENGE_LAB.id, await loadLabLevels(registry, CHALLENGE_LAB.id, "challenge"));
         appSave = loaded.payload ?? createDefaultAppSave();
         savingBlocked = loaded.futureVersion;
         applySettings();
@@ -913,6 +927,7 @@ function leaveGameplay() {
     invSave.classList.add("hidden");
     endReplay();
     lastRecording = undefined;
+    setupChallenge(undefined);
     currentRoom = undefined;
     sandboxBar.classList.add("hidden");
     sandboxDrawer.classList.add("hidden");
@@ -1078,6 +1093,7 @@ function renderHubScreen() {
         openFreeBuild: () => showLab(FREE_BUILD_ROOMS.id),
         ...(experimentLabOpen(appSave) ? { openExperiments: () => showLab(EXPERIMENT_LAB.id) } : {}),
         ...(chainWorkshopOpen(appSave) ? { openChain: () => showLab(CHAIN_WORKSHOP.id) } : {}),
+        ...(challengeLabOpen(appSave) ? { openChallenges: () => showLab(CHALLENGE_LAB.id) } : {}),
         pokeBolt: () => { const p = activeProfile(appSave); hubQueue.push({ kind: "BOLT", title: p?.openingComplete ? "Fully charged and ready to wobble!" : "Bzzt… still charging…", body: "Tap the Campus Map to pick where to go next." }); showNextHubMoment(); },
         pokeSprocket: () => { sfx(1300, .05); window.setTimeout(() => sfx(1500, .05), 90); hubRoot.querySelector(".station-sprocket")?.classList.add("wiggle"); window.setTimeout(() => hubRoot.querySelector(".station-sprocket")?.classList.remove("wiggle"), 600); },
         meetVisitor: id => {
@@ -1979,6 +1995,12 @@ ui.test.addEventListener("click", () => {
     if (openingActive)
         openingDirector.noteTest(now());
     const testSnap = build.snapshot();
+    // A new TEST is a new attempt: any old result card goes away.
+    if (resultShown) {
+        motionResult.classList.add("hidden");
+        whyCard.classList.add("hidden");
+        resultShown = false;
+    }
     telemetry.inc("testPresses");
     tests.start(testSnap);
     testMode = true;
@@ -1986,6 +2008,8 @@ ui.test.addEventListener("click", () => {
     ui.mode.textContent = "TEST";
     sfx(700, 0.06);
     runMeter = new RunMeter(contentChecksum(contentOf(testSnap)));
+    challengeRun = challenge && activeLevel ? new ChallengeRun(challenge, build, new Set([...(activeLevel.staticObjects ?? []), ...activeLevel.starterParts].map(p => p.id))) : undefined;
+    cargoBox.classList.add("locked");
     // M25: record the run (the build + every tap) so it can be replayed exactly.
     recorder = openingActive || exp ? undefined : new ReplayRecorder(testSnap, contentChecksum(contentOf(testSnap)));
     lastRecording = undefined;
@@ -2996,6 +3020,74 @@ document.querySelector("#replay-restart").addEventListener("click", () => { cons
     return; rp.restart(); rp.paused = false; replayNote = ""; markerIndex = 0; replayProblem.textContent = "⚠️ Jump to the problem"; });
 replayProblem.addEventListener("click", jumpToProblem);
 document.querySelector("#replay-close").addEventListener("click", endReplay);
+// ---------------------------------------------------------------- Challenge Lab (M26)
+const cargoBox = document.querySelector("#challenge-cargo"), cargoValue = document.querySelector("#cargo-value");
+/** The challenge being played (if any), and the TEST being scored. */
+let challenge;
+let challengeRun;
+function setupChallenge(def) {
+    challenge = def;
+    challengeRun = undefined;
+    cargoBox.classList.toggle("hidden", def?.capture.kind !== "CARGO");
+    cargoBox.classList.remove("locked");
+    if (!def)
+        return;
+    const best = challengeBest(appSave, def.id);
+    motionObjective.textContent = `${def.goal} ${best ? `Your best: ${formatScore(def, best.value)}.` : "Set your first record!"}`;
+    document.querySelector(".motion-hud .motion-badge").textContent = `CHALLENGE ${def.number}`;
+    showCargo();
+}
+function showCargo() { const c = challenge?.capture; if (c?.kind !== "CARGO")
+    return; cargoValue.textContent = `Cargo: ${Number(build.getPart(c.subject)?.parameters.weight ?? c.choices[0])}`; }
+function changeCargo(step) {
+    const c = challenge?.capture;
+    if (c?.kind !== "CARGO" || testMode || replayer)
+        return;
+    const cart = build.getPart(c.subject);
+    if (!cart)
+        return;
+    const now = Number(cart.parameters.weight ?? c.choices[0]);
+    const i = Math.max(0, Math.min(c.choices.length - 1, c.choices.indexOf(now) + step));
+    build.reshape(c.subject, { parameters: { ...cart.parameters, weight: c.choices[i] } });
+    showCargo();
+    sfx(600 + i * 40, .04);
+}
+document.querySelector("#cargo-down").addEventListener("click", () => changeCargo(-1));
+document.querySelector("#cargo-up").addEventListener("click", () => changeCargo(1));
+/** The TEST reached the challenge's scoring moment: save the score (if it's a record) and celebrate honestly. */
+function finishChallenge() {
+    const def = challenge, run = challengeRun, level = activeLevel, rt = tests.active();
+    if (!def || !run?.result || !level || !rt)
+        return;
+    if (!tests.isPaused())
+        tests.togglePause();
+    const r = run.result;
+    const seeded = new Set([...(level.staticObjects ?? []), ...level.starterParts].map(p => p.id));
+    const added = playerParts(build, seeded).length;
+    if (!r.success || r.value === undefined) {
+        void commit(withChallengeResult(appSave, def, r).save);
+        showMotionResult(false, `Not this time. ${def.goal}`);
+        sfx(330, .08);
+        return;
+    }
+    checkRunDiscoveries();
+    const outcome = recordMissionSuccess(appSave, level.id, { playerPartCount: added, discoveries: [] });
+    const scored = withChallengeResult(outcome.save, def, r);
+    void commit(scored.save, true).catch(() => undefined);
+    lastMissionLevelId = level.id;
+    resultReturnsToHub = false;
+    const score = formatScore(def, r.value);
+    const prev = scored.previous ? formatScore(def, scored.previous.value) : undefined;
+    const verdict = scored.verdict === "FIRST" ? " Your first record!" : scored.verdict === "NEW_RECORD" ? `${prev && scored.previous.value === r.value ? ` Same ${def.measureName.toLowerCase()} as before, but ${def.tieBreak.name} — a new record!` : ` NEW PERSONAL BEST! (was ${prev})`}` : scored.verdict === "MATCHED" ? ` You matched your best exactly (${prev}).` : ` Your best is ${prev}. Change one thing and try to beat it!`;
+    const ratings = earnedRatings(def, r, added).map(x => ` 🏅 ${x.label} — ${x.because}.`).join("");
+    const fun = ` Just for fun: ${personalityLabel(build, rt)}!`;
+    showMotionResult(true, `${def.measureName}: ${score}.${verdict}${ratings}${fun}`, outcome.stars, outcome.newStars, outcome.newRewards);
+    if (scored.verdict === "NEW_RECORD" || scored.verdict === "FIRST")
+        motionResultTitle.textContent = scored.verdict === "FIRST" ? "RECORD SET!" : "NEW RECORD!";
+    motionObjective.textContent = `${def.goal} Your best: ${formatScore(def, challengeBest(scored.save, def.id)?.value ?? r.value)}.`;
+    sfx(980, .09);
+    buzz(60);
+}
 function render() {
     maybeCompleteOpeningChallenge();
     maybeCompleteMotionMission();
@@ -3007,18 +3099,20 @@ function render() {
         drawPhotoBackground(renderer.ctx, photo.background, now() / 1000);
     if (freeBuildActive && currentRoom && !photoBackground)
         drawRoomBackdrop(currentRoom);
+    const lookLab = challenge ? (challenge.baseLevelId.startsWith("chain.") ? CHAIN_WORKSHOP.id : challenge.labId) : currentLabId;
+    const sceneryId = challenge ? challenge.baseLevelId : activeLevel?.id;
     if (labActive && photoBackground)
-        renderer.drawScenery(activeLevel?.id);
+        renderer.drawScenery(sceneryId);
     else if (labActive) {
-        if (currentLabId === "gear-garage")
+        if (lookLab === "gear-garage")
             renderer.drawGearGarageBackdrop(now() / 1000);
-        else if (currentLabId === "builder-bay")
+        else if (lookLab === "builder-bay")
             renderer.drawBuilderBayBackdrop();
-        else if (hasLabBackdrop(currentLabId))
-            renderer.drawLabBackdrop(currentLabId, now() / 1000);
+        else if (hasLabBackdrop(lookLab))
+            renderer.drawLabBackdrop(lookLab, now() / 1000);
         else
             renderer.drawMotionYardBackdrop();
-        renderer.drawScenery(activeLevel?.id);
+        renderer.drawScenery(sceneryId);
     }
     const runtime = replayer ? replayer.runtime : tests.active();
     const states = runtime?.physics.states();
@@ -3083,10 +3177,14 @@ function frame(frameNow) {
         if (rt) {
             runMeter?.sample(rt);
             recorder?.record(rt);
+            if (challengeRun && !challengeRun.done && activeLevel && !tests.isPaused())
+                challengeRun.tick(rt, evaluateLevelOutcome(activeLevel, build, rt).complete);
         }
     } replayer?.step(); }));
     if (replayer?.frame())
         replayNote = "Fast-forwarding…";
+    if (challengeRun?.done && testMode && !resultShown)
+        finishChallenge();
     render();
     requestAnimationFrame(frame);
 }

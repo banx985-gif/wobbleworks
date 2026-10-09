@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 1,
+  "id": "challenge.chain-master",
+  "title": "Chain Master",
+  "environmentId": "env.chain-workshop",
+  "availablePartIds": [
+    "chain.domino",
+    "chain.bell",
+    "chain.seesaw",
+    "chain.trapdoor",
+    "chain.cannon",
+    "chain.confetti",
+    "motion.ball",
+    "motion.ramp"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "staticObjects": [
+    {
+      "id": "counter",
+      "definitionId": "chain.counter",
+      "position": {
+        "x": 15.2,
+        "y": 0.7
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "ramp",
+      "definitionId": "motion.ramp",
+      "position": {
+        "x": 2.2,
+        "y": 6.9
+      },
+      "rotation": 0.45,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "ball",
+      "definitionId": "motion.ball",
+      "position": {
+        "x": 1.4,
+        "y": 6
+      },
+      "rotation": 0,
+      "parameters": {},
+      "tags": [
+        "start"
+      ]
+    },
+    {
+      "id": "d0",
+      "definitionId": "chain.domino",
+      "position": {
+        "x": 4.6,
+        "y": 7.95
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "d1",
+      "definitionId": "chain.domino",
+      "position": {
+        "x": 5.4,
+        "y": 7.95
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "bell",
+      "definitionId": "chain.bell",
+      "position": {
+        "x": 7.8,
+        "y": 7.7
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "bell"
+      ]
+    }
+  ],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "outcomeRules": [
+    {
+      "kind": "CHAIN_LENGTH",
+      "minDepth": 3,
+      "oneStart": true
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "chain.cause",
+      "conceptId": "chain.cause",
+      "eventKind": "CHAIN_EDGE",
+      "minimumCount": 1,
+      "truthContractId": "truth.chain.v1"
+    }
+  ],
+  "hints": [
+    "Each thing has to set off the next one. Is there a gap?",
+    "Something tall and wobbly could fill the gap."
+  ],
+  "narrationCues": [
+    "One push. How long a chain reaction can you make?"
+  ]
+}

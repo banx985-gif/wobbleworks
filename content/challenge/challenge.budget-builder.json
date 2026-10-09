@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "id": "challenge.budget-builder",
+  "title": "Budget Builder",
+  "environmentId": "env.builder-bay",
+  "availablePartIds": [
+    "builder.beam-wood",
+    "builder.beam-metal",
+    "builder.brace",
+    "builder.column",
+    "builder.rope"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "staticObjects": [
+    {
+      "id": "left",
+      "definitionId": "builder.cliff",
+      "position": {
+        "x": 2.5,
+        "y": 6.7
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "width": 5,
+        "height": 3
+      },
+      "tags": [
+        "ground"
+      ]
+    },
+    {
+      "id": "right",
+      "definitionId": "builder.cliff",
+      "position": {
+        "x": 12.5,
+        "y": 6.7
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "width": 7,
+        "height": 3
+      },
+      "tags": [
+        "ground"
+      ]
+    },
+    {
+      "id": "gap",
+      "definitionId": "builder.chasm",
+      "position": {
+        "x": 7,
+        "y": 8.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "width": 4
+      },
+      "tags": [
+        "chasm"
+      ]
+    },
+    {
+      "id": "bolt",
+      "definitionId": "builder.bolt-walker",
+      "position": {
+        "x": 2,
+        "y": 5.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "endX": 12,
+        "delay": 1
+      },
+      "tags": [
+        "walker.bolt"
+      ]
+    }
+  ],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "outcomeRules": [
+    {
+      "kind": "STRUCT_ARRIVES",
+      "travellerTag": "walker.bolt"
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "structure.load",
+      "conceptId": "structure.load",
+      "eventKind": "TRAVELLER_START",
+      "minimumCount": 1,
+      "truthContractId": "truth.structures.v1"
+    }
+  ],
+  "hints": [
+    "Bolt needs something to walk on, all the way across.",
+    "Make it reach from one cliff edge to the other."
+  ],
+  "narrationCues": [
+    "Get Bolt across with the cheapest bridge you can build."
+  ]
+}
