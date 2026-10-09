@@ -5,6 +5,8 @@ import { labCompletionCount } from "../progression/LabProgression.js";
 import { lockerItems, progressSummary } from "../progression/ProgressionManager.js";
 import { hubFeatures, restorationStage, dueVisitors, restorationProps } from "../progression/Restoration.js";
 import { REWARDS, rewardById, MISSION_STARS } from "../progression/Rewards.js";
+import { HIDDEN_LAB_KEY_PIECES } from "../progression/Campus.js";
+import { KEY_PIECE_PICTURES, pictureOrEmoji, rewardIcon } from "../render/RewardPictures.js";
 import { renderLook } from "../inventor/LookView.js";
 import { BOLT_FINAL_MEMORY, CENTRAL_MACHINE_SYSTEMS, CREDITS, ENDING_SCENES, FINAL_PROTOTYPE_LEVEL, collectedStory } from "../story/CampusStory.js";
 import { dueContractVisitors, openJobs } from "../contracts/Contracts.js";
@@ -74,10 +76,8 @@ export function avatarBadge(profile, size = 54) {
     else
         wrap.append(svg(`<circle cx="32" cy="36" r="24" fill="var(--avatar)" stroke="#18323f" stroke-width="5"/><circle cx="24" cy="34" r="4" fill="#18323f"/><circle cx="40" cy="34" r="4" fill="#18323f"/><path d="M23 45 q9 7 18 0" fill="none" stroke="#18323f" stroke-width="4" stroke-linecap="round"/>`, "0 0 64 64"));
     const hat = ((_b = profile.equipped) === null || _b === void 0 ? void 0 : _b.avatar) ? rewardById(profile.equipped.avatar) : undefined;
-    if (hat) {
-        const h = el("span", "avatar-hat", hat.icon);
-        wrap.append(h);
-    }
+    if (hat)
+        wrap.append(rewardIcon(hat, "avatar-hat"));
     return wrap;
 }
 export const BOLT_POSES = ["point", "wave", "cheer", "panic", "inspect", "sign"];
@@ -372,7 +372,7 @@ export function renderLocker(root, save, tab, cb) {
     for (const id of owned) {
         const r = rewardById(id);
         const b = el("button", `locker-item${p.equipped[tab] === id ? " selected" : ""}`);
-        b.append(el("span", "locker-icon", r.icon), el("span", "", r.title));
+        b.append(rewardIcon(r, "locker-icon"), el("span", "", r.title));
         if (p.unseenRewards.includes(id))
             b.append(el("span", "station-badge", "NEW"));
         b.addEventListener("click", () => cb.equip(tab, id));
@@ -401,7 +401,7 @@ export function renderTrophies(root, save, cb) {
     for (const r of REWARDS.filter(x => x.kind === "BADGE" || x.kind === "STICKER")) {
         const has = p.rewards.includes(r.id);
         const card = el("div", `trophy${has ? "" : " missing"}${r.kind === "BADGE" ? " badge" : ""}`);
-        card.append(el("span", "trophy-icon", has ? r.icon : "?"), el("strong", "", has ? r.title : "???"));
+        card.append(has ? rewardIcon(r, "trophy-icon") : el("span", "trophy-icon", "?"), el("strong", "", has ? r.title : "???"));
         if (has)
             card.title = r.description;
         if (p.unseenRewards.includes(r.id))
@@ -418,7 +418,27 @@ export function renderTrophies(root, save, cb) {
         row.append(el("span", "", lab.icon), el("strong", "", lab.title), el("span", "star on", "★"), el("span", "", `${got} of ${lab.missions.length * 3}`));
         labs.append(row);
     }
-    root.append(head, labs, badges, fairBook(save), storyBook(save, cb));
+    root.append(head, labs, keyPieces(p.rewards), badges, fairBook(save), storyBook(save, cb));
+}
+/**
+ * The three strange key pieces (M45 pictures): found ones show the finished piece, the next one to find is "filling",
+ * and the rest are locked. Pictures only: the pieces are still won exactly as before.
+ */
+function keyPieces(rewards) {
+    const row = el("section", "key-pieces");
+    row.append(el("strong", "", "Strange key pieces"));
+    const found = HIDDEN_LAB_KEY_PIECES.map(k => rewards.includes(k));
+    const next = found.indexOf(false);
+    HIDDEN_LAB_KEY_PIECES.forEach((k, i) => {
+        var _a, _b;
+        const state = found[i] ? "found" : i === next && found.some(Boolean) ? "filling" : "locked";
+        const slot = el("span", `key-piece ${state}`);
+        slot.append(pictureOrEmoji(KEY_PIECE_PICTURES[state], found[i] ? "🗝️" : "?", "key-pic"));
+        slot.title = found[i] ? (_b = (_a = rewardById(k)) === null || _a === void 0 ? void 0 : _a.title) !== null && _b !== void 0 ? _b : "Key piece" : "Not found yet";
+        row.append(slot);
+    });
+    row.append(el("span", "muted", found.every(Boolean) ? "All three! A secret door is open somewhere…" : `${found.filter(Boolean).length} of 3 found`));
+    return row;
 }
 /** Science Fair history (M28): every accepted entry and the measured awards it earned. Fun awards are never kept. */
 function fairBook(save) {
@@ -528,7 +548,7 @@ export function renderProfileSelect(root, save, selectedId, cb) {
             art.append(avatarBadge(p, 110));
         const hat = !look && p.equipped.avatar ? rewardById(p.equipped.avatar) : undefined;
         if (hat)
-            art.append(el("span", "inventor-hat", hat.icon));
+            art.append(rewardIcon(hat, "inventor-hat"));
         const stars = Object.values(p.levels).reduce((n, r) => n + r.stars.length, 0);
         const trophies = p.rewards.filter(id => id.startsWith("badge.") || id.startsWith("sticker.")).length;
         const stats = el("div", "inventor-stats");

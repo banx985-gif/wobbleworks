@@ -2,6 +2,7 @@ import { activeProfile } from "../app/AppState.js";
 import { comparisonLines, compareVersions, inventionStorage, latestVersion, resolveAll, shelfItemFor, thumbKey, tidySuggestion, VERSION_METRICS } from "../inventions/Inventions.js";
 import { formatBytes } from "../save/StorageMonitor.js";
 import { miniBuild } from "./HubScreens.js";
+import { INVENTION_CARD_FRAME, picturePath } from "../render/RewardPictures.js";
 let view = { kind: "LIST" };
 export function showInventionList() { view = { kind: "LIST" }; }
 export function showInventionDetail(id) { view = { kind: "DETAIL", id, picks: [] }; }
@@ -51,6 +52,9 @@ export function renderInventions(root, save, cb) {
     for (const inv of [...p.inventions].sort((a, b) => latestVersion(b).savedAtMs - latestVersion(a).savedAtMs)) {
         const last = latestVersion(inv);
         const card = button("", () => { view = { kind: "DETAIL", id: inv.id, picks: [] }; cb.rerender(); }, "inv-card");
+        // M45: each invention sits in the painted blank card (a picture frame only).
+        card.style.backgroundImage = `url(${picturePath(INVENTION_CARD_FRAME)})`;
+        card.classList.add("framed");
         const content = resolveAll(inv).get(last.n);
         card.append(picture(cb, inv, last.n, content === null || content === void 0 ? void 0 : content.parts), el("strong", "", inv.name), el("span", "muted", `Version ${last.n} · ${last.partCount} parts`));
         if (shelfItemFor(save, inv.id))

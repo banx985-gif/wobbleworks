@@ -68,6 +68,7 @@ import { attachKind, spaceSnap, vesselBehaviour } from "./space/SpaceSystem.js";
 import { InputManager } from "./input/InputManager.js";
 import { CanvasRenderer } from "./render/CanvasRenderer.js";
 import { PROGRAM_PICTURES, SPAWN_PICTURES, trayPictureArt } from "./render/PartPictures.js";
+import { MAKE_YOUR_OWN_ICON, REWARD_PICTURES, WHY_CARD_PICTURE, EXPERIMENT_CARD, missionCard, picturePath, rewardIcon } from "./render/RewardPictures.js";
 import { CameraController } from "./render/CameraController.js";
 import { AutosaveScheduler, IndexedDbStore, SaveManager, ThumbnailCache } from "./save/SaveManager.js";
 import { EditorOverlay } from "./tooling/EditorOverlay.js";
@@ -143,6 +144,22 @@ function applyTrayPictures() {
     });
 }
 applyTrayPictures();
+/** M45: picture cards and icons on fixed buttons and panels, from the one reward/card map (render/RewardPictures.ts). */
+function applyCardPictures() {
+    const pic = (art, cls) => { const img = document.createElement("img"); img.src = picturePath(art); img.alt = ""; img.className = cls; return img; };
+    const maker = document.querySelector("#btn-creator");
+    if (maker && !maker.querySelector("img")) {
+        maker.textContent = " Make your own";
+        maker.prepend(pic(MAKE_YOUR_OWN_ICON, "btn-pic"));
+    }
+    const why = document.querySelector("#why-pic");
+    if (why)
+        why.src = picturePath(WHY_CARD_PICTURE);
+    const kicker = document.querySelector("#experiment-panel .exp-kicker");
+    if (kicker && !kicker.querySelector("img"))
+        kicker.prepend(pic(EXPERIMENT_CARD, "kicker-pic"));
+}
+applyCardPictures();
 /** A painted picture's file, once the art list has arrived (menus fall back to their emoji until then). */
 function artUrl(art) { return art ? artManifest[art] : undefined; }
 /** Reads the art list (assets/manifest.json) only: a small file, so the tray buttons and recorded sounds know their files. */
@@ -171,7 +188,7 @@ function loadArtList() {
 let pictureLoad;
 function loadPlayfieldPictures() {
     pictureLoad !== null && pictureLoad !== void 0 ? pictureLoad : (pictureLoad = loadArtList().then(async () => {
-        const wanted = Object.keys(artManifest).filter(id => /^(motion|structure|air|level|fx|ui\.hint|duck|toy|char\.bolt|gear|power|water|robot|icon|magnet|flight|space|logic|sound|launch|target)\./.test(id));
+        const wanted = Object.keys(artManifest).filter(id => /^(motion|structure|air|level|fx|ui\.hint|duck|toy|char\.(?:bolt|minibot|robopup)|gear|power|water|robot|icon|magnet|flight|space|logic|sound|launch|target)\./.test(id));
         // A few at a time: a slow device stays responsive while they arrive.
         for (let i = 0; i < wanted.length; i += 8)
             await Promise.allSettled(wanted.slice(i, i + 8).map(id => assets.loadImage(id, artManifest[id])));
@@ -524,6 +541,16 @@ function renderLabMenu() {
             objective.textContent = unlocked ? `${room.icon} ${room.prompts[0]}` : room.free ? "Finish the opening first." : room.needs === "ALL" ? "Opens when the Great WobbleWorks Machine runs." : `Opens with the ${(_t = (_s = regionById((_r = room.needs) !== null && _r !== void 0 ? _r : "")) === null || _s === void 0 ? void 0 : _s.title) !== null && _t !== void 0 ? _t : "lab"}`;
         else
             objective.textContent = tpl ? (unlocked ? `${tpl.question} ${savedExperiments(appSave, meta.id).length ? `· ${savedExperiments(appSave, meta.id).length} saved` : ""}` : `Opens with the ${(_v = (_u = regionById(tpl.labId)) === null || _u === void 0 ? void 0 : _u.title) !== null && _v !== void 0 ? _v : "lab"}`) : meta.objective;
+        // Science Fairs, the Experiment Lab and Creature & Music show a picture card on each tile (pictures only).
+        const cardArt = missionCard(lab.id, meta.id);
+        if (cardArt) {
+            const img = document.createElement("img");
+            img.className = "tile-card";
+            img.src = picturePath(cardArt);
+            img.alt = "";
+            button.classList.add("has-card");
+            button.append(img);
+        }
         button.append(slot, title, objective);
         button.addEventListener("click", () => loadMission(meta.id));
         motionMissionGrid.append(button);
@@ -704,7 +731,7 @@ function showMotionResult(success, body, stars = [], newStars = [], rewards = []
             continue;
         const chip = document.createElement("span");
         chip.className = "reward-chip";
-        chip.textContent = `${r.icon} ${r.title}`;
+        chip.append(rewardIcon(r, "chip-pic"), document.createTextNode(` ${r.title}`));
         chip.title = r.description;
         resultRewards.append(chip);
     }
@@ -1460,12 +1487,12 @@ function queueHubMoments() {
         hubQueue.push({ kind: "BOLT", title: m.boltLine, body: m.change, onDone: () => { void commit(markRestorationSeen(appSave, [m])); } });
     const unseen = ((_b = (_a = activeProfile(appSave)) === null || _a === void 0 ? void 0 : _a.unseenRewards) !== null && _b !== void 0 ? _b : []).filter(id => { var _a; const k = (_a = rewardById(id)) === null || _a === void 0 ? void 0 : _a.kind; return k === "PART" || k === "TOOL" || k === "KEY_PIECE" || k === "PROP"; });
     if (unseen.length)
-        hubQueue.push({ kind: "REWARD", title: "New things for your workshop!", body: unseen.map(id => `${rewardById(id).icon} ${rewardById(id).title}`).join("   "), onDone: () => { void commit(markRewardsSeen(appSave, unseen)); } });
+        hubQueue.push({ kind: "REWARD", title: "New things for your workshop!", body: unseen.map(id => `${REWARD_PICTURES[id] ? "" : `${rewardById(id).icon} `}${rewardById(id).title}`).join("   "), pictures: unseen.map(id => REWARD_PICTURES[id]).filter((a) => Boolean(a)), onDone: () => { void commit(markRewardsSeen(appSave, unseen)); } });
     if (creditsPending(appSave))
         hubQueue.push({ kind: "STORY", title: CREDITS.title, body: CREDITS.lines.join(" "), scene: CREDITS });
 }
 function showNextHubMoment() {
-    var _a, _b;
+    var _a, _b, _c;
     const next = hubQueue[0];
     hubMoment.classList.toggle("hidden", !next || next.kind === "STORY");
     if (!next)
@@ -1476,11 +1503,24 @@ function showNextHubMoment() {
         return;
     }
     document.querySelector("#hub-moment-title").textContent = next.title;
-    document.querySelector("#hub-moment-body").textContent = next.body;
-    document.querySelector("#btn-hub-moment").textContent = (_a = next.button) !== null && _a !== void 0 ? _a : "OK!";
+    const momentBody = document.querySelector("#hub-moment-body");
+    momentBody.textContent = next.body;
+    // Reward pictures (stickers, badges, key pieces) above the words.
+    if ((_a = next.pictures) === null || _a === void 0 ? void 0 : _a.length) {
+        const row = document.createElement("span");
+        row.className = "moment-pics";
+        for (const art of next.pictures) {
+            const img = document.createElement("img");
+            img.src = picturePath(art);
+            img.alt = "";
+            row.append(img);
+        }
+        momentBody.prepend(row);
+    }
+    document.querySelector("#btn-hub-moment").textContent = (_b = next.button) !== null && _b !== void 0 ? _b : "OK!";
     document.querySelector("#btn-hub-moment-later").classList.toggle("hidden", !next.later);
     const face = document.querySelector("#hub-moment-bolt");
-    face.replaceChildren(boltArt((_b = activeProfile(appSave)) === null || _b === void 0 ? void 0 : _b.equipped.bolt, next.kind === "REWARD" ? "cheer" : "sign"));
+    face.replaceChildren(boltArt((_c = activeProfile(appSave)) === null || _c === void 0 ? void 0 : _c.equipped.bolt, next.kind === "REWARD" ? "cheer" : "sign"));
     if (next.kind === "BOLT") {
         currentNarration = next.title;
         speakCurrentLine();
@@ -1920,7 +1960,7 @@ function showNextPop() {
     }
     popBusy = true;
     discoveryPop.className = `discovery-pop${next.kind === "SECRET" ? " secret" : next.kind === "USE" ? " use" : ""}`;
-    document.querySelector("#discovery-pop-fx").src = next.kind === "SECRET" ? "./assets/fx/fx.star-splash.webp" : "./assets/fx/fx.star-pop.webp";
+    document.querySelector("#discovery-pop-fx").src = next.art ? picturePath(next.art) : next.kind === "SECRET" ? "./assets/fx/fx.star-splash.webp" : "./assets/fx/fx.star-pop.webp";
     document.querySelector("#discovery-pop-kicker").textContent = next.kind === "SECRET" ? "SECRET EXPERIMENT! ⭐" : next.kind === "USE" ? "PART CARD" : "NEW DISCOVERY!";
     document.querySelector("#discovery-pop-title").textContent = next.title;
     document.querySelector("#discovery-pop-line").textContent = next.line;
@@ -3079,7 +3119,7 @@ expSave.addEventListener("click", () => {
         for (const rid of r.newRewards) {
             const rw = rewardById(rid);
             if (rw)
-                popQueue.push({ kind: "NEW", title: `${rw.icon} ${rw.title}`, line: rw.description });
+                popQueue.push({ kind: "NEW", title: REWARD_PICTURES[rw.id] ? rw.title : `${rw.icon} ${rw.title}`, line: rw.description, ...(REWARD_PICTURES[rw.id] ? { art: REWARD_PICTURES[rw.id] } : {}) });
         }
         showNextPop();
     }

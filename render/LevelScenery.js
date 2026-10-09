@@ -1,4 +1,6 @@
 const S = (art, x, bottom, w, alpha) => ({ art: `level.${art}`, x, bottom, w, ...(alpha !== undefined ? { alpha } : {}) });
+/** Scenery that isn't a level.* picture (M45: the minibots and the orange robot puppy, extras only, never Bolt or Sprocket). */
+const X = (art, x, bottom, w) => ({ art, x, bottom, w });
 export const LEVEL_SCENERY = {
     // Motion Yard
     "motion.roll-with-it": [S("bucket", 10.5, 8.25, 1.3)],
@@ -6,7 +8,7 @@ export const LEVEL_SCENERY = {
     "motion.bounce-around": [S("button-target", 11.6, 6.2, 1.0)],
     "motion.duck-cannon": [S("duck-bath", 10.3, 5.95, 2.4)],
     "motion.giant-marble-delivery": [S("marble-run", 14.8, 8.25, 1.7)],
-    "motion.runaway-test-cart": [S("hazard-sign", 13.4, 8.25, 1.2)],
+    "motion.runaway-test-cart": [S("hazard-sign", 13.4, 8.25, 1.2), S("cone-barrier", 15.1, 8.25, 1.4)],
     // Gear Garage
     "gear.turn-the-door": [S("boarded-door", 8.6, 8.2, 2.2)],
     "gear.clockwork-trouble": [S("clockwork", 9.4, 7.6, 2.8)],
@@ -40,7 +42,7 @@ export const LEVEL_SCENERY = {
     "water.water-the-garden": [S("garden-beds", 13.8, 8.2, 2.2)],
     "water.spray-the-target": [S("spray-targets", 14.6, 8.2, 1.8)],
     "water.the-grand-fountain": [S("fountain", 14.9, 8.2, 1.5)],
-    "water.flooded-workshop": [S("hazard-sign", 10.5, 8.2, 1.1), S("leaky-pipe", 15, 8.2, 1.4)],
+    "water.flooded-workshop": [S("hazard-sign", 10.5, 8.2, 1.1), S("leaky-pipe", 15, 8.2, 1.4), S("cone-barrier", 12.4, 8.2, 1.3)],
     // Flight Hangar
     "flight.blow-it-over": [S("wind-spinner", 13.6, 8.2, 2)],
     "flight.through-the-hoops": [S("hoops", 14.4, 8.2, 1.8)],
@@ -49,13 +51,16 @@ export const LEVEL_SCENERY = {
     "flight.safe-landing": [S("cargo-parachute", 3, 8.2, 1.6)],
     // Robot Lab (top-down floor: scenery sits in spare corners of the arena)
     "robot.press-the-button": [S("robot-gate", 13.5, 3.2, 1.8)],
-    "robot.robot-dance-party": [S("dance-stage", 14.3, 3.4, 1.8), S("dance-pads", 13.6, 8.3, 1.8)],
+    "robot.robot-dance-party": [S("dance-stage", 14.3, 3.4, 1.8), S("dance-pads", 13.6, 8.3, 1.8), X("char.minibot.wave", 15.2, 6.4, 0.9)],
     "robot.carry-the-box": [S("supply-crates", 13.6, 8.3, 1.8)],
     "robot.automated-factory": [S("supply-crates", 13.8, 8.3, 1.8)],
     // Space Centre
     "space.build-the-rover": [S("moon-flags", 14.2, 7.6, 1.8)],
     "space.moon-base-delivery": [S("moon-flags", 1.2, 7.6, 1.6), S("supply-crates", 11.3, 7.45, 0.9)],
     // (Safe Touchdown's landing pad picture is the landing pad part itself: see PartPictures.ts.)
+    // Creature & Music Machines
+    "music.robot-band": [X("char.minibot.group", 14.2, 8.2, 1.7)],
+    "creature.crawling-bug": [X("char.robopup.orange", 14.6, 8.2, 1.3)],
     // Hidden Prototype Lab
     "prototype.tiny-factory": [S("prototype-machine", 12.4, 8.2, 2.0)]
 };
@@ -67,7 +72,7 @@ export const SCENERY_ASPECT = {
     "level.power-grid": 1.02, "level.hoops": 0.92, "level.hover-pads": 1.37, "level.cargo-parachute": 0.85, "level.wind-spinner": 1.17, "level.robot-gate": 1.18,
     "level.fountain": 0.82, "level.spray-targets": 0.97, "level.garden-beds": 1.08, "level.leaky-pipe": 1.27, "level.scrap-pile": 1.0, "level.sorter-chutes": 1.31,
     "level.magnet-targets": 1.09, "level.dance-pads": 1.08, "level.supply-crates": 1.12, "level.dance-stage": 0.99, "level.moon-flags": 0.96, "level.landing-pad": 1.48,
-    "level.prototype-machine": 1.01
+    "level.prototype-machine": 1.01, "level.cone-barrier": 2.08, "char.minibot.group": 0.92, "char.minibot.wave": 0.77, "char.robopup.orange": 0.94
 };
 export function sceneryRect(p) {
     var _a;

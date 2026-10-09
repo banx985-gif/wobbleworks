@@ -1,16 +1,20 @@
 import { rewardById } from "../progression/Rewards.js";
+import { REWARD_PICTURES, picturePath } from "../render/RewardPictures.js";
 export const PHOTO_BACKGROUNDS = [
     { id: "room", label: "This room", icon: "🏠" }, { id: "sky", label: "Blue sky", icon: "☀️" }, { id: "night", label: "Night", icon: "🌙" },
     { id: "blueprint", label: "Blueprint", icon: "📐" }, { id: "party", label: "Party", icon: "🎉" }
 ];
-/** Stickers everyone has, plus every sticker reward this inventor has earned. */
 export const BASIC_STICKERS = [
     { id: "basic.star", icon: "⭐", title: "Star" }, { id: "basic.heart", icon: "❤️", title: "Heart" }, { id: "basic.sparkle", icon: "✨", title: "Sparkle" },
     { id: "basic.thumbs", icon: "👍", title: "Thumbs up" }, { id: "basic.party", icon: "🎉", title: "Party" }, { id: "basic.idea", icon: "💡", title: "Idea" }
 ];
+/** A painted sticker (M45) as a picture that the photo keeps when it is saved. */
+function stickerImage(url) { const img = document.createElement("img"); img.src = url; img.alt = ""; img.draggable = false; img.className = "photo-sticker-pic"; return img; }
 export function photoStickers(rewards) {
-    const earned = rewards.filter(id => id.startsWith("sticker.")).map(id => rewardById(id)).filter((r) => Boolean(r)).map(r => ({ id: r.id, icon: r.icon, title: r.title }));
-    return [...BASIC_STICKERS, ...earned];
+    const earned = rewards.filter(id => id.startsWith("sticker.")).map(id => rewardById(id)).filter((r) => Boolean(r)).map(r => ({ id: r.id, icon: r.icon, title: r.title, ...(REWARD_PICTURES[r.id] ? { picture: picturePath(REWARD_PICTURES[r.id]) } : {}) }));
+    // Several stickers share one painted picture: offer each picture once.
+    const seen = new Set();
+    return [...BASIC_STICKERS, ...earned.filter(e => !e.picture || (!seen.has(e.picture) && Boolean(seen.add(e.picture))))];
 }
 export const BOLT_PHOTO_POSES = ["none", "wave", "cheer", "point", "inspect", "sign"];
 export function photoFileName(title, at = new Date()) {
@@ -212,7 +216,9 @@ export class PhotoMode {
             }
         if (kind === "stickers")
             for (const s of this.host.stickers()) {
-                const btn = this.button(s.icon, () => this.addItem("sticker", s.icon, 0.3 + Math.random() * 0.4, 0.25 + Math.random() * 0.4));
+                const btn = this.button(s.picture ? "" : s.icon, () => this.addItem("sticker", s.picture ? stickerImage(s.picture) : s.icon, 0.3 + Math.random() * 0.4, 0.25 + Math.random() * 0.4));
+                if (s.picture)
+                    btn.append(stickerImage(s.picture));
                 btn.title = s.title;
                 btn.setAttribute("aria-label", `Add ${s.title} sticker`);
                 btn.classList.add("photo-sticker-btn");

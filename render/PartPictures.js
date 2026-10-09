@@ -113,7 +113,7 @@ export const SPAWN_PICTURES = {
     "sandbox.toy-car": "toy.cars", "sandbox.balloon": "toy.balloons", "sandbox.weight": "toy.weights", "sandbox.bowling-ball": "toy.bowling-balls",
     "sandbox.feather": "toy.feathers", "scrap.wood-block": "toy.blocks", "motion.goal-zone": "target.bullseye", "chain.bell": "sound.bell-frame",
     "circuit.switch": "power.button-lever", "scrap.glass-vase": "toy.glass-vase", "sandbox.toy-animal": "toy.bunny", "silly.bolt": "char.bolt.wave",
-    "plumb.tank": "water.tank-large", "flight.fan": "air.fan", "motion.ramp": "motion.ramp"
+    "plumb.tank": "water.tank-pair", "flight.fan": "air.fan-box-pair", "motion.ramp": "motion.ramp-pair"
 };
 /** Robot program buttons (M44), by the button's label. */
 export const PROGRAM_PICTURES = {
