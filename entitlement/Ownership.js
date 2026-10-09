@@ -1,4 +1,4 @@
-import { FULL_GAME_PRODUCT, TRUSTED_KEYS, verifyProof } from "./Entitlement.js";
+import { FULL_GAME_PRODUCT, trustedKeys, verifyProof } from "./Entitlement.js";
 /**
  * Who owns the full game on this device (M37) — resolved from the cached signed proof, kept under its own key next to
  * (never inside) the child save, so backups and imports can never carry or forge ownership.
@@ -8,7 +8,7 @@ export const PROOF_KEY = "entitlement.proof";
 export async function resolveOwnership(input) {
     if (input.cached === undefined || input.cached === null)
         return { status: { state: input.saveState, source: "SAVE", checkedOnline: false }, clearCache: false };
-    const check = await verifyProof(input.cached, input.keys ?? TRUSTED_KEYS, input.nowMs ?? Date.now());
+    const check = await verifyProof(input.cached, input.keys ?? trustedKeys(), input.nowMs ?? Date.now());
     if (!check.ok)
         return { status: { state: input.saveState, source: "SAVE", proofProblem: check.reason, checkedOnline: false }, clearCache: check.reason === "NOT_A_PROOF" };
     let r = "UNREACHABLE";
@@ -30,7 +30,7 @@ export class OwnershipController {
     keys;
     online;
     status = { state: "UNKNOWN", source: "SAVE", checkedOnline: false };
-    constructor(store, adapter, keys = TRUSTED_KEYS, online = () => typeof navigator === "undefined" || navigator.onLine) {
+    constructor(store, adapter, keys = trustedKeys(), online = () => typeof navigator === "undefined" || navigator.onLine) {
         this.store = store;
         this.adapter = adapter;
         this.keys = keys;
@@ -47,7 +47,7 @@ export class OwnershipController {
         catch {
             cached = undefined;
         }
-        const out = await resolveOwnership({ cached, saveState, keys: this.keys, ...(this.online() && this.adapter.revalidate ? { revalidate: (p) => this.adapter.revalidate(p) } : {}) });
+        const out = await resolveOwnership({ cached, saveState, keys: this.keys, ...(this.online() && this.adapter.revalidate && !this.adapter.deferRevalidate ? { revalidate: (p) => this.adapter.revalidate(p) } : {}) });
         if (out.clearCache) {
             try {
                 await this.store.setMany([{ key: PROOF_KEY, value: null }]);
@@ -56,6 +56,49 @@ export class OwnershipController {
         }
         this.status = out.status;
         return this.status;
+    }
+    /**
+     * After start-up, without holding anything up (Google Play): ask the store whether a purchase still stands (a refund
+     * locks the full game again; no answer never does), or quietly pick up a purchase the store already knows about.
+     * Returns true when the ownership state changed.
+     */
+    async refresh() {
+        if (!this.online())
+            return false;
+        const before = this.status;
+        let cached;
+        try {
+            cached = await this.store.get(PROOF_KEY);
+        }
+        catch {
+            cached = undefined;
+        }
+        const good = cached !== undefined && cached !== null && (await verifyProof(cached, this.keys)).ok;
+        if (good && this.adapter.revalidate) {
+            const out = await resolveOwnership({ cached, saveState: before.state, keys: this.keys, revalidate: (p) => this.adapter.revalidate(p) });
+            if (out.clearCache) {
+                try {
+                    await this.store.setMany([{ key: PROOF_KEY, value: null }]);
+                }
+                catch { /* try again next time */ }
+            }
+            // Only a definite answer changes anything: VALID confirms, REVOKED locks; no answer keeps the offline unlock.
+            if (out.status.checkedOnline)
+                this.status = out.status;
+        }
+        else if (!good && this.adapter.silentRestore && this.adapter.available) {
+            const r = await this.safe(() => this.adapter.restore());
+            if (r.kind === "OWNED" && (await verifyProof(r.proof, this.keys)).ok) {
+                try {
+                    await this.store.setMany([{ key: PROOF_KEY, value: r.proof }]);
+                }
+                catch {
+                    return false;
+                }
+                this.status = { state: "OWNED", source: "PROOF", checkedOnline: true };
+            }
+        }
+        return this.status.state !== before.state || this.status.source !== before.source;
     }
     async buy() { return this.settle(this.adapter.available ? await this.safe(() => this.adapter.purchase()) : { kind: "UNAVAILABLE", message: this.adapter.unavailableReason ?? "Buying isn't available here." }, "bought"); }
     async restore() { return this.settle(this.adapter.available ? await this.safe(() => this.adapter.restore()) : { kind: "UNAVAILABLE", message: this.adapter.unavailableReason ?? "Restoring isn't available here." }, "restored"); }

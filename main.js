@@ -84,6 +84,7 @@ import { startLocalisation } from "./i18n/Localise.js";
 import { eventSound, mixLevels } from "./audio/SoundLibrary.js";
 import { OwnershipController } from "./entitlement/Ownership.js";
 import { pickAdapter } from "./entitlement/StoreAdapters.js";
+import { BACK_BUTTON_SELECTOR, backStep, hookNativeApp, keepsScreenAwake } from "./app/NativeApp.js";
 const canvas = document.querySelector("#game");
 if (!canvas)
     throw new Error("Missing #game canvas");
@@ -104,6 +105,8 @@ const appStore = new IndexedDbStore("wobbleworks-app", 1);
 const thumbs = new ThumbnailCache(appStore);
 /** Full-game ownership (M37): its signed proof lives next to — never inside — the child save. */
 const ownership = new OwnershipController(appStore, pickAdapter(window, q => window.prompt(q)));
+/** The Android app's back button, background events and keep-awake switch (does nothing in a web browser). */
+const nativeApp = hookNativeApp(window, androidBack);
 const saveManager = new SaveManager(appStore, validateAppSave, {
     migrate: raw => { const r = migrateAppSave(raw); return r.ok ? { payload: r.save, migrated: r.migrated } : r.reason === "FUTURE_VERSION" ? { futureVersion: true } : undefined; }
 });
@@ -936,7 +939,26 @@ function transition(next, force = false) {
         renderShell();
         updateMusic();
     }
+    if (moved)
+        nativeApp.setAwake(keepsScreenAwake(shell.current()));
     return moved;
+}
+/** The Android back button: Pause in the Workshop, back a screen elsewhere, never quitting mid-build (NativeApp.ts). */
+function androidBack() {
+    const screen = shell.current();
+    const card = shellElement.querySelector(`[data-screen="${screen}"]`);
+    const button = [...(card?.querySelectorAll(BACK_BUTTON_SELECTOR) ?? [])].find(b => b.offsetParent !== null && !b.disabled);
+    const step = backStep(screen, Boolean(button));
+    if (step === "PAUSE")
+        openPause();
+    else if (step === "RESUME")
+        resumeFromPause();
+    else if (step === "BACK_BUTTON")
+        button.click();
+    else if (step === "TITLE")
+        void autosave.flush().then(() => transition("TITLE", true));
+    else if (step === "EXIT")
+        void autosave.flush().then(() => nativeApp.exit());
 }
 /** Each place has its own music (M36): the title, the Workshop and map, and every lab and mode. Paused screens are quiet. */
 function musicPlace() {
@@ -1090,6 +1112,15 @@ async function loadAppState() {
         // A release build never trusts a saved "owned" without a verified proof (that state could only come from a test tool).
         else if (RELEASE_BUILD && owned.source === "SAVE" && ownsFullGame(appSave.entitlement))
             appSave = withEntitlement(appSave, "LOCKED");
+        // Google Play: once the game is running, ask Play quietly (a refund relocks; a reinstall or a late payment unlocks).
+        void ownership.refresh().then(async (changed) => {
+            const s = ownership.current();
+            if (!changed || s.source !== "PROOF")
+                return;
+            await commit(withEntitlement(appSave, s.state), true);
+            if (shell.current() === "PARENT_DASHBOARD")
+                renderParent();
+        });
         savingBlocked = loaded.futureVersion;
         applySettings();
         const lastBuild = currentLastBuild(appSave);
@@ -4038,7 +4069,8 @@ const resizeObserver = new ResizeObserver(() => renderer.resize());
 resizeObserver.observe(canvas);
 clock.reset(performance.now());
 requestAnimationFrame(frame);
-if ("serviceWorker" in navigator)
+// The Android app carries every file inside it, so only the web game uses the offline helper (it could serve an old copy after an app update).
+if ("serviceWorker" in navigator && !nativeApp.native)
     navigator.serviceWorker.register("./sw.js").catch(() => undefined);
 console.info(`WobbleWorks loaded (labs: ${[...labLevels.keys()].join(", ") || "loading"}): ${DEFAULT_PARTS.length} technical part definitions`);
 void boot();

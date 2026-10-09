@@ -1,4 +1,5 @@
 import { FULL_GAME_PRODUCT, isProofShape } from "./Entitlement.js";
+import { isAndroidApp, playAdapter } from "./PlayBilling.js";
 /** The ownership service address. Empty until the service exists (release work). */
 export const OWNERSHIP_SERVICE_URL = "";
 export function nativeAdapter(bridge, platform) {
@@ -44,5 +45,7 @@ export function pickAdapter(win, ask) {
     const bridge = win?.WobbleWorksNative;
     if (bridge)
         return nativeAdapter(bridge, bridge.platform ?? "ANDROID");
+    if (win && isAndroidApp(win))
+        return playAdapter(win);
     return webAdapter(OWNERSHIP_SERVICE_URL, ask);
 }
