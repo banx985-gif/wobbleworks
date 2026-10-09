@@ -81,6 +81,7 @@ import { pictureUrl, renderLook } from "./inventor/LookView.js";
 import { AVATAR_PORTRAITS } from "./hub/HubScreens.js";
 import { rewardById as rewardInfo } from "./progression/Rewards.js";
 import { startLocalisation } from "./i18n/Localise.js";
+import { eventSound, mixLevels } from "./audio/SoundLibrary.js";
 const canvas = document.querySelector("#game");
 if (!canvas)
     throw new Error("Missing #game canvas");
@@ -120,6 +121,8 @@ async function loadArt() {
     catch {
         return;
     }
+    // Recorded sounds arrive the same way as art: "audio.<id>" in the manifest replaces that synthesised sound.
+    audio.setRecordings(Object.fromEntries(Object.entries(artManifest).filter(([id]) => id.startsWith("audio.")).map(([id, url]) => [id.slice(6), url])));
     const wanted = Object.keys(artManifest).filter(id => /^(motion|structure|air|level|fx|ui\.hint|duck|toy|char\.bolt|gear|power|water|robot|icon|magnet|flight|space)\./.test(id));
     await Promise.allSettled(wanted.map(id => assets.loadImage(id, artManifest[id])));
 }
@@ -268,7 +271,8 @@ function applySettings(settings = currentSettings(appSave)) {
     document.documentElement.classList.toggle("high-contrast", settings.highContrast);
     document.documentElement.classList.toggle("no-subtitles", !settings.subtitles);
     document.documentElement.classList.toggle("left-handed", settings.leftHanded);
-    audio.setMasterGain(0.35 * settings.sfxVolume);
+    audio.setMix(mixLevels(settings));
+    updateMusic();
 }
 function syncSettingsForm() {
     const s = currentSettings(appSave);
@@ -366,6 +370,10 @@ function speakCurrentLine(force = false) {
         return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(currentNarration);
+    // Music dips while Bolt talks, so his words are clear.
+    audio.duck(true);
+    utterance.onend = () => audio.duck(false);
+    utterance.onerror = () => audio.duck(false);
     utterance.rate = 1.02;
     utterance.pitch = 1.08;
     utterance.volume = currentSettings(appSave).voiceVolume;
@@ -385,7 +393,7 @@ function presentBolt(line, reaction = false, pose = reaction ? "cheer" : "point"
         boltAvatar.classList.remove("react");
         requestAnimationFrame(() => boltAvatar.classList.add("react"));
     }
-    sfx(reaction ? 920 : 620, reaction ? 0.08 : 0.045);
+    audio.play("bolt-voice");
     speakCurrentLine();
 }
 function renderOpeningHud() {
@@ -570,6 +578,25 @@ function loadMission(id) {
 function sayGoal(force = false) { const goal = motionObjective.textContent ?? ""; if (!goal)
     return; currentNarration = goal; speakCurrentLine(force); }
 document.querySelector("#btn-say-again").addEventListener("click", () => sayGoal(true));
+/** Success feels good (M36): a quick confetti burst over the result card. Calm Motion shows none; it never delays anything. */
+function celebrate(success) {
+    motionResult.querySelector(".result-confetti")?.remove();
+    if (!success || currentSettings(appSave).reducedMotion)
+        return;
+    const burst = document.createElement("div");
+    burst.className = "result-confetti";
+    burst.setAttribute("aria-hidden", "true");
+    const colours = ["#ff6b6b", "#ffd43b", "#69db7c", "#4dabf7", "#da77f2", "#ff922b"];
+    for (let i = 0; i < 18; i++) {
+        const bit = document.createElement("span");
+        bit.style.setProperty("--dx", `${Math.round(Math.cos(i / 18 * Math.PI * 2) * (90 + (i % 3) * 40))}px`);
+        bit.style.setProperty("--dy", `${Math.round(Math.sin(i / 18 * Math.PI * 2) * (60 + (i % 4) * 25) - 40)}px`);
+        bit.style.background = colours[i % colours.length];
+        burst.append(bit);
+    }
+    motionResult.append(burst);
+    window.setTimeout(() => burst.remove(), 1400);
+}
 function showMotionResult(success, body, stars = [], newStars = [], rewards = []) {
     resultShown = true;
     motionResult.classList.remove("hidden");
@@ -592,6 +619,7 @@ function showMotionResult(success, body, stars = [], newStars = [], rewards = []
     keepBuildingButton.classList.toggle("hidden", success && !challenge);
     watchReplayButton.classList.toggle("hidden", !recorder || recorder.length < 30);
     watchReplayButton.textContent = !success && recorder?.markers.length ? "🎬 See where it went wrong" : "🎬 Watch replay";
+    celebrate(success);
     if (success) {
         const labels = { solve: "Solved", efficient: "Tiny machine", advanced: "Wild invention" };
         for (const id of ["solve", "efficient", "advanced"]) {
@@ -657,12 +685,12 @@ function maybeCompleteMotionMission() {
     if (g) {
         showMotionResult(true, g.challenge.id === FINAL_CHALLENGE_ID ? "THE GREAT WOBBLEWORKS MACHINE IS RUNNING! Every system, all at once. Let's go and see the campus wake up!" : `${g.challenge.title}: all ${g.challenge.stages.length} stages done! A Grand Hall champion.`, outcome.stars, outcome.newStars, outcome.newRewards);
         resultStars.querySelectorAll(".result-star:not(.on)").forEach(s => s.remove());
-        sfx(1180, .12);
+        audio.play("success-sting");
         buzz(90);
         return;
     }
     showMotionResult(true, `${helped ? "Job done!" : "Nice invention."}${thanks}${chainNote}${discovered}${cleared}`, outcome.stars, outcome.newStars, outcome.newRewards);
-    sfx(980, .09);
+    audio.play("success-sting");
     buzz(60);
 }
 /** A Grand Hall stage (not the last) is done: remember the next stage and offer it. */
@@ -677,7 +705,7 @@ function grandStageDone(g, saved) {
     showMotionResult(true, `Stage ${g.stage + 1} of ${g.challenge.stages.length} done! Next: ${g.challenge.stages[next].line}`);
     resultStars.classList.add("hidden");
     nextStageButton.classList.remove("hidden");
-    sfx(880, .08);
+    audio.play("success-sting");
     buzz(40);
 }
 async function saveOpeningProgress(step, complete = false) {
@@ -884,9 +912,48 @@ function renderShell() {
 }
 function transition(next, force = false) {
     const moved = shell.transition(next, now(), force);
-    if (moved)
+    if (moved) {
         renderShell();
+        updateMusic();
+    }
     return moved;
+}
+/** Each place has its own music (M36): the title, the Workshop and map, and every lab and mode. Paused screens are quiet. */
+function musicPlace() {
+    const s = shell.current();
+    if (s === "PAUSE" || s === "LOADING" || s === "LOADING_FAILURE" || s === "ROTATE_DEVICE")
+        return undefined;
+    if (s === "SETTINGS" || s === "GROWN_UPS" || s === "PARENT_DASHBOARD" || s === "INFO")
+        return audio.currentMusic() ?? "title";
+    if (s === "SPLASH" || s === "TITLE" || s === "PROFILE_SELECT" || s === "CREATE_INVENTOR" || s === "EXTRAS")
+        return "title";
+    if (s === "MOTION_YARD" || s === "WORKSHOP")
+        return openingActive ? "workshop" : freeBuildActive ? "workshop" : currentLabId;
+    return "hub";
+}
+function updateMusic() { const place = musicPlace(); if (!place || !(currentSettings(appSave).music ?? true)) {
+    audio.stopMusic();
+    return;
+} audio.playMusic(place); }
+/** Machines make their sounds as things happen in a TEST (each family at most every MIN_REPEAT_SECONDS). */
+let soundRuntime;
+let soundsHeard = 0;
+function playEventSounds(runtime) {
+    if (!runtime) {
+        soundRuntime = undefined;
+        soundsHeard = 0;
+        return;
+    }
+    if (soundRuntime !== runtime) {
+        soundRuntime = runtime;
+        soundsHeard = 0;
+    }
+    const events = runtime.causalEvents;
+    for (; soundsHeard < events.length; soundsHeard++) {
+        const id = eventSound(events[soundsHeard].kind);
+        if (id)
+            audio.play(id);
+    }
 }
 function enterWorkshop() {
     if (isPortraitBuildLayout()) {
@@ -1268,7 +1335,7 @@ function renderHubScreen() {
         ...(scienceFairOpen(appSave) ? { openFair: () => showLab(SCIENCE_FAIR.id) } : {}),
         ...(creatureMusicOpen(appSave) ? { openCreatures: () => showLab(CREATURE_MUSIC.id) } : {}),
         pokeBolt: () => { const p = activeProfile(appSave); hubQueue.push({ kind: "BOLT", title: p?.openingComplete ? "Fully charged and ready to wobble!" : "Bzzt… still charging…", body: "Tap the Campus Map to pick where to go next." }); showNextHubMoment(); },
-        pokeSprocket: () => { sfx(1300, .05); window.setTimeout(() => sfx(1500, .05), 90); hubRoot.querySelector(".station-sprocket")?.classList.add("wiggle"); window.setTimeout(() => hubRoot.querySelector(".station-sprocket")?.classList.remove("wiggle"), 600); },
+        pokeSprocket: () => { audio.play("sprocket-bark"); hubRoot.querySelector(".station-sprocket")?.classList.add("wiggle"); window.setTimeout(() => hubRoot.querySelector(".station-sprocket")?.classList.remove("wiggle"), 600); },
         meetVisitor: id => {
             // Inventor Contract visitors (M27) ask for help: "Let's help!" accepts their jobs; "Maybe later" leaves them at the door.
             const cv = visitorById(id);
@@ -1494,7 +1561,7 @@ function showBoltTip(line, pose = "point") {
     boltTip.classList.remove("hidden");
     currentNarration = line;
     speakCurrentLine();
-    sfx(620, .045);
+    audio.play("bolt-voice");
 }
 function hideBoltTip() { boltTip.classList.add("hidden"); }
 /** After a failed TEST: maybe a gentle Bolt tip, a pulsing clue button, glowing parts. Never changes the challenge. */
@@ -1573,12 +1640,13 @@ function showNextPop() {
     document.querySelector("#discovery-pop-title").textContent = next.title;
     document.querySelector("#discovery-pop-line").textContent = next.line;
     if (next.kind === "SECRET") {
-        sfx(880, .08);
-        window.setTimeout(() => sfx(1320, .12), 120);
+        audio.play("secret-sting");
         buzz(80);
     }
+    else if (next.kind === "USE")
+        audio.play("click");
     else
-        sfx(next.kind === "USE" ? 760 : 1040, .07);
+        audio.play("discovery-sting");
     window.setTimeout(() => { popBusy = false; discoveryPop.classList.add("hidden"); window.setTimeout(showNextPop, 180); }, next.kind === "SECRET" ? 3400 : next.kind === "USE" ? 1800 : 2600);
 }
 function openWhyCard() {
@@ -1751,12 +1819,15 @@ const lifecycle = new LifecycleCoordinator(() => {
         tests.togglePause();
         lifecyclePaused = true;
     }
+    void audio.suspend();
+    window.speechSynthesis?.cancel?.();
 }, async () => {
     if (shell.current() === "WORKSHOP" || shell.current() === "PAUSE")
         await persistCurrentBuild(false, true);
     else
         await autosave.flush();
 }, () => {
+    void audio.resume();
     if (lifecyclePaused && shell.current() === "WORKSHOP") {
         pausedByShell = true;
         transition("PAUSE", true);
@@ -2184,6 +2255,7 @@ document.querySelectorAll("[data-part]").forEach(button => button.addEventListen
     const id = button.dataset.part;
     const surfacePart = ["motion.friction-high", "motion.friction-low", "motion.bounce-pad"].includes(id);
     const placed = build.add(id, { x: 8 + Math.random() * 1.5 - 0.75, y: surfacePart ? 8.32 : 3 });
+    audio.play("pickup");
     // Part Picker: the pick is made — over to the other player to place it.
     if (coop?.pattern === "PICK") {
         coop.pick(id);
@@ -2269,9 +2341,12 @@ ui.redo.addEventListener("click", () => { if (!testMode && gameplayAllowed())
 ui.del.addEventListener("click", () => { if (!testMode && selectedId && gameplayAllowed()) {
     build.delete(selectedId);
     selectedId = undefined;
+    audio.play("unsnap");
 } });
-ui.rotate.addEventListener("click", () => { if (!testMode && selectedId && gameplayAllowed())
-    build.rotate(selectedId, Math.PI / 12); });
+ui.rotate.addEventListener("click", () => { if (!testMode && selectedId && gameplayAllowed()) {
+    build.rotate(selectedId, Math.PI / 12);
+    audio.play("rotate");
+} });
 ui.resetCamera.addEventListener("click", () => { if (gameplayAllowed())
     camera.reset(); });
 document.querySelector("#btn-zoom-in").addEventListener("click", () => { if (gameplayAllowed())
@@ -2316,7 +2391,7 @@ window.addEventListener("keydown", event => {
 });
 canvas.addEventListener("wheel", event => { if (!gameplayAllowed())
     return; event.preventDefault(); camera.setZoom(camera.zoom * (event.deltaY > 0 ? 0.92 : 1.08)); }, { passive: false });
-window.addEventListener("pointerdown", () => void audio.unlock(), { once: true });
+window.addEventListener("pointerdown", () => { void audio.unlock().then(() => updateMusic()); }, { once: true });
 function pointerWorld(sample) { const logical = renderer.viewport.screenToLogical(sample.x, sample.y); const worldLogical = camera.logicalToWorld(logical); return { x: worldLogical.x / 100, y: worldLogical.y / 100 }; }
 /** Things you can tap while building: switches flip, magnets turn. Locked ones in a level can still be tapped (never moved). */
 function tapAction(p) {
@@ -2506,10 +2581,13 @@ input.on((event, sample) => {
             if (dragPreview.x < 0.4 || dragPreview.x > 15.6 || dragPreview.y < 0.5 || dragPreview.y > 9)
                 observer.noteDragError();
             build.move(droppedId, { x: Math.max(0.4, Math.min(15.6, dragPreview.x)), y: openingRamp ? 7.95 : surfacePart ? 8.32 : Math.max(0.5, Math.min(8.2, dragPreview.y)) });
+            const placedAt = build.getPart(droppedId)?.position;
             snapToGhost(droppedId);
             snapToCraft(droppedId);
             snapToVessel(droppedId);
             snapGear(droppedId);
+            const settledAt = build.getPart(droppedId)?.position;
+            audio.play(placedAt && settledAt && (placedAt.x !== settledAt.x || placedAt.y !== settledAt.y) ? "snap" : "drop");
             snapBeam(droppedId);
             autoSnapOpeningWheel(droppedId);
         }
@@ -3829,6 +3907,7 @@ function render() {
         renderer.drawChainEdges(runtime, shown);
     updateChainHud(runtime);
     playNotes(runtime);
+    playEventSounds(replayer ? undefined : runtime);
     if (creator?.phase === "SET" && ++creatorFrame % 20 === 0)
         renderCreatorPanel();
     if (currentRoom && !testMode && ++capFrame % 20 === 0)
