@@ -5,6 +5,7 @@ import { boltArt, boltPoseUrl, renderCampusMap, renderHub, renderLocker, renderP
 import { renderInventions, showInventionDetail, showInventionList } from "./hub/InventionScreens.js";
 import { contentChecksum, contentOf, deleteInvention, duplicateInvention, inventionById, latestVersion, liveThumbKeys, renameInvention, resolveVersion, restoreAsNewVersion, saveNewInvention, saveVersion, shelfItemFor, showOnShelf, suggestedName, takeOffShelf, thumbKey, tidySuggestion, tidyVersions } from "./inventions/Inventions.js";
 import { RunMeter } from "./inventions/RunMeter.js";
+import { CO_PATTERNS, CoBuildSession, TogetherLaunch, partnerChoices, sessionOwner, togetherName } from "./coop/CoBuild.js";
 import { followPoint, followTargets, ReplayPlayer, ReplayRecorder } from "./replay/ReplaySystem.js";
 import { drawPhotoBackground, PhotoMode, photoStickers, thumbnailFrom } from "./photo/PhotoMode.js";
 import { renderParentDashboard, renderParentGate } from "./parent/ParentArea.js";
@@ -527,6 +528,8 @@ function showMotionResult(success, body, stars = [], newStars = [], rewards = []
     shelfButton.classList.toggle("hidden", !success || !activeProfile(appSave));
     shelfButton.disabled = false;
     shelfButton.textContent = "Put on Shelf";
+    if (coop && success)
+        settlePrediction(true);
     motionBackButton.textContent = resultReturnsToHub ? "Workshop" : labDef().title;
     whyButton.classList.toggle("hidden", success || !lastWhy);
     keepBuildingButton.classList.toggle("hidden", success && !challenge);
@@ -834,6 +837,8 @@ function stopToBuild() {
             lastRun = { checksum: runMeter.buildChecksum, metrics: m };
         runMeter = undefined;
     }
+    if (coop)
+        settlePrediction(false);
     if (recorder && recorder.length > 30)
         lastRecording = recorder;
     recorder = undefined;
@@ -984,6 +989,7 @@ function leaveGameplay() {
     setupChallenge(undefined);
     contract = undefined;
     setupFair(undefined);
+    endCoop(false);
     currentRoom = undefined;
     sandboxBar.classList.add("hidden");
     sandboxDrawer.classList.add("hidden");
@@ -2048,6 +2054,10 @@ document.querySelector("#setting-snap").addEventListener("change", event => {
 document.querySelectorAll("[data-part]").forEach(button => button.addEventListener("click", () => {
     if (testMode || replayer || !gameplayAllowed())
         return;
+    if (coop && !coop.canUseTray()) {
+        toast(coop.pattern === "PICK" ? `It's ${coop.current.name}'s turn to place the part — then they pass back.` : `It's ${coop.current.name}'s turn.`);
+        return;
+    }
     if (!roomForMore(1))
         return;
     if (openingActive)
@@ -2055,6 +2065,11 @@ document.querySelectorAll("[data-part]").forEach(button => button.addEventListen
     const id = button.dataset.part;
     const surfacePart = ["motion.friction-high", "motion.friction-low", "motion.bounce-pad"].includes(id);
     const placed = build.add(id, { x: 8 + Math.random() * 1.5 - 0.75, y: surfacePart ? 8.32 : 3 });
+    // Part Picker: the pick is made — over to the other player to place it.
+    if (coop?.pattern === "PICK") {
+        coop.pick(id);
+        window.setTimeout(() => passTurn(), 250);
+    }
     if ((openingActive || labActive) && id === "motion.ramp")
         build.rotate(placed.id, -0.18);
     if (id === "builder.column")
@@ -2065,6 +2080,11 @@ document.querySelectorAll("[data-part]").forEach(button => button.addEventListen
 ui.test.addEventListener("click", () => {
     if (testMode || !gameplayAllowed())
         return;
+    // Co-build, Builder & Predictor: the waiting player guesses what will happen before the TEST starts.
+    if (coop?.needsPrediction()) {
+        openPredict();
+        return;
+    }
     if (openingActive)
         openingDirector.noteTest(now());
     const testSnap = build.snapshot();
@@ -2263,6 +2283,8 @@ function testModeTouch(event, sample) {
 input.on((event, sample) => {
     if (replayer)
         return; // replays are watch-only
+    if (coop && !coopAllows(event, sample.id))
+        return;
     if (testMode && gameplayAllowed()) {
         testModeTouch(event, sample);
         return;
@@ -2785,6 +2807,11 @@ function openSaveDialog() {
     }
     else
         invSaveName.value = motionTitle.textContent && labActive ? motionTitle.textContent.slice(0, 40) : suggestedName(appSave);
+    // Made together: it still belongs to this device's inventor (profile-local), and says who helped.
+    if (coop) {
+        const partner = coop.players.find(p => p.profileId !== activeProfile(appSave)?.id) ?? coop.players[1];
+        invSaveName.value = togetherName(invSaveName.value.replace(/ \(with [^)]*\)$/, ""), partner);
+    }
     const m = metricsForCurrent();
     invSaveNote.textContent = m ? "This TEST's results will be saved with it, so you can compare versions." : "Tip: TEST it first, and its results are saved too.";
     invSave.classList.remove("hidden");
@@ -3268,6 +3295,180 @@ function playNotes(runtime) {
         sfx(SCALE_HZ[n.pitch - 1] * (n.family === "DRUM" ? 0.5 : n.family === "HORN" ? 1 : n.family === "CHIME" ? 2 : 1), RING_SECONDS[n.family] ?? 0.1);
     }
 }
+// ---------------------------------------------------------------- Build together (M30): taking turns on one device
+const togetherButton = document.querySelector("#btn-together"), coopSetup = document.querySelector("#coop-setup"), coopBar = document.querySelector("#coop-bar");
+const coopPredict = document.querySelector("#coop-predict"), coopLaunch = document.querySelector("#coop-launch");
+let coop;
+let coopPartner;
+let coopPattern = "TURNS";
+/** The finger that is building right now; another finger touching at the same time is ignored. */
+let coopFinger;
+let coopNudgeAt = 0;
+function coopAllows(event, finger) {
+    if (event === "down") {
+        if (coopFinger !== undefined && coopFinger !== finger) {
+            if (now() - coopNudgeAt > 2500) {
+                coopNudgeAt = now();
+                toast(`One builder at a time — it's ${coop.current.name}'s turn!`);
+            }
+            return false;
+        }
+        if (!testMode && !coop.canEdit()) {
+            toast(`${coop.current.name} is picking a part from the tray.`);
+            return false;
+        }
+        coopFinger = finger;
+        return true;
+    }
+    if (finger !== coopFinger)
+        return false;
+    if (event === "up" || event === "cancel")
+        coopFinger = undefined;
+    return true;
+}
+function renderCoopSetup() {
+    const partners = document.querySelector("#coop-partners"), patterns = document.querySelector("#coop-patterns");
+    partners.replaceChildren();
+    patterns.replaceChildren();
+    for (const p of partnerChoices(appSave)) {
+        const b = document.createElement("button");
+        b.textContent = p.name;
+        b.style.setProperty("--who", p.colour);
+        b.classList.toggle("on", coopPartner?.id === p.id);
+        b.addEventListener("click", () => { coopPartner = p; renderCoopSetup(); });
+        partners.append(b);
+    }
+    for (const p of CO_PATTERNS) {
+        const b = document.createElement("button");
+        b.innerHTML = "";
+        const t = document.createElement("strong");
+        t.textContent = `${p.icon} ${p.title}`;
+        const l = document.createElement("span");
+        l.textContent = p.line;
+        b.append(t, l);
+        b.classList.toggle("on", coopPattern === p.id);
+        b.addEventListener("click", () => { coopPattern = p.id; renderCoopSetup(); });
+        patterns.append(b);
+    }
+    document.querySelector("#coop-start").disabled = !coopPartner;
+}
+togetherButton.addEventListener("click", () => { if (!gameplayAllowed() || coop)
+    return; coopPartner = undefined; coopPattern = "TURNS"; renderCoopSetup(); coopSetup.classList.remove("hidden"); });
+document.querySelector("#coop-cancel").addEventListener("click", () => coopSetup.classList.add("hidden"));
+document.querySelector("#coop-start").addEventListener("click", () => {
+    const me = sessionOwner(appSave);
+    if (!me || !coopPartner)
+        return;
+    coop = new CoBuildSession([me, coopPartner], coopPattern);
+    coopFinger = undefined;
+    coopSetup.classList.add("hidden");
+    selectedId = undefined;
+    build.sealHistory();
+    renderCoopBar();
+    toast(coopPattern === "PICK" ? `${me.name} picks a part first — ${coopPartner.name} places it.` : `${me.name} builds first. Pass when it's ${coopPartner.name}'s turn!`);
+    sfx(880, .08);
+});
+function renderCoopBar() {
+    coopBar.classList.toggle("hidden", !coop);
+    appElement.classList.toggle("coop-tray-locked", Boolean(coop && !coop.canUseTray()));
+    if (!coop)
+        return;
+    const who = coop.current;
+    coopBar.style.setProperty("--who", who.colour);
+    const doing = coop.pattern === "PICK" ? (coop.phase === "PICK" ? "pick a part from the tray" : "place the part, then pass back") : coop.pattern === "PREDICT" ? `build — ${coop.waiting.name} predicts before each TEST` : "build";
+    document.querySelector("#coop-who").textContent = `${who.name}'s turn`;
+    document.querySelector("#coop-doing").textContent = `Turn ${coop.turn} · ${doing}`;
+    document.querySelector("#coop-pass").textContent = `Pass to ${coop.waiting.name} ➡`;
+}
+/** Hand over: the outgoing player's view is kept, the incoming player gets theirs back; selection is cleared and this turn's undo is sealed. */
+function passTurn() {
+    if (!coop)
+        return;
+    if (testMode)
+        stopToBuild();
+    const next = coop.pass({ x: camera.x, y: camera.y, zoom: camera.zoom });
+    if (next) {
+        camera.setZoom(next.zoom);
+        camera.centerOn(next.x, next.y);
+    }
+    else
+        camera.reset();
+    selectedId = undefined;
+    dragStart = undefined;
+    dragPreview = undefined;
+    panStart = undefined;
+    coopFinger = undefined;
+    build.sealHistory();
+    renderCoopBar();
+    toast(`${coop.current.name}'s turn!`);
+    sfx(660, .06);
+}
+document.querySelector("#coop-pass").addEventListener("click", passTurn);
+function endCoop(say = true) {
+    if (!coop)
+        return;
+    const s = coop.score();
+    const partner = coop.waiting.name;
+    coop = undefined;
+    coopFinger = undefined;
+    renderCoopBar();
+    coopPredict.classList.add("hidden");
+    if (say)
+        toast(s.total ? `Great building together! Predictions right: ${s.right} of ${s.total}.` : `Great building together, ${partner}!`);
+}
+document.querySelector("#coop-end").addEventListener("click", () => endCoop(true));
+function openPredict() {
+    if (!coop)
+        return;
+    document.querySelector("#coop-predict-who").textContent = `${coop.waiting.name}, what do you think will happen?`;
+    document.querySelector("#coop-predict-q").textContent = labActive && activeLevel ? "Will it work?" : "Will something move?";
+    coopPredict.classList.remove("hidden");
+}
+document.querySelectorAll("[data-guess]").forEach(b => b.addEventListener("click", () => { if (!coop)
+    return; coop.predict(b.dataset.guess); coopPredict.classList.add("hidden"); ui.test.click(); }));
+/** The TEST ended: did the prediction come true? (A mission: did it work? Free Build: did something move?) */
+function settlePrediction(success) {
+    if (!coop)
+        return;
+    const mission = labActive && Boolean(activeLevel);
+    const happened = mission ? success : success || (runMeter?.result()?.distance ?? lastRun?.metrics.distance ?? 0) >= 0.5;
+    const line = coop.resolve(happened, mission ? ["it worked", "it didn't work this time"] : ["something moved", "nothing moved"]);
+    if (line)
+        toast(line);
+}
+// Together Launch: the one mini game designed for two hands at once.
+let launch;
+document.querySelector("#coop-launch-open").addEventListener("click", () => {
+    coopSetup.classList.add("hidden");
+    launch = new TogetherLaunch();
+    coopLaunch.classList.remove("hidden", "launched");
+    document.querySelector("#coop-launch-msg").textContent = "Both hold your button — together!";
+    const step = () => {
+        if (!launch)
+            return;
+        const done = launch.tick();
+        document.querySelector("#coop-launch-fill").style.width = `${Math.round(launch.progress * 100)}%`;
+        if (done) {
+            coopLaunch.classList.add("launched");
+            document.querySelector("#coop-launch-msg").textContent = "🚀 You launched it together!";
+            sfx(990, .2);
+            launch = undefined;
+            return;
+        }
+        requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+});
+document.querySelectorAll("[data-hold]").forEach(b => {
+    const side = Number(b.dataset.hold);
+    b.addEventListener("pointerdown", e => { e.preventDefault(); try {
+        b.setPointerCapture(e.pointerId);
+    }
+    catch { /* not a real pointer */ } b.classList.add("held"); launch?.press(side, true); });
+    for (const ev of ["pointerup", "pointercancel", "lostpointercapture"])
+        b.addEventListener(ev, () => { b.classList.remove("held"); launch?.press(side, false); });
+});
+document.querySelector("#coop-launch-close").addEventListener("click", () => { launch = undefined; coopLaunch.classList.add("hidden"); });
 function render() {
     maybeCompleteOpeningChallenge();
     maybeCompleteMotionMission();
@@ -3344,6 +3545,9 @@ function render() {
         saveInventionButton.hidden = !canKeep;
         photoButton.hidden = !canKeep;
     }
+    const canTogether = canKeep && !openingActive && !coop;
+    if (togetherButton.classList.contains("hidden") === canTogether)
+        togetherButton.classList.toggle("hidden", !canTogether);
     ui.undo.disabled = !enabled || testMode || Boolean(replayer) || !build.canUndo();
     ui.redo.disabled = !enabled || testMode || Boolean(replayer) || !build.canRedo();
     ui.test.disabled = !enabled || testMode || Boolean(replayer);

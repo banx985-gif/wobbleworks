@@ -35,6 +35,15 @@
       <div id="sandbox-drawer" class="sandbox-drawer hidden" role="dialog" aria-label="Sandbox tools"></div>
       <div id="sandbox-prompt" class="sandbox-prompt hidden"><span id="sandbox-prompt-text"></span><button id="btn-prompt-next">Next idea</button><button id="btn-prompt-close" aria-label="Hide ideas">✕</button></div>
       <div id="toast" class="toast hidden" role="status"></div>
+      <div id="coop-setup" class="coop-setup hidden" role="dialog" aria-labelledby="coop-setup-title">
+        <strong id="coop-setup-title">👫 Build together</strong>
+        <span class="muted">Who's building with you?</span><div id="coop-partners" class="coop-choices"></div>
+        <span class="muted">How do you want to play?</span><div id="coop-patterns" class="coop-patterns"></div>
+        <div class="coop-actions"><button id="coop-start" class="primary">Start!</button><button id="coop-launch-open">🚀 Together Launch (mini game)</button><button id="coop-cancel">Cancel</button></div>
+      </div>
+      <div id="coop-bar" class="coop-bar hidden" aria-live="polite"><span class="coop-dot" aria-hidden="true"></span><div><strong id="coop-who"></strong><span id="coop-doing"></span></div><button id="coop-pass" class="primary">Pass ➡</button><button id="coop-end" aria-label="Stop building together">✕</button></div>
+      <div id="coop-predict" class="coop-predict hidden" role="dialog" aria-labelledby="coop-predict-who"><strong id="coop-predict-who"></strong><span id="coop-predict-q"></span><div class="coop-actions"><button data-guess="YES">👍 Yes</button><button data-guess="NO">👎 No</button><button data-guess="UNSURE">🤔 Not sure</button></div></div>
+      <div id="coop-launch" class="coop-launch hidden" role="dialog" aria-label="Together Launch"><button class="coop-hold" data-hold="0">✋ Hold!</button><div class="coop-launch-mid"><span class="coop-rocket" aria-hidden="true">🚀</span><div class="coop-meter"><span id="coop-launch-fill"></span></div><strong id="coop-launch-msg"></strong><button id="coop-launch-close">Close</button></div><button class="coop-hold" data-hold="1">Hold! ✋</button></div>
       <div id="challenge-cargo" class="challenge-cargo hidden" aria-label="Choose the cargo"><button id="cargo-down" aria-label="Lighter cargo">◀</button><span id="cargo-value">Cargo: 10</span><button id="cargo-up" aria-label="Heavier cargo">▶</button></div>
       <div id="follow-menu" class="follow-menu hidden" role="dialog" aria-label="Follow with the camera"></div>
       <div id="replay-bar" class="replay-bar hidden" aria-label="Replay controls">
@@ -59,7 +68,7 @@
       <aside id="motion-hud" class="motion-hud hidden" aria-live="polite">
         <div class="motion-badge">MOTION YARD</div>
         <div class="motion-copy"><strong id="motion-title">Roll With It</strong><span id="motion-objective">Get the ball to the bucket.</span></div>
-        <div class="motion-tools"><button id="btn-fair-enter" class="primary hidden">🎪 Enter the fair!</button><button id="btn-hint" class="hint-btn" aria-label="Get a clue"><span aria-hidden="true">💡</span> Clue</button><button id="btn-force-scanner" aria-pressed="false">Force Scanner</button></div>
+        <div class="motion-tools"><button id="btn-together" class="hidden">👫 Together</button><button id="btn-fair-enter" class="primary hidden">🎪 Enter the fair!</button><button id="btn-hint" class="hint-btn" aria-label="Get a clue"><span aria-hidden="true">💡</span> Clue</button><button id="btn-force-scanner" aria-pressed="false">Force Scanner</button></div>
       </aside>
       <div id="bolt-tip" class="bolt-tip hidden" aria-live="polite"><span id="bolt-tip-face" class="bolt-tip-face"></span><span id="bolt-tip-text"></span><button id="btn-bolt-tip-close" aria-label="Close tip">OK</button></div>
       <div id="discovery-pop" class="discovery-pop hidden" aria-live="assertive"><img id="discovery-pop-fx" src="./assets/fx/fx.star-pop.webp" alt="" /><div><strong id="discovery-pop-kicker">NEW DISCOVERY!</strong><span id="discovery-pop-title"></span><small id="discovery-pop-line"></small></div></div>

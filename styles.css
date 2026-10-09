@@ -571,3 +571,21 @@ html.high-contrast { --ink:#000; --panel:#fff; --accent:#006b1b; --danger:#a0000
 /* ---- Science Fairs (M28) ---- */
 #btn-fair-enter{min-height:56px;font-weight:900;background:#f783ac}
 .fair-list{margin:6px 0;padding-left:20px;text-align:left}.fair-list li{margin:4px 0}
+
+/* ---- Build together (M30) ---- */
+#btn-together{min-height:56px}
+.coop-setup,.coop-predict{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:40;display:flex;flex-direction:column;gap:8px;width:min(620px,94%);padding:16px 20px;background:#fff;border:4px solid #203040;border-radius:22px;box-shadow:0 10px 0 #0002}
+.coop-setup strong,.coop-predict strong{font-size:1.25rem}
+.coop-choices,.coop-actions{display:flex;gap:8px;flex-wrap:wrap}.coop-choices button,.coop-actions button{min-height:56px;font-weight:900}
+.coop-choices button{border-left:10px solid var(--who,#adb5bd)}.coop-choices button.on,.coop-patterns button.on{background:#ffd43b}
+.coop-patterns{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}.coop-patterns button{min-height:72px;display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left}.coop-patterns span{font-weight:600;font-size:.85rem}
+.coop-bar{position:absolute;left:50%;top:96px;transform:translateX(-50%);z-index:22;display:flex;align-items:center;gap:10px;padding:6px 10px;background:#fff;border:4px solid var(--who,#203040);border-radius:20px;box-shadow:0 6px 0 #0002}
+.coop-bar strong{display:block;font-size:1.1rem}.coop-bar span{font-weight:700;font-size:.85rem}.coop-bar button{min-height:56px;min-width:56px;font-weight:900}
+.coop-dot{width:22px;height:22px;border-radius:50%;background:var(--who,#ffd43b);border:3px solid #203040}
+.coop-tray-locked .tray button{opacity:.4}
+.coop-launch{position:absolute;inset:0;z-index:45;display:grid;grid-template-columns:1fr 1.2fr 1fr;align-items:center;gap:12px;padding:16px;background:#e7f5ffee}
+.coop-hold{min-height:180px;font-size:1.6rem;font-weight:900;border-radius:30px;touch-action:none;background:#fff}.coop-hold.held{background:#69db7c}
+.coop-launch-mid{display:flex;flex-direction:column;align-items:center;gap:10px}.coop-launch-mid button{min-height:56px}
+.coop-rocket{font-size:72px;transition:transform 1.2s ease-in}.coop-launch.launched .coop-rocket{transform:translateY(-60vh)}
+.coop-meter{width:100%;height:20px;border:3px solid #203040;border-radius:12px;overflow:hidden;background:#fff}.coop-meter span{display:block;height:100%;width:0;background:#4dabf7}
+.photo-on .coop-bar,.replaying .coop-bar{display:none!important}

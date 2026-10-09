@@ -93,6 +93,8 @@ export class BuildSystem {
     redo() { const mutation = this.redoStack.pop(); if (!mutation)
         return; this.apply(mutation); this.undoStack.push(mutation); this.revision += 1; }
     canUndo() { return this.undoStack.length > 0; }
+    /** Co-build (M30): a turn ends — undo and redo now only reach back to here (nobody can undo the other player's work). */
+    sealHistory() { this.undoStack.length = 0; this.redoStack.length = 0; }
     canRedo() { return this.redoStack.length > 0; }
     commit(mutation) { this.undoStack.push(deepClone(mutation)); this.redoStack.length = 0; this.revision += 1; }
     replacePart(id, updater) { const i = this.parts.findIndex(p => p.id === id); if (i >= 0)
