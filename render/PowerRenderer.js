@@ -31,7 +31,10 @@ export function drawCircuitPart(c, part, def, selected, ctx) {
     }
     const load = st?.load(part.id);
     const level = load?.level ?? 0;
-    if (b.role === "BATTERY")
+    const generator = def.id === "circuit.generator";
+    if (generator)
+        drawGenerator(c, st?.source(part.id)?.power ?? 0);
+    else if (b.role === "BATTERY")
         drawBattery(c, part, def, st);
     else if (b.role === "SWITCH")
         drawSwitch(c, st ? st.isClosed(part.id) : part.parameters.closed === true, ctx.art);
@@ -64,7 +67,48 @@ export function drawCircuitPart(c, part, def, selected, ctx) {
         c.fillText(load.on ? `${Math.round(level * 100)}% power` : "no power", 0, b.role === "LOAD" && b.load === "BULB" ? -64 : -48);
     }
     c.restore();
-    return !(b.role === "LOAD" && b.load === "MOTOR");
+    return !(b.role === "LOAD" && b.load === "MOTOR") && !generator;
+}
+/** Generator (M27): a coil in a round housing; the bolt lights up while it is making power. Code-drawn (docs/ART_NEEDED.md, Batch V). */
+function drawGenerator(c, power) {
+    c.fillStyle = "#e9ecef";
+    c.beginPath();
+    c.roundRect(-46, -30, 92, 72, 18);
+    c.fill();
+    c.stroke();
+    c.strokeStyle = "#e8590c";
+    c.lineWidth = 5;
+    for (let k = -30; k <= 30; k += 12) {
+        c.beginPath();
+        c.moveTo(k, -18);
+        c.lineTo(k + 6, 30);
+        c.stroke();
+    }
+    c.strokeStyle = INK;
+    c.lineWidth = 4;
+    const on = power > 0.05;
+    c.fillStyle = on ? "#ffd43b" : "#adb5bd";
+    if (on) {
+        c.shadowColor = "#ffd43b";
+        c.shadowBlur = 10 + Math.min(20, power * 6);
+    }
+    c.beginPath();
+    c.moveTo(4, -26);
+    c.lineTo(-10, 4);
+    c.lineTo(0, 4);
+    c.lineTo(-4, 26);
+    c.lineTo(12, -6);
+    c.lineTo(2, -6);
+    c.closePath();
+    c.fill();
+    c.stroke();
+    c.shadowBlur = 0;
+    c.fillStyle = INK;
+    for (const tx of [-38, 38]) {
+        c.beginPath();
+        c.arc(tx, 42, 6, 0, Math.PI * 2);
+        c.fill();
+    }
 }
 function drawBattery(c, part, def, st) {
     const b = circuitBehaviour(def);

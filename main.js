@@ -30,7 +30,8 @@ import { OpeningDirector, evaluateOpeningSuccess } from "./opening/OpeningDirect
 import { loadMotionYardLevels } from "./motion/MotionContent.js";
 import { MOTION_PERFORMANCE_BUDGET } from "./motion/MotionPerformanceBudget.js";
 import { evaluateMotionMission, MOTION_REAL_WORLD_CARDS } from "./motion/MotionYard.js";
-import { CHAIN_WORKSHOP, CHALLENGE_LAB, EXPERIMENT_LAB, FREE_BUILD_ROOMS, MAIN_LABS } from "./progression/CampaignData.js";
+import { CHAIN_WORKSHOP, CHALLENGE_LAB, CONTRACT_BOARD, EXPERIMENT_LAB, FREE_BUILD_ROOMS, MAIN_LABS } from "./progression/CampaignData.js";
+import { acceptVisitor, contractById, contractOpen, contractsOf, jobBoardOpen, visitorById } from "./contracts/Contracts.js";
 import { ChallengeRun, challengeBest, challengeById, challengeLabOpen, challengeOpen, earnedRatings, formatScore, personalityLabel, playerParts, withChallengeResult } from "./challenge/Challenges.js";
 import { activeModifiers, sandboxTrayParts, capStatus, CAMPAIGN_PART_CAP, MODIFIER_LABELS, placeTemplate, sandboxById, sandboxOpen, SANDBOX_PART_CAP, SPAWN_CATALOGUE, templateById, withModifier } from "./sandbox/Sandboxes.js";
 import { buildExperimentRig, experimentTemplate, verdict, verdictLine } from "./experiment/ExperimentTemplates.js";
@@ -158,6 +159,8 @@ let lockerTab = "avatar";
 let parentNotice = "";
 let lastStorage;
 let hubQueue = [];
+/** Visitors who will pop by the Workshop to say thank you for a finished job (M27). */
+let visitorReactions = [];
 let lastMissionLevelId;
 let resultReturnsToHub = false;
 // ---- M11 guidance state (per attempt; nothing here is read by the simulation)
@@ -277,7 +280,7 @@ function readSettingsForm() {
     return { textScale: Number.isFinite(num) ? Math.max(0.9, Math.min(1.4, num)) : 1, reducedMotion: chk("#setting-reduced-motion"), highContrast: chk("#setting-high-contrast"), narration: chk("#setting-narration"), subtitles: chk("#setting-subtitles"), soundEffects: chk("#setting-sfx"), music: chk("#setting-music"), vibration: chk("#setting-vibration") };
 }
 /** The nine campaign labs plus the creative modes that use the same mission menu (the Chain Reaction Workshop). */
-const PLAY_SETS = [...MAIN_LABS, CHAIN_WORKSHOP, EXPERIMENT_LAB, FREE_BUILD_ROOMS, CHALLENGE_LAB];
+const PLAY_SETS = [...MAIN_LABS, CHAIN_WORKSHOP, EXPERIMENT_LAB, FREE_BUILD_ROOMS, CHALLENGE_LAB, CONTRACT_BOARD];
 function labDef(id = currentLabId) { return PLAY_SETS.find(l => l.id === id); }
 function labOfLevel(levelId) { return PLAY_SETS.find(l => l.missions.some(m => m.id === levelId))?.id ?? "motion-yard"; }
 function completedSet() { return new Set(completedLevelIds(appSave)); }
@@ -294,6 +297,9 @@ function evaluateLevel(level, runtime) {
     // Challenge Lab: finishing is decided by the challenge's own scoring (finishChallenge), on an exact tick.
     if (lab === CHALLENGE_LAB.id)
         return { levelId: level.id, success: false, discoveries: [] };
+    // Job Board: each job uses its lab room's own rules, checked the same way as every other level.
+    if (lab === CONTRACT_BOARD.id)
+        return { levelId: level.id, success: runtime ? evaluateLevelOutcome(level, build, runtime).complete : false, discoveries: [] };
     if (lab === CHAIN_WORKSHOP.id)
         return { levelId: level.id, success: runtime ? evaluateLevelOutcome(level, build, runtime).complete : false, discoveries: runtime ? collectChainDiscoveries(build, runtime) : [] };
     const module = labModule(lab);
@@ -304,7 +310,8 @@ function evaluateLevel(level, runtime) {
 /** Remember this run so the next TEST can show whether a change (like a brace) really helped. */
 function rememberRun() { const runtime = tests.active(); if (runtime && activeLevel)
     lastRuns.set(activeLevel.id, runSummary(build, runtime)); }
-function labIsOpen(labId) { if (labId === CHALLENGE_LAB.id)
+function labIsOpen(labId) { if (labId === CONTRACT_BOARD.id)
+    return labLevels.has(labId) && (jobBoardOpen(appSave) || testingLabs.has(labId)); if (labId === CHALLENGE_LAB.id)
     return labLevels.has(labId) && (challengeLabOpen(appSave) || testingLabs.has(labId)); if (labId === FREE_BUILD_ROOMS.id)
     return labLevels.has(labId) && Boolean(activeProfile(appSave)?.freeBuildUnlocked); if (labId === EXPERIMENT_LAB.id)
     return labLevels.has(labId) && (experimentLabOpen(appSave) || testingLabs.has(labId)); if (labId === CHAIN_WORKSHOP.id)
@@ -365,7 +372,7 @@ function renderLabMenu() {
     document.querySelector("#lab-lead").textContent = `${lab.concepts}. Build, TEST, watch what happens, then change it.`;
     motionProgressLabel.textContent = `${lab.missions.filter(m => completed.has(m.id)).length} / ${lab.missions.length} ${lab.title} experiences completed`;
     for (const meta of lab.missions) {
-        const unlocked = labMissionUnlocked(lab, meta.id, completed) && (lab.id !== EXPERIMENT_LAB.id || experimentUnlocked(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== FREE_BUILD_ROOMS.id || sandboxOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== CHALLENGE_LAB.id || challengeOpen(appSave, meta.id) || testingLabs.has(lab.id));
+        const unlocked = labMissionUnlocked(lab, meta.id, completed) && (lab.id !== EXPERIMENT_LAB.id || experimentUnlocked(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== FREE_BUILD_ROOMS.id || sandboxOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== CHALLENGE_LAB.id || challengeOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== CONTRACT_BOARD.id || contractOpen(appSave, meta.id) || testingLabs.has(lab.id));
         const button = document.createElement("button");
         button.className = `motion-mission${completed.has(meta.id) ? " done" : ""}${!unlocked ? " locked" : ""}${requiredNext === meta.id ? " required" : ""}`;
         button.disabled = !unlocked;
@@ -378,7 +385,13 @@ function renderLabMenu() {
         const tpl = lab.id === EXPERIMENT_LAB.id ? experimentTemplate(meta.id) : undefined;
         const room = lab.id === FREE_BUILD_ROOMS.id ? sandboxById(meta.id) : undefined;
         const ch = lab.id === CHALLENGE_LAB.id ? challengeById(meta.id) : undefined;
-        if (ch) {
+        const job = lab.id === CONTRACT_BOARD.id ? contractById(meta.id) : undefined;
+        const who = job ? visitorById(job.visitorId) : undefined;
+        if (job && who) {
+            slot.textContent = `${who.icon} ${who.name.toUpperCase()}`;
+            objective.textContent = unlocked ? job.goal : activeProfile(appSave)?.visitorsMet.includes(who.id) ? `Opens with the ${regionById(job.labId)?.title ?? "lab"}` : `Meet ${who.name} at the Workshop door`;
+        }
+        else if (ch) {
             const best = challengeBest(appSave, ch.id);
             objective.textContent = unlocked ? `${ch.icon} ${ch.goal}${best ? ` · Best: ${formatScore(ch, best.value)}` : ""}` : `Opens with the ${regionById(ch.labId)?.title ?? "lab"}`;
         }
@@ -469,6 +482,12 @@ function loadMission(id) {
     enterWorkshop();
     startExperiment(labId === EXPERIMENT_LAB.id ? level : undefined);
     setupChallenge(labId === CHALLENGE_LAB.id ? challengeById(level.id) : undefined);
+    contract = labId === CONTRACT_BOARD.id ? contractById(level.id) : undefined;
+    if (contract) {
+        const who = visitorById(contract.visitorId);
+        motionObjective.textContent = contract.goal;
+        document.querySelector(".motion-hud .motion-badge").textContent = `JOB FOR ${who.name.toUpperCase()}`;
+    }
 }
 function showMotionResult(success, body, stars = [], newStars = [], rewards = []) {
     resultShown = true;
@@ -536,10 +555,14 @@ function maybeCompleteMotionMission() {
     hintButton.classList.remove("offer");
     const card = result.discoveries.map(id => [...MOTION_REAL_WORLD_CARDS, ...GEAR_REAL_WORLD_CARDS, ...STRUCTURE_REAL_WORLD_CARDS, ...LAB_MODULES.flatMap(m => m.realWorldCards), ...CHAIN_REAL_WORLD_CARDS].find(c => c.discoveryId === id)).find(Boolean);
     const chainNote = labOfLevel(activeLevel.id) === CHAIN_WORKSHOP.id ? noteChainRun() : "";
+    const helped = contract ? visitorById(contract.visitorId) : undefined;
+    const thanks = helped ? ` ${helped.name}: “${helped.thanks}”` : "";
+    if (helped && outcome.firstCompletion)
+        visitorReactions.push({ kind: "VISITOR", title: `${helped.icon} ${helped.name} pops by:`, body: `“${helped.thanks} Thanks for doing ${contract.title}!”` });
     rememberRun();
     const discovered = card ? ` ${card.title}: ${card.example}` : result.discoveries.length ? ` You discovered ${result.discoveries[0].replace("motion.", "").replaceAll("-", " ")}.` : "";
     const cleared = outcome.labCleared ? ` The ${regionById(outcome.labCleared)?.title ?? "lab"} is restored!` : "";
-    showMotionResult(true, `Nice invention.${chainNote}${discovered}${cleared}`, outcome.stars, outcome.newStars, outcome.newRewards);
+    showMotionResult(true, `${helped ? "Job done!" : "Nice invention."}${thanks}${chainNote}${discovered}${cleared}`, outcome.stars, outcome.newStars, outcome.newRewards);
     sfx(980, .09);
     buzz(60);
 }
@@ -839,6 +862,7 @@ async function loadAppState() {
         labLevels.set(EXPERIMENT_LAB.id, await loadLabLevels(registry, EXPERIMENT_LAB.id, "experiment"));
         labLevels.set(FREE_BUILD_ROOMS.id, await loadLabLevels(registry, FREE_BUILD_ROOMS.id, "sandbox"));
         labLevels.set(CHALLENGE_LAB.id, await loadLabLevels(registry, CHALLENGE_LAB.id, "challenge"));
+        labLevels.set(CONTRACT_BOARD.id, await loadLabLevels(registry, CONTRACT_BOARD.id, "contract"));
         appSave = loaded.payload ?? createDefaultAppSave();
         savingBlocked = loaded.futureVersion;
         applySettings();
@@ -928,6 +952,7 @@ function leaveGameplay() {
     endReplay();
     lastRecording = undefined;
     setupChallenge(undefined);
+    contract = undefined;
     currentRoom = undefined;
     sandboxBar.classList.add("hidden");
     sandboxDrawer.classList.add("hidden");
@@ -961,6 +986,9 @@ function showHub() {
     transition("HUB", true);
 }
 function queueHubMoments() {
+    // Visitors whose job you just finished pop by first to say thank you.
+    hubQueue.push(...visitorReactions);
+    visitorReactions = [];
     // Story first (a recording, then the blueprint piece and Bolt's memory when a lab is restored), then the hub changes.
     for (const s of pendingStoryScenes(appSave))
         hubQueue.push({ kind: "STORY", title: s.title, body: s.lines.join(" "), scene: s });
@@ -983,6 +1011,8 @@ function showNextHubMoment() {
     }
     document.querySelector("#hub-moment-title").textContent = next.title;
     document.querySelector("#hub-moment-body").textContent = next.body;
+    document.querySelector("#btn-hub-moment").textContent = next.button ?? "OK!";
+    document.querySelector("#btn-hub-moment-later").classList.toggle("hidden", !next.later);
     const face = document.querySelector("#hub-moment-bolt");
     face.replaceChildren(boltArt(activeProfile(appSave)?.equipped.bolt, next.kind === "REWARD" ? "cheer" : "sign"));
     if (next.kind === "BOLT") {
@@ -991,6 +1021,7 @@ function showNextHubMoment() {
     }
     sfx(next.kind === "REWARD" ? 1040 : 760, .08);
 }
+document.querySelector("#btn-hub-moment-later").addEventListener("click", () => { hubQueue.shift(); renderHubScreen(); });
 document.querySelector("#btn-hub-moment").addEventListener("click", () => {
     const done = hubQueue.shift();
     done?.onDone?.();
@@ -1094,9 +1125,18 @@ function renderHubScreen() {
         ...(experimentLabOpen(appSave) ? { openExperiments: () => showLab(EXPERIMENT_LAB.id) } : {}),
         ...(chainWorkshopOpen(appSave) ? { openChain: () => showLab(CHAIN_WORKSHOP.id) } : {}),
         ...(challengeLabOpen(appSave) ? { openChallenges: () => showLab(CHALLENGE_LAB.id) } : {}),
+        ...(jobBoardOpen(appSave) ? { openJobBoard: () => showLab(CONTRACT_BOARD.id) } : {}),
         pokeBolt: () => { const p = activeProfile(appSave); hubQueue.push({ kind: "BOLT", title: p?.openingComplete ? "Fully charged and ready to wobble!" : "Bzzt… still charging…", body: "Tap the Campus Map to pick where to go next." }); showNextHubMoment(); },
         pokeSprocket: () => { sfx(1300, .05); window.setTimeout(() => sfx(1500, .05), 90); hubRoot.querySelector(".station-sprocket")?.classList.add("wiggle"); window.setTimeout(() => hubRoot.querySelector(".station-sprocket")?.classList.remove("wiggle"), 600); },
         meetVisitor: id => {
+            // Inventor Contract visitors (M27) ask for help: "Let's help!" accepts their jobs; "Maybe later" leaves them at the door.
+            const cv = visitorById(id);
+            if (cv) {
+                const jobs = contractsOf(cv.id).map(c => c.title).join(" and ");
+                hubQueue.push({ kind: "VISITOR", title: `${cv.icon} ${cv.name} says:`, body: `“${cv.ask}” Jobs: ${jobs}.`, button: "Let's help!", later: true, onDone: () => { void commit(acceptVisitor(appSave, cv.id), true); toast(`${cv.name}'s jobs are on the Job Board 📋`); } });
+                renderHubScreen();
+                return;
+            }
             const out = meetVisitor(appSave, id);
             const v = out.gift ? rewardById(out.gift) : undefined;
             void commit(out.save, true);
@@ -3025,6 +3065,8 @@ const cargoBox = document.querySelector("#challenge-cargo"), cargoValue = docume
 /** The challenge being played (if any), and the TEST being scored. */
 let challenge;
 let challengeRun;
+/** The Inventor Contract being played (M27), if any. */
+let contract;
 function setupChallenge(def) {
     challenge = def;
     challengeRun = undefined;
@@ -3099,8 +3141,9 @@ function render() {
         drawPhotoBackground(renderer.ctx, photo.background, now() / 1000);
     if (freeBuildActive && currentRoom && !photoBackground)
         drawRoomBackdrop(currentRoom);
-    const lookLab = challenge ? (challenge.baseLevelId.startsWith("chain.") ? CHAIN_WORKSHOP.id : challenge.labId) : currentLabId;
-    const sceneryId = challenge ? challenge.baseLevelId : activeLevel?.id;
+    const themed = challenge ?? contract;
+    const lookLab = themed ? (themed.baseLevelId.startsWith("chain.") ? CHAIN_WORKSHOP.id : themed.labId) : currentLabId;
+    const sceneryId = themed ? themed.baseLevelId : activeLevel?.id;
     if (labActive && photoBackground)
         renderer.drawScenery(sceneryId);
     else if (labActive) {

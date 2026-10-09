@@ -15,6 +15,8 @@ export const POWER_PARTS = [
     part("circuit.button", "power.button", "Button", [{ kind: "RIGID_BODY", bodyType: "STATIC", shape: "BOX", width: 0.8, height: 0.3, density: 1, friction: 0.8, restitution: 0.05 }, { kind: "CIRCUIT", role: "BUTTON", terminals: [T(-0.45, 0.05), T(0.45, 0.05)] }]),
     part("circuit.bulb", "power.bulb", "Bulb", [{ kind: "CIRCUIT", role: "LOAD", load: "BULB", ohms: 6, terminals: [T(-0.2, 0.42), T(0.2, 0.42)] }]),
     part("circuit.buzzer", "power.buzzer", "Buzzer", [{ kind: "CIRCUIT", role: "LOAD", load: "BUZZER", ohms: 8, terminals: [T(-0.3, 0.3), T(0.3, 0.3)] }]),
+    // M27: a generator is a power source whose push grows with how fast its shaft is turned (by gears on the same spot).
+    part("circuit.generator", "power.generator", "Generator", [{ kind: "CIRCUIT", role: "BATTERY", volts: 0, ohms: 0.5, terminals: [T(-0.38, 0.42), T(0.38, 0.42)] }, { kind: "GEAR", role: "SHAFT", radius: 0.18, teeth: 0 }, { kind: "GENERATOR", efficiency: 1 }]),
     part("circuit.motor", "power.motor", "Electric Motor", [{ kind: "CIRCUIT", role: "LOAD", load: "MOTOR", ohms: 4, terminals: [T(-0.38, 0.42), T(0.38, 0.42)] }, { kind: "GEAR", role: "SHAFT", radius: 0.18, teeth: 0 }, { kind: "GEAR_DRIVER", driver: "MOTOR", speed: 4, torque: 6, electric: true }]),
     part("circuit.splitter", "power.splitter", "Splitter", [{ kind: "CIRCUIT", role: "JUNCTION", terminals: [T(0, 0)] }], [elec("hub")]),
     part("circuit.device", "power.power-meter", "Gadget", [{ kind: "CIRCUIT", role: "LOAD", load: "DEVICE", ohms: 6, terminals: [T(-0.35, 0.45), T(0.35, 0.45)] }])

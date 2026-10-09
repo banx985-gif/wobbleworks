@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "id": "contract.rescue-line",
+  "title": "Rescue Line",
+  "environmentId": "env.motion-yard",
+  "availablePartIds": [
+    "motion.spring",
+    "motion.ramp",
+    "structure.block"
+  ],
+  "starterParts": [
+    {
+      "id": "duck",
+      "definitionId": "silly.duck",
+      "position": {
+        "x": 2.8,
+        "y": 7.72
+      },
+      "rotation": 0,
+      "parameters": {
+        "initialVx": 3.8,
+        "friction": 0.05
+      },
+      "tags": [
+        "subject.duck"
+      ]
+    }
+  ],
+  "starterConnections": [],
+  "staticObjects": [
+    {
+      "id": "bath",
+      "definitionId": "motion.goal-zone",
+      "position": {
+        "x": 10.3,
+        "y": 4.75
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "zone.bath"
+      ]
+    }
+  ],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "outcomeRules": [
+    {
+      "kind": "EVENT_OCCURRED",
+      "eventKind": "SPRING_LAUNCH",
+      "targetTag": "subject.duck"
+    },
+    {
+      "kind": "OBJECT_ENTERS_ZONE",
+      "objectTag": "subject.duck",
+      "zoneTag": "zone.bath",
+      "radius": 1.25
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "duck-force-evidence",
+      "conceptId": "motion.force",
+      "eventKind": "SPRING_LAUNCH",
+      "minimumCount": 1,
+      "truthContractId": "truth.motion.v1"
+    }
+  ],
+  "hints": [
+    "Put a spring in the duck’s path.",
+    "Tune the launch so the duck lands in the bath target."
+  ],
+  "narrationCues": [
+    "Launch the rescue float right into the pool!"
+  ]
+}

@@ -173,4 +173,13 @@ export const CHALLENGE_LAB = { id: "challenge-lab", title: "Challenge Lab", conc
         ["challenge.egg-drop", "Egg Drop", "Keep survivalState true while minimising peakImpact."], ["challenge.chain-master", "Chain Master", "Maximise valid chainLength under anti-loop rules."],
         ["challenge.robot-efficiency", "Robot Efficiency", "Reach the robot goal with minimum programBlockCount, tie-break elapsedTime."], ["challenge.stable-platform", "Stable Platform", "Minimise stabilityVariance while supporting the specified load."]
     ].map(([id, title, objective]) => ({ id: id, title: title, slot: "CHALLENGE", objective: objective, requiredForProgression: false })) };
-export const CREATIVE_MODES = [CHAIN_WORKSHOP, EXPERIMENT_LAB, FREE_BUILD_ROOMS, CHALLENGE_LAB];
+/** Job Board (M27): the 24 Inventor Contracts brought by campus visitors (visitors and rules in src/contracts/Contracts.ts). */
+export const CONTRACT_BOARD = { id: "contract-board", title: "Job Board", concepts: "Jobs for campus visitors", colour: "#74c0fc", icon: "📋", missions: [
+        ["contract.apple-elevator", "Apple Elevator"], ["contract.kitchen-conveyor", "Kitchen Conveyor"], ["contract.roof-beam-lift", "Roof Beam Lift"], ["contract.site-bridge", "Site Bridge"],
+        ["contract.hilltop-apples", "Hilltop Apples"], ["contract.water-the-rows", "Water the Rows"], ["contract.rescue-line", "Rescue Line"], ["contract.pump-to-the-roof", "Pump to the Roof"],
+        ["contract.loading-dock", "Loading Dock"], ["contract.fragile-parcel", "Fragile Parcel"], ["contract.rover-cargo", "Rover Cargo"], ["contract.panel-deployment", "Panel Deployment"],
+        ["contract.safe-animal-gate", "Safe Animal Gate"], ["contract.snack-launcher", "Snack Launcher"], ["contract.treasure-lift", "Treasure Lift"], ["contract.bell-and-cannon", "Bell and Cannon"],
+        ["contract.stage-lift", "Stage Lift"], ["contract.beat-machine", "Beat Machine"], ["contract.fountain-fix", "Fountain Fix"], ["contract.ride-starter", "Ride Starter"],
+        ["contract.wheel-wobble", "Wheel Wobble"], ["contract.generator-test", "Generator Test"], ["contract.controlled-drop", "Controlled Drop"], ["contract.sensor-rig", "Sensor Rig"]
+    ].map(([id, title]) => ({ id: id, title: title, slot: "CHALLENGE", objective: "A job for a campus visitor.", requiredForProgression: false })) };
+export const CREATIVE_MODES = [CHAIN_WORKSHOP, EXPERIMENT_LAB, FREE_BUILD_ROOMS, CHALLENGE_LAB, CONTRACT_BOARD];

@@ -1,0 +1,241 @@
+{
+  "schemaVersion": 1,
+  "id": "contract.rover-cargo",
+  "title": "Rover Cargo",
+  "environmentId": "env.space-centre",
+  "availablePartIds": [
+    "space.wheel",
+    "space.grip-wheel",
+    "space.solar-panel"
+  ],
+  "starterParts": [
+    {
+      "id": "rover",
+      "definitionId": "space.rover",
+      "position": {
+        "x": 1.6,
+        "y": 8.05
+      },
+      "rotation": 0,
+      "parameters": {
+        "pinned": true
+      },
+      "tags": [
+        "rover"
+      ]
+    },
+    {
+      "id": "motor",
+      "definitionId": "space.drive-motor",
+      "position": {
+        "x": 1.6,
+        "y": 8.03
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "waitFor": "POWERED:beacon"
+      }
+    },
+    {
+      "id": "cargo",
+      "definitionId": "space.cargo-pod",
+      "position": {
+        "x": 1.95,
+        "y": 7.63
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "cargo"
+      ]
+    }
+  ],
+  "starterConnections": [],
+  "staticObjects": [
+    {
+      "id": "moon",
+      "definitionId": "space.gravity-zone",
+      "position": {
+        "x": 8,
+        "y": 4.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "width": 16,
+        "g": 1.62,
+        "air": false,
+        "label": "MOON"
+      }
+    },
+    {
+      "id": "sun",
+      "definitionId": "space.sun",
+      "position": {
+        "x": 12,
+        "y": 0.8
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "rim",
+      "definitionId": "motion.ramp",
+      "position": {
+        "x": 7,
+        "y": 7.75
+      },
+      "rotation": -0.6,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "rock",
+      "definitionId": "space.moon-plateau",
+      "position": {
+        "x": 10.5,
+        "y": 8.4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "rock-2",
+      "definitionId": "space.moon-plateau",
+      "position": {
+        "x": 13.5,
+        "y": 8.4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "base",
+      "definitionId": "space.moon-base",
+      "position": {
+        "x": 14.2,
+        "y": 6.6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "base"
+      ]
+    },
+    {
+      "id": "beacon-battery",
+      "definitionId": "circuit.battery",
+      "position": {
+        "x": 13,
+        "y": 2.6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "beacon-switch",
+      "definitionId": "circuit.switch",
+      "position": {
+        "x": 14.6,
+        "y": 2.6
+      },
+      "rotation": 0,
+      "parameters": {
+        "closed": false
+      }
+    },
+    {
+      "id": "beacon",
+      "definitionId": "circuit.bulb",
+      "position": {
+        "x": 13.8,
+        "y": 3.8
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "bw-1",
+      "definitionId": "circuit.wire",
+      "position": {
+        "x": 13.85,
+        "y": 2.675
+      },
+      "rotation": 0.211093,
+      "parameters": {
+        "locked": true,
+        "length": 0.715891
+      }
+    },
+    {
+      "id": "bw-2",
+      "definitionId": "circuit.wire",
+      "position": {
+        "x": 14.5,
+        "y": 3.485
+      },
+      "rotation": 2.168159,
+      "parameters": {
+        "locked": true,
+        "length": 1.777892
+      }
+    },
+    {
+      "id": "bw-3",
+      "definitionId": "circuit.wire",
+      "position": {
+        "x": 13.05,
+        "y": 3.41
+      },
+      "rotation": -2.167297,
+      "parameters": {
+        "locked": true,
+        "length": 1.958162
+      }
+    }
+  ],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "outcomeRules": [
+    {
+      "kind": "ROVER_DELIVERS",
+      "roverTag": "rover",
+      "zoneTag": "base",
+      "radius": 1.2,
+      "cargoTag": "cargo"
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "space.solar",
+      "conceptId": "space.solar",
+      "eventKind": "ROVER_DRIVING",
+      "minimumCount": 1,
+      "truthContractId": "truth.space.v1"
+    }
+  ],
+  "hints": [
+    "The rover sets off by itself when the base beacon comes on.",
+    "No batteries here: the Sun has to power it, and the crater rim is steep."
+  ],
+  "narrationCues": [
+    "Supplies for the Moon base — over to you, rover crew!"
+  ]
+}

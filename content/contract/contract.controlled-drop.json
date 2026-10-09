@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "id": "contract.controlled-drop",
+  "title": "Controlled Drop",
+  "environmentId": "env.space-centre",
+  "availablePartIds": [
+    "motion.ball",
+    "silly.duck",
+    "motion.marble"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "staticObjects": [
+    {
+      "id": "chamber-earth",
+      "definitionId": "space.gravity-zone",
+      "position": {
+        "x": 4,
+        "y": 4.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "width": 8,
+        "g": 9.81,
+        "air": true,
+        "label": "EARTH"
+      },
+      "tags": [
+        "chamber.earth"
+      ]
+    },
+    {
+      "id": "chamber-moon",
+      "definitionId": "space.gravity-zone",
+      "position": {
+        "x": 12,
+        "y": 4.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "width": 8,
+        "g": 1.62,
+        "air": false,
+        "label": "MOON"
+      },
+      "tags": [
+        "chamber.moon"
+      ]
+    }
+  ],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "outcomeRules": [
+    {
+      "kind": "GRAVITY_COMPARE",
+      "aZoneTag": "chamber.earth",
+      "bZoneTag": "chamber.moon",
+      "minRatio": 2
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "space.mass-same",
+      "conceptId": "space.mass-same",
+      "eventKind": "GRAVITY_ZONE",
+      "minimumCount": 1,
+      "truthContractId": "truth.space.v1"
+    }
+  ],
+  "hints": [
+    "A fair test changes only ONE thing.",
+    "Drop the same thing, from the same height, in each room."
+  ],
+  "narrationCues": [
+    "Same drop, different gravity — a fair test!"
+  ]
+}

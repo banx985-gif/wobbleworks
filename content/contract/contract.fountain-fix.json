@@ -1,0 +1,306 @@
+{
+  "schemaVersion": 1,
+  "id": "contract.fountain-fix",
+  "title": "Fountain Fix",
+  "environmentId": "env.water-works",
+  "availablePartIds": [
+    "plumb.pipe",
+    "circuit.wire",
+    "gear.small",
+    "gear.medium",
+    "gear.large"
+  ],
+  "starterParts": [
+    {
+      "id": "p-up",
+      "definitionId": "plumb.pipe",
+      "position": {
+        "x": 5.125,
+        "y": 4.635
+      },
+      "rotation": -1.217488,
+      "parameters": {
+        "length": 6.213807
+      }
+    },
+    {
+      "id": "p-down",
+      "definitionId": "plumb.pipe",
+      "position": {
+        "x": 6.65,
+        "y": 4.05
+      },
+      "rotation": 0.855053,
+      "parameters": {
+        "length": 3.04795
+      }
+    },
+    {
+      "id": "p-v",
+      "definitionId": "plumb.pipe",
+      "position": {
+        "x": 8.775,
+        "y": 5.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "length": 0.85
+      }
+    },
+    {
+      "id": "p-l",
+      "definitionId": "plumb.pipe",
+      "position": {
+        "x": 9.7,
+        "y": 5.1
+      },
+      "rotation": -0.197396,
+      "parameters": {
+        "length": 1.019804
+      }
+    },
+    {
+      "id": "p-r",
+      "definitionId": "plumb.pipe",
+      "position": {
+        "x": 9.7,
+        "y": 5.5
+      },
+      "rotation": 0.54042,
+      "parameters": {
+        "length": 1.16619
+      }
+    },
+    {
+      "id": "p-w",
+      "definitionId": "plumb.pipe-narrow",
+      "position": {
+        "x": 8.975,
+        "y": 5.925
+      },
+      "rotation": 1.871717,
+      "parameters": {
+        "length": 1.518223
+      }
+    }
+  ],
+  "starterConnections": [],
+  "staticObjects": [
+    {
+      "id": "pond",
+      "definitionId": "plumb.source",
+      "position": {
+        "x": 1.4,
+        "y": 7.4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "head": 0.3
+      }
+    },
+    {
+      "id": "pump",
+      "definitionId": "plumb.pump",
+      "position": {
+        "x": 3.6,
+        "y": 7.4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "battery",
+      "definitionId": "circuit.battery",
+      "position": {
+        "x": 3.6,
+        "y": 5.9
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "header",
+      "definitionId": "plumb.tank",
+      "position": {
+        "x": 6.2,
+        "y": 2.4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "header"
+      ]
+    },
+    {
+      "id": "valve",
+      "definitionId": "plumb.valve",
+      "position": {
+        "x": 8,
+        "y": 5.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "open": false
+      }
+    },
+    {
+      "id": "joint",
+      "definitionId": "plumb.splitter",
+      "position": {
+        "x": 9.2,
+        "y": 5.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "jet-l",
+      "definitionId": "plumb.nozzle",
+      "position": {
+        "x": 10.2,
+        "y": 5
+      },
+      "rotation": -1,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "jet-r",
+      "definitionId": "plumb.nozzle",
+      "position": {
+        "x": 10.2,
+        "y": 5.8
+      },
+      "rotation": -0.4,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "wheel",
+      "definitionId": "plumb.wheel",
+      "position": {
+        "x": 9.2,
+        "y": 7.4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "wheel"
+      ]
+    },
+    {
+      "id": "display",
+      "definitionId": "gear.ride",
+      "position": {
+        "x": 10.3,
+        "y": 7.4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "output.display"
+      ]
+    },
+    {
+      "id": "ride-gear",
+      "definitionId": "gear.small",
+      "position": {
+        "x": 10.3,
+        "y": 7.4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "basin-l",
+      "definitionId": "plumb.target",
+      "position": {
+        "x": 12.2,
+        "y": 8
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "basin"
+      ]
+    },
+    {
+      "id": "basin-r",
+      "definitionId": "plumb.target",
+      "position": {
+        "x": 13.2,
+        "y": 6.8
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "basin"
+      ]
+    },
+    {
+      "id": "tank-legs",
+      "definitionId": "motion.platform",
+      "position": {
+        "x": 6.2,
+        "y": 3.15
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    }
+  ],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "outcomeRules": [
+    {
+      "kind": "WATER_RECEIVED",
+      "targetTag": "basin",
+      "min": 0.6
+    },
+    {
+      "kind": "GEAR_OUTPUT",
+      "targetTag": "output.display",
+      "sustainSeconds": 2
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "water.pump",
+      "conceptId": "water.pump",
+      "eventKind": "PUMP_LIFT",
+      "minimumCount": 1,
+      "truthContractId": "truth.water.v1"
+    }
+  ],
+  "hints": [
+    "Follow the water from the pond. Where does it stop?",
+    "Three jobs: lift it, let it out, and pass the wheel's turning to the display."
+  ],
+  "narrationCues": [
+    "Get the fountain splashing again!"
+  ]
+}

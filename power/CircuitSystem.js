@@ -13,8 +13,8 @@ import { sunFactor } from "../space/SpaceSystem.js";
  */
 export const ELECTRICITY_TRUTH_CONTRACT = Object.freeze({
     id: "truth.electricity.v1",
-    preserve: ["a circuit needs a complete path", "source, load and switch relationships", "series and parallel", "electricity takes the easiest path", "batteries store limited energy"],
-    simplify: ["low-voltage abstract network", "steady current with no spin-up", "ideal wires with a tiny resistance", "no dangerous shock model"],
+    preserve: ["a circuit needs a complete path", "source, load and switch relationships", "series and parallel", "electricity takes the easiest path", "batteries store limited energy", "a generator pushes harder the faster it is turned"],
+    simplify: ["low-voltage abstract network", "steady current with no spin-up", "ideal wires with a tiny resistance", "no dangerous shock model", "turning a generator does not get harder when it powers something"],
     neverImply: ["disconnected wires can power loads", "water and electricity interaction is modelled"]
 });
 /** Reference push of one ordinary battery (volts) and how close two points must be to be the same connection (m). */
@@ -23,6 +23,8 @@ export const NODE_EPSILON = 0.06;
 const GMIN = 1e-9;
 /** Load level thresholds (1 ≈ one battery straight across the load). */
 export const LEVEL_ON = 0.15;
+/** A generator's push (volts) for each radian per second its shaft turns: the faster it is turned, the harder it pushes (M27). */
+export const GENERATOR_VOLTS_PER_RAD = 0.45;
 export const LEVEL_BRIGHT = 0.6;
 export function circuitBehaviour(def) { const b = def?.behaviours.find(x => x.kind === "CIRCUIT"); return b?.kind === "CIRCUIT" ? b : undefined; }
 export function wireBehaviour(def) { const b = def?.behaviours.find(x => x.kind === "WIRE"); return b?.kind === "WIRE" ? b : undefined; }
@@ -110,6 +112,10 @@ export function analyzeCircuit(parts, definition) {
             elements.push({ ...base, kind: "BATTERY", ohms: c.ohms ?? 0.5, volts: Math.round(Number(c.volts ?? ONE_BATTERY_VOLTS) * sun * 1000) / 1000, capacity: 1e9, maxPower: Infinity });
             continue;
         }
+        if (c.role === "BATTERY" && def.behaviours.some(b => b.kind === "GENERATOR")) {
+            elements.push({ ...base, kind: "BATTERY", ohms: c.ohms ?? 0.5, volts: 0, capacity: 1e9, maxPower: Infinity, generator: true });
+            continue;
+        }
         if (c.role === "BATTERY")
             elements.push({ ...base, kind: "BATTERY", ohms: c.ohms ?? 0.5, volts: Number(p.parameters.volts ?? c.volts ?? ONE_BATTERY_VOLTS), capacity: Math.min(cap, Number(p.parameters.capacity ?? c.capacity ?? 400)), maxPower: Number(p.parameters.maxPower ?? c.maxPower ?? Infinity) });
         else if (c.role === "SWITCH" || c.role === "BUTTON")
@@ -165,8 +171,18 @@ export class CircuitSystem {
     get tick() { return this.ticks; }
     hasCircuit() { return this.layout.elements.some(e => e.kind === "BATTERY"); }
     /** One tick. `pressed` says whether each button is held down right now (by a body, Bolt's schedule or a finger). */
-    step(dt, pressed, flipped = new Set()) {
+    /** `shaftSpeed`: how fast a generator's shaft is turning (radians per second), from the gear system. */
+    step(dt, pressed, flipped = new Set(), shaftSpeed = () => 0) {
         const els = this.layout.elements;
+        for (const e of els)
+            if (e.generator) {
+                const v = Math.round(GENERATOR_VOLTS_PER_RAD * Math.abs(shaftSpeed(e.partId)) * 1000) / 1000;
+                if (v > 0.3 && !this.once.has(`gen:${e.partId}`)) {
+                    this.once.add(`gen:${e.partId}`);
+                    this.pending.push({ kind: "GENERATOR_MAKING_POWER", sourceId: e.partId, data: { volts: v } });
+                }
+                this.genVolts.set(e.partId, v);
+            }
         for (const e of els) {
             if (e.kind === "BUTTON") {
                 const now = pressed(e.partId);
@@ -253,7 +269,9 @@ export class CircuitSystem {
             }
         this.ticks += 1;
     }
-    emf(e) { return this.tripped.has(e.partId) || (this.charge.get(e.partId) ?? 0) <= 0 ? 0 : e.volts; }
+    genVolts = new Map();
+    emf(e) { if (e.generator)
+        return this.tripped.has(e.partId) ? 0 : this.genVolts.get(e.partId) ?? 0; return this.tripped.has(e.partId) || (this.charge.get(e.partId) ?? 0) <= 0 ? 0 : e.volts; }
     /** Is this load's network joined (through closed paths) to any battery at all? */
     connectedToSource(load) {
         const adj = new Map();

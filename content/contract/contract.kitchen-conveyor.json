@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "id": "contract.kitchen-conveyor",
+  "title": "Kitchen Conveyor",
+  "environmentId": "env.power-lab",
+  "availablePartIds": [
+    "circuit.wire"
+  ],
+  "starterParts": [
+    {
+      "id": "cargo",
+      "definitionId": "motion.parcel",
+      "position": {
+        "x": 6.5,
+        "y": 7.8
+      },
+      "rotation": 0,
+      "parameters": {},
+      "tags": [
+        "subject.cargo"
+      ]
+    }
+  ],
+  "starterConnections": [],
+  "staticObjects": [
+    {
+      "id": "motor",
+      "definitionId": "circuit.motor",
+      "position": {
+        "x": 2.5,
+        "y": 5.5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "driver.motor"
+      ]
+    },
+    {
+      "id": "battery",
+      "definitionId": "circuit.battery",
+      "position": {
+        "x": 2.5,
+        "y": 7.4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "pulley-a",
+      "definitionId": "gear.belt-pulley",
+      "position": {
+        "x": 2.5,
+        "y": 5.5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "drum",
+      "definitionId": "gear.conveyor-drum",
+      "position": {
+        "x": 5.2,
+        "y": 7.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "drives": "belt"
+      },
+      "tags": [
+        "output.drum"
+      ]
+    },
+    {
+      "id": "pulley-b",
+      "definitionId": "gear.belt-pulley",
+      "position": {
+        "x": 5.2,
+        "y": 7.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "belt",
+      "definitionId": "motion.conveyor",
+      "position": {
+        "x": 8,
+        "y": 8.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "belt"
+      ]
+    },
+    {
+      "id": "bay",
+      "definitionId": "motion.goal-zone",
+      "position": {
+        "x": 10.8,
+        "y": 7.7
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "zone.bay"
+      ]
+    }
+  ],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "outcomeRules": [
+    {
+      "kind": "OBJECT_ENTERS_ZONE",
+      "objectTag": "subject.cargo",
+      "zoneTag": "zone.bay",
+      "radius": 0.8
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "power.motor",
+      "conceptId": "power.motor",
+      "eventKind": "GEAR_TRAIN_RUNNING",
+      "minimumCount": 1,
+      "truthContractId": "truth.electricity.v1"
+    }
+  ],
+  "hints": [
+    "An electric motor turns when electricity flows through it.",
+    "If it turns the wrong way, swap which end goes to + and which to −."
+  ],
+  "narrationCues": [
+    "Get the conveyor going so the plates reach the serving hatch!"
+  ]
+}

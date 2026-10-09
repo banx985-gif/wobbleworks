@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "id": "contract.ride-starter",
+  "title": "Ride Starter",
+  "environmentId": "env.gear-garage",
+  "availablePartIds": [
+    "gear.small",
+    "gear.medium",
+    "gear.large"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "staticObjects": [
+    {
+      "id": "motor",
+      "definitionId": "gear.motor",
+      "position": {
+        "x": 3,
+        "y": 5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "driver.motor"
+      ]
+    },
+    {
+      "id": "carousel",
+      "definitionId": "gear.carousel",
+      "position": {
+        "x": 4.1,
+        "y": 5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "output.carousel"
+      ]
+    }
+  ],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "outcomeRules": [
+    {
+      "kind": "GEAR_OUTPUT",
+      "targetTag": "output.carousel",
+      "minSpeed": 0.8,
+      "maxSpeed": 2.5,
+      "sustainSeconds": 3
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "gear.mesh",
+      "conceptId": "gear.mesh",
+      "eventKind": "GEAR_MESH",
+      "minimumCount": 1,
+      "truthContractId": "truth.gears.v1"
+    }
+  ],
+  "hints": [
+    "Sprocket loves spinning — but not TOO fast!",
+    "Slow the motor down before it reaches the carousel."
+  ],
+  "narrationCues": [
+    "Not too fast, not too slow — get the carousel going!"
+  ]
+}

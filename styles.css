@@ -563,3 +563,7 @@ html.high-contrast { --ink:#000; --panel:#fff; --accent:#006b1b; --danger:#a0000
 .challenge-cargo button{min-width:56px;min-height:56px;font-size:1.3rem;font-weight:900}
 .challenge-cargo.locked button{opacity:.4;pointer-events:none}
 .replaying .challenge-cargo,.photo-on .challenge-cargo{display:none!important}
+
+/* ---- Inventor Contracts (M27) ---- */
+.job-board-art{display:grid;place-items:center;width:100%;height:100%;font-size:clamp(24px,4vw,52px);line-height:1;filter:drop-shadow(0 3px 0 #0003)}
+#btn-hub-moment-later{min-height:56px}

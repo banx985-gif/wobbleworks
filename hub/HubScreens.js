@@ -7,6 +7,7 @@ import { hubFeatures, restorationStage, dueVisitors, restorationProps } from "..
 import { REWARDS, rewardById, MISSION_STARS } from "../progression/Rewards.js";
 import { renderLook } from "../inventor/LookView.js";
 import { CENTRAL_MACHINE_SYSTEMS, collectedStory } from "../story/CampusStory.js";
+import { dueContractVisitors, openJobs } from "../contracts/Contracts.js";
 /**
  * The look to draw: the maker look, wearing whatever the locker has equipped in the avatar slot when that
  * reward is also a maker piece (hard hat, goggles, cap) — one shared list, so the locker puts it on.
@@ -158,7 +159,8 @@ export function renderHub(root, save, cb) {
     const stage = restorationStage(save);
     const features = hubFeatures(stage);
     const summary = progressSummary(save);
-    const visitors = dueVisitors(save);
+    // Gift visitors first (Postie Pip), then Inventor Contract visitors, in the order they arrived.
+    const visitors = [...dueVisitors(save), ...dueContractVisitors(save)];
     const top = el("div", "hub-top");
     const who = el("button", "hub-who");
     who.append(avatarBadge(p, 46), el("strong", "", p.name));
@@ -209,6 +211,8 @@ export function renderHub(root, save, cb) {
     ];
     if (cb.openExperiments)
         stations.push({ id: "experiments", label: "Experiment Lab", x: 52, y: 22, w: 9, h: 18, onTap: cb.openExperiments, art: () => { const img = el("img", "hub-prop"); img.src = "./assets/icons/icon.energy-flask.webp"; img.alt = ""; img.draggable = false; return img; } });
+    if (cb.openJobBoard)
+        stations.push({ id: "jobs", label: "Job Board", x: 64, y: 41, w: 10, h: 17, onTap: cb.openJobBoard, ...(openJobs(save).length ? { badge: String(openJobs(save).length) } : {}), art: () => el("span", "job-board-art", "📋") });
     if (cb.openChallenges)
         stations.push({ id: "challenges", label: "Challenge Lab", x: 20, y: 24, w: 12, h: 17, onTap: cb.openChallenges, art: () => { const img = el("img", "hub-prop"); img.src = "./assets/icons/icon.speed.webp"; img.alt = ""; img.draggable = false; return img; } });
     if (cb.openChain)

@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "id": "contract.wheel-wobble",
+  "title": "Wheel Wobble",
+  "environmentId": "env.space-centre",
+  "availablePartIds": [
+    "space.wheel"
+  ],
+  "starterParts": [
+    {
+      "id": "rover",
+      "definitionId": "space.rover",
+      "position": {
+        "x": 2.5,
+        "y": 8.05
+      },
+      "rotation": 0,
+      "parameters": {
+        "pinned": true
+      },
+      "tags": [
+        "rover"
+      ]
+    },
+    {
+      "id": "wheel-front",
+      "definitionId": "space.wheel",
+      "position": {
+        "x": 3,
+        "y": 8.17
+      },
+      "rotation": 0,
+      "parameters": {}
+    },
+    {
+      "id": "drive",
+      "definitionId": "space.drive-motor",
+      "position": {
+        "x": 2.5,
+        "y": 8.03
+      },
+      "rotation": 0,
+      "parameters": {}
+    },
+    {
+      "id": "power",
+      "definitionId": "circuit.battery",
+      "position": {
+        "x": 2.2,
+        "y": 7.67
+      },
+      "rotation": 0,
+      "parameters": {}
+    }
+  ],
+  "starterConnections": [],
+  "staticObjects": [
+    {
+      "id": "moon",
+      "definitionId": "space.gravity-zone",
+      "position": {
+        "x": 8,
+        "y": 4.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "width": 16,
+        "g": 1.62,
+        "air": false,
+        "label": "MOON"
+      }
+    },
+    {
+      "id": "flag",
+      "definitionId": "space.marker",
+      "position": {
+        "x": 11,
+        "y": 7.6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "marker"
+      ]
+    }
+  ],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "outcomeRules": [
+    {
+      "kind": "ROVER_DELIVERS",
+      "roverTag": "rover",
+      "zoneTag": "marker",
+      "radius": 1
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "space.rover",
+      "conceptId": "space.rover",
+      "eventKind": "ROVER_DRIVING",
+      "minimumCount": 1,
+      "truthContractId": "truth.space.v1"
+    }
+  ],
+  "hints": [
+    "Watch the rover carefully. What's missing that a rover needs?",
+    "Count the wheels. Something that rolls goes at each end."
+  ],
+  "narrationCues": [
+    "My test rover just won't go right. Can you find what's missing?"
+  ]
+}

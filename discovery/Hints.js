@@ -6,6 +6,7 @@ import { ROBOT_HINTS } from "../robots/RobotHints.js";
 import { SPACE_HINTS } from "../space/SpaceHints.js";
 import { CHAIN_HINTS } from "../chain/ChainHints.js";
 import { challengeHints } from "../challenge/ChallengeHints.js";
+import { contractHints } from "../contracts/ContractHints.js";
 import { describeBlock } from "../robots/BlockEditor.js";
 const g = (definitionId, x, y, rotation = 0) => ({ definitionId, x, y, rotation });
 export const MOTION_HINTS = {
@@ -54,7 +55,7 @@ export const BUILDER_HINTS = {
 /** Every lab's hints, by level id. */
 const LAB_HINTS = { ...MOTION_HINTS, ...GEAR_HINTS, ...BUILDER_HINTS, ...POWER_HINTS, ...MAGNET_HINTS, ...WATER_HINTS, ...FLIGHT_HINTS, ...ROBOT_HINTS, ...SPACE_HINTS, ...CHAIN_HINTS };
 /** Every level's verified answer and clues, including the Challenge Lab (which reuses its lab levels' answers). */
-export const LEVEL_HINTS = { ...LAB_HINTS, ...challengeHints(LAB_HINTS) };
+export const LEVEL_HINTS = { ...LAB_HINTS, ...challengeHints(LAB_HINTS), ...contractHints(LAB_HINTS) };
 export { POWER_HINTS, MAGNET_HINTS, WATER_HINTS, FLIGHT_HINTS, ROBOT_HINTS, SPACE_HINTS, CHAIN_HINTS };
 /** What each tier shows. Tiers are cumulative: Hint 3 still shows the idea and the glowing parts. */
 export function hintView(levelId, level, tier) {

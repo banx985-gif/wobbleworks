@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "id": "contract.loading-dock",
+  "title": "Loading Dock",
+  "environmentId": "env.magnet-factory",
+  "availablePartIds": [
+    "circuit.wire"
+  ],
+  "starterParts": [
+    {
+      "id": "iron-1",
+      "definitionId": "scrap.iron-block",
+      "position": {
+        "x": 3.8,
+        "y": 8.175
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "metal"
+      ]
+    },
+    {
+      "id": "iron-2",
+      "definitionId": "scrap.iron-block",
+      "position": {
+        "x": 4.3,
+        "y": 8.175
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "metal"
+      ]
+    },
+    {
+      "id": "wood",
+      "definitionId": "scrap.wood-block",
+      "position": {
+        "x": 5.2,
+        "y": 8.175
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "nonmetal"
+      ]
+    }
+  ],
+  "starterConnections": [],
+  "staticObjects": [
+    {
+      "id": "battery",
+      "definitionId": "circuit.battery",
+      "position": {
+        "x": 2.2,
+        "y": 5.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "button",
+      "definitionId": "circuit.button",
+      "position": {
+        "x": 3.8,
+        "y": 5.6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "pressFrom": 1,
+        "pressTo": 6.5
+      },
+      "tags": [
+        "control.crane"
+      ]
+    },
+    {
+      "id": "magnet",
+      "definitionId": "magnetic.electromagnet",
+      "position": {
+        "x": 4,
+        "y": 7.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "trackFrom": 4,
+        "trackTo": 11,
+        "trackStart": 2.5,
+        "trackEnd": 5.5
+      },
+      "tags": [
+        "crane"
+      ]
+    },
+    {
+      "id": "bin",
+      "definitionId": "motion.goal-zone",
+      "position": {
+        "x": 11,
+        "y": 8
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "bin.metal"
+      ]
+    },
+    {
+      "id": "iron-3",
+      "definitionId": "scrap.iron-block",
+      "position": {
+        "x": 3.3,
+        "y": 8.175
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "metal"
+      ]
+    }
+  ],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "outcomeRules": [
+    {
+      "kind": "ALL_IN_ZONE",
+      "objectTag": "metal",
+      "zoneTag": "bin.metal",
+      "radius": 1
+    },
+    {
+      "kind": "NONE_IN_ZONE",
+      "objectTag": "nonmetal",
+      "zoneTag": "bin.metal",
+      "radius": 1
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "magnet.electromagnet",
+      "conceptId": "magnet.electromagnet",
+      "eventKind": "ELECTROMAGNET_ON",
+      "minimumCount": 1,
+      "truthContractId": "truth.magnetism.v1"
+    }
+  ],
+  "hints": [
+    "An electromagnet is only a magnet while electricity flows through it.",
+    "Bolt holds the crane button down, then lets go over the bin."
+  ],
+  "narrationCues": [
+    "Three metal crates for the van — leave the wooden one!"
+  ]
+}

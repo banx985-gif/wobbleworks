@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "id": "contract.generator-test",
+  "title": "Generator Test",
+  "environmentId": "env.power-lab",
+  "availablePartIds": [
+    "gear.small",
+    "gear.medium",
+    "gear.large"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "crank",
+      "definitionId": "gear.crank",
+      "position": {
+        "x": 3.5,
+        "y": 5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "driver.crank"
+      ]
+    },
+    {
+      "id": "generator",
+      "definitionId": "circuit.generator",
+      "position": {
+        "x": 4.6,
+        "y": 5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "lamp",
+      "definitionId": "circuit.bulb",
+      "position": {
+        "x": 7.5,
+        "y": 3.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "target.lamp"
+      ]
+    },
+    {
+      "id": "w1",
+      "definitionId": "circuit.wire",
+      "position": {
+        "x": 6.34,
+        "y": 4.52
+      },
+      "rotation": -0.584601,
+      "parameters": {
+        "locked": true,
+        "length": 3.261656
+      }
+    },
+    {
+      "id": "w2",
+      "definitionId": "circuit.wire",
+      "position": {
+        "x": 6.85,
+        "y": 4.91
+      },
+      "rotation": 1.906435,
+      "parameters": {
+        "locked": true,
+        "length": 2.732471
+      }
+    },
+    {
+      "id": "w3",
+      "definitionId": "circuit.wire",
+      "position": {
+        "x": 5.31,
+        "y": 5.81
+      },
+      "rotation": -2.797988,
+      "parameters": {
+        "locked": true,
+        "length": 2.31534
+      }
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "CIRCUIT_POWERED",
+      "targetTag": "target.lamp",
+      "minLevel": 0.8,
+      "sustainSeconds": 2
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "generator-evidence",
+      "conceptId": "power.generator",
+      "eventKind": "GENERATOR_MAKING_POWER",
+      "minimumCount": 1,
+      "truthContractId": "truth.electricity.v1"
+    }
+  ],
+  "hints": [
+    "A generator makes more electricity the faster it spins.",
+    "Big gear turning a small gear makes the small one spin faster."
+  ],
+  "narrationCues": [
+    "Crank the generator and light the test lamp — nice and bright!"
+  ]
+}

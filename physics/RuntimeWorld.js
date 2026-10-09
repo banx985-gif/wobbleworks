@@ -338,7 +338,7 @@ export class RuntimeWorld {
                 this.event(on ? "MAGNET_SWITCH_CLOSED" : "MAGNET_SWITCH_OPENED", p.id);
             }
         }
-        this.circuits.step(dt, id => this.buttonPressed(id), this.flips);
+        this.circuits.step(dt, id => this.buttonPressed(id), this.flips, id => this.gears.omega(id));
         // Water after electricity (pumps need current); valves tapped during the TEST flip here too.
         if (this.water.layout.ports.length) {
             this.water.step(dt, id => Math.abs(this.circuits.motorDrive(id)), id => this.gears.state(id)?.angle ?? 0, this.flips);
