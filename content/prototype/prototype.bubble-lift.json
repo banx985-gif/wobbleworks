@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "id": "prototype.bubble-lift",
+  "title": "Bubble Lift",
+  "environmentId": "env.flight-hangar",
+  "availablePartIds": [
+    "proto.bubble-blower",
+    "structure.block",
+    "motion.ramp"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "feather",
+      "definitionId": "sandbox.feather",
+      "position": {
+        "x": 3,
+        "y": 7.9
+      },
+      "rotation": 0,
+      "parameters": {},
+      "tags": [
+        "feather"
+      ]
+    },
+    {
+      "id": "shelf",
+      "definitionId": "motion.platform",
+      "position": {
+        "x": 5.8,
+        "y": 5.8
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "goal-zone.shelf",
+      "definitionId": "motion.goal-zone",
+      "position": {
+        "x": 5.8,
+        "y": 5.4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "zone.shelf"
+      ]
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "OBJECT_ENTERS_ZONE",
+      "objectTag": "feather",
+      "zoneTag": "zone.shelf",
+      "radius": 0.9
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "air.wind",
+      "conceptId": "air.wind",
+      "eventKind": "WIND_PUSH",
+      "minimumCount": 1,
+      "truthContractId": "truth.flight.v1"
+    }
+  ],
+  "hints": [
+    "A feather is light and catches lots of air.",
+    "Moving air pushes things along. Which way should the bubbles blow?"
+  ],
+  "narrationCues": [
+    "Use the bubble blowers to float the feather up onto the high shelf!"
+  ]
+}

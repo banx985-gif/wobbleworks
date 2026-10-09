@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "id": "prototype.tiny-factory",
+  "title": "Tiny Factory",
+  "environmentId": "env.chain-workshop",
+  "availablePartIds": [
+    "chain.domino",
+    "chain.bell",
+    "chain.seesaw",
+    "motion.ramp",
+    "structure.block"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "counter",
+      "definitionId": "chain.counter",
+      "position": {
+        "x": 15.2,
+        "y": 0.7
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "ramp",
+      "definitionId": "motion.ramp",
+      "position": {
+        "x": 2.2,
+        "y": 6.9
+      },
+      "rotation": 0.45,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "ball",
+      "definitionId": "motion.ball",
+      "position": {
+        "x": 1.4,
+        "y": 6
+      },
+      "rotation": 0,
+      "parameters": {},
+      "tags": [
+        "start"
+      ]
+    },
+    {
+      "id": "box",
+      "definitionId": "motion.goal-zone",
+      "position": {
+        "x": 5.6,
+        "y": 7.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "zone.factory"
+      ]
+    },
+    {
+      "id": "bell",
+      "definitionId": "chain.bell",
+      "position": {
+        "x": 7.2,
+        "y": 7.45
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "bell"
+      ]
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "CHAIN_LENGTH",
+      "minDepth": 3,
+      "endTag": "bell",
+      "oneStart": true
+    },
+    {
+      "kind": "BUILD_WITHIN",
+      "minX": 3.6,
+      "maxX": 7.4,
+      "minY": 5.6,
+      "maxY": 8.4
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "chain.cause",
+      "conceptId": "chain.cause",
+      "eventKind": "DOMINO_FALL",
+      "minimumCount": 1,
+      "truthContractId": "truth.chain.v1"
+    }
+  ],
+  "hints": [
+    "Three steps, one after another — but everything has to fit inside the little factory.",
+    "Small things that knock each other over fit in small spaces."
+  ],
+  "narrationCues": [
+    "Build a three-step machine that rings the bell — and fits inside the tiny factory!"
+  ]
+}

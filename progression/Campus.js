@@ -14,7 +14,7 @@ export const CAMPUS_REGIONS = [
     { id: "hidden-prototype-lab", title: "Hidden Prototype Lab", kind: "SECRET", free: false, map: MAP_POS["hidden-prototype-lab"], icon: "❓", colour: "#ced4da" }
 ];
 /** Labs whose authored content is in this build. Each lab milestone (M12–M19) adds its id here. */
-export const INSTALLED_REGION_CONTENT = new Set(["workshop-hub", "motion-yard", "gear-garage", "builder-bay", "power-lab", "magnet-factory", "water-works", "flight-hangar", "robot-lab", "space-centre", "grand-invention-hall"]);
+export const INSTALLED_REGION_CONTENT = new Set(["workshop-hub", "motion-yard", "gear-garage", "builder-bay", "power-lab", "magnet-factory", "water-works", "flight-hangar", "robot-lab", "space-centre", "grand-invention-hall", "hidden-prototype-lab"]);
 export const HIDDEN_LAB_KEY_PIECES = ["key.prototype-1", "key.prototype-2", "key.prototype-3"];
 /** The finale's badge: owning it means the Great WobbleWorks Machine ran and the whole campus is restored (M32). */
 export const CAMPAIGN_COMPLETE_BADGE = "badge.campus-restored";

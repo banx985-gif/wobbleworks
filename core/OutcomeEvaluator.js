@@ -360,6 +360,12 @@ export function evaluateLevelOutcome(level, build, runtime) {
     const rules = level.outcomeRules ?? [];
     if (rules.length === 0)
         return { complete: false, passed: [] };
-    const passed = rules.map(rule => evaluateOutcomeRule(rule, build, runtime));
+    const seeded = new Set([...(level.staticObjects ?? []), ...level.starterParts].map(p => p.id));
+    const passed = rules.map(rule => rule.kind === "BUILD_WITHIN" ? buildWithin(rule, build, seeded) : evaluateOutcomeRule(rule, build, runtime));
     return { complete: passed.every(Boolean), passed };
+}
+/** Every part the player added was placed inside the box (judged on where it was built, so the test can't move it out). */
+export function buildWithin(rule, build, seeded) {
+    const added = build.allParts().filter(p => !seeded.has(p.id));
+    return added.length > 0 && added.every(p => p.position.x >= rule.minX && p.position.x <= rule.maxX && p.position.y >= rule.minY && p.position.y <= rule.maxY);
 }

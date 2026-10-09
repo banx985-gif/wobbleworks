@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 1,
+  "id": "prototype.bolts-missing-memory",
+  "title": "Bolt's Missing Memory",
+  "environmentId": "env.chain-workshop",
+  "availablePartIds": [
+    "proto.super-spring",
+    "chain.domino",
+    "chain.bell",
+    "chain.seesaw",
+    "motion.ramp",
+    "structure.block"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "counter",
+      "definitionId": "chain.counter",
+      "position": {
+        "x": 15.2,
+        "y": 0.7
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "ramp",
+      "definitionId": "motion.ramp",
+      "position": {
+        "x": 2.2,
+        "y": 6.9
+      },
+      "rotation": 0.45,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "ball",
+      "definitionId": "motion.ball",
+      "position": {
+        "x": 1.4,
+        "y": 6
+      },
+      "rotation": 0,
+      "parameters": {},
+      "tags": [
+        "start"
+      ]
+    },
+    {
+      "id": "wall",
+      "definitionId": "motion.barrier",
+      "position": {
+        "x": 6.5,
+        "y": 7
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "catch",
+      "definitionId": "motion.barrier",
+      "position": {
+        "x": 8.6,
+        "y": 4.4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "d0",
+      "definitionId": "chain.domino",
+      "position": {
+        "x": 9.4,
+        "y": 7.95
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "d1",
+      "definitionId": "chain.domino",
+      "position": {
+        "x": 10.2,
+        "y": 7.95
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "d2",
+      "definitionId": "chain.domino",
+      "position": {
+        "x": 11,
+        "y": 7.95
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "d3",
+      "definitionId": "chain.domino",
+      "position": {
+        "x": 11.8,
+        "y": 7.95
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "d4",
+      "definitionId": "chain.domino",
+      "position": {
+        "x": 12.6,
+        "y": 7.95
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "chip",
+      "definitionId": "proto.memory-chip",
+      "position": {
+        "x": 13.4,
+        "y": 7.45
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "memory"
+      ]
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "CHAIN_LENGTH",
+      "minDepth": 6,
+      "endTag": "memory",
+      "oneStart": true
+    },
+    {
+      "kind": "EVENT_OCCURRED",
+      "eventKind": "SPRING_LAUNCH"
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "chain.cause",
+      "conceptId": "chain.cause",
+      "eventKind": "BELL_RING",
+      "minimumCount": 1,
+      "truthContractId": "truth.chain.v1"
+    }
+  ],
+  "hints": [
+    "The ball can't get over the wall… on its own.",
+    "The Super Spring sends things flying. Where should it go?"
+  ],
+  "narrationCues": [
+    "Bolt's last missing memory is in the chip! Get the chain all the way there."
+  ]
+}

@@ -14,6 +14,7 @@ import { chainLayer, drawChainEdges, drawChainPart, isChainPart } from "./ChainR
 import { drawExperimentPart, isExperimentPart } from "./ExperimentRenderer.js";
 import { drawSandboxPart, isSandboxPart, sandboxLayer } from "./SandboxRenderer.js";
 import { creatureLayer, drawCreatureOrMusicPart, isCreatureOrMusicPart } from "./CreatureRenderer.js";
+import { drawPrototypePart, isPrototypePart } from "./PrototypeRenderer.js";
 import { drawDoorPanel, drawGearGarageBackdrop, drawGearLinks, drawGearPart, drawRotationView, gearBehaviour, gearOutput } from "./GearRenderer.js";
 export class CanvasRenderer {
     canvas;
@@ -122,7 +123,8 @@ export class CanvasRenderer {
     drawParts(parts, registry, runtimeStates, selectedId, gears, time = 0, structures, showStress = false, runtime) {
         const states = new Map(runtimeStates?.map(s => [s.id, s]) ?? []);
         // Draw order only: fixed things first (zones, ramps, pads), then shafts, then gears, then moving things in front.
-        const layer = (p) => { const def = registry.get(p.definitionId); if (isCreatureOrMusicPart(def))
+        const layer = (p) => { const def = registry.get(p.definitionId); if (isPrototypePart(def))
+            return 4; if (isCreatureOrMusicPart(def))
             return creatureLayer(def); if (isSandboxPart(def))
             return sandboxLayer(def); if (isExperimentPart(def))
             return def.id === "experiment.test-surface" ? 0 : -1; if (isChainPart(def))
@@ -152,6 +154,8 @@ export class CanvasRenderer {
         for (const placed of ordered) {
             const def = registry.get(placed.definitionId);
             const rigid = def.behaviours.find(b => b.kind === "RIGID_BODY");
+            if (isPrototypePart(def) && drawPrototypePart(this.ctx, placed, def, selectedId === placed.id, { states, time, ...(runtime ? { runtime } : {}), gearAngle: (id) => gears?.state(id)?.angle ?? 0 }))
+                continue;
             if (isCreatureOrMusicPart(def) && drawCreatureOrMusicPart(this.ctx, placed, def, selectedId === placed.id, { states, ...(runtime ? { runtime } : {}), time, gearAngle: (id) => gears?.state(id)?.angle ?? 0 }))
                 continue;
             if (isSandboxPart(def) && drawSandboxPart(this.ctx, placed, def, selectedId === placed.id, { states, ...(runtime ? { runtime } : {}), time }))

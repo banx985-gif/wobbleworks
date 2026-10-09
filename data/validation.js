@@ -119,6 +119,8 @@ export function assertLevelDefinition(value, knownPartIds) {
             throw new ValidationError(`ELAPSED_AT_LEAST cannot be negative`);
         else if (rule.kind === "ELAPSED_AT_MOST" && !(rule.seconds > 0))
             throw new ValidationError(`ELAPSED_AT_MOST must be a positive time`);
+        else if (rule.kind === "BUILD_WITHIN" && !(rule.maxX > rule.minX && rule.maxY > rule.minY))
+            throw new ValidationError(`BUILD_WITHIN needs a box`);
         else if (rule.kind === "GEAR_OUTPUT") {
             if (!authoredTags.has(rule.targetTag))
                 throw new ValidationError(`GEAR_OUTPUT references unknown authored tag`);

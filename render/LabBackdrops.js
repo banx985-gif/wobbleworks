@@ -300,6 +300,59 @@ T["grand-invention-hall"] = { title: "GRAND INVENTION HALL", top: "#fff9db", bot
         }
         c.globalAlpha = 1;
     } };
+/** Hidden Prototype Lab (M33): a basement workshop — brick wall, warning stripes, pinned-up blueprints and stray bubbles. */
+T["hidden-prototype-lab"] = { title: "PROTOTYPE LAB", top: "#343a40", bottom: "#495057", wall: "#5c4b51", floor: "#343a40", accent: "#ffd43b", motif: (c, t) => {
+        c.strokeStyle = "#4a3b40";
+        c.lineWidth = 3;
+        for (let y = 140; y < 700; y += 36) {
+            c.beginPath();
+            c.moveTo(0, y);
+            c.lineTo(1600, y);
+            c.stroke();
+            for (let x = ((y / 36) % 2) * 40; x < 1600; x += 80) {
+                c.beginPath();
+                c.moveTo(x, y);
+                c.lineTo(x, y + 36);
+                c.stroke();
+            }
+        }
+        c.fillStyle = "#ffd43b";
+        c.fillRect(0, 150, 1600, 18);
+        c.fillStyle = "#212529";
+        for (let x = -20; x < 1620; x += 40) {
+            c.beginPath();
+            c.moveTo(x, 168);
+            c.lineTo(x + 20, 168);
+            c.lineTo(x + 38, 150);
+            c.lineTo(x + 18, 150);
+            c.closePath();
+            c.fill();
+        }
+        for (const [x, y, r] of [[1180, 250, -0.05], [1390, 290, 0.06]]) {
+            c.save();
+            c.translate(x, y);
+            c.rotate(r);
+            c.fillStyle = "#1c7ed6";
+            c.fillRect(-90, -60, 180, 120);
+            c.strokeStyle = "#d0ebff";
+            c.lineWidth = 2;
+            c.strokeRect(-80, -50, 160, 100);
+            c.beginPath();
+            c.arc(-20, 0, 26, 0, Math.PI * 2);
+            c.moveTo(20, -30);
+            c.lineTo(60, 30);
+            c.stroke();
+            c.restore();
+        }
+        c.strokeStyle = "#a5d8ff88";
+        c.lineWidth = 2;
+        for (let k = 0; k < 9; k++) {
+            const p = (t * 0.05 + k / 9) % 1;
+            c.beginPath();
+            c.arc(120 + k * 110 + Math.sin(t + k) * 20, 690 - p * 540, 8 + (k % 3) * 5, 0, Math.PI * 2);
+            c.stroke();
+        }
+    } };
 export function hasLabBackdrop(labId) { return labId in THEMES; }
 export function drawLabBackdrop(c, labId, time) {
     const th = THEMES[labId];

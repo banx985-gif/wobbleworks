@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "id": "prototype.no-wheels-allowed",
+  "title": "No Wheels Allowed",
+  "environmentId": "env.motion-yard",
+  "availablePartIds": [
+    "motion.ramp",
+    "structure.block",
+    "motion.friction-low",
+    "motion.spring",
+    "motion.bounce-pad"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [
+    {
+      "id": "no-wheels",
+      "kind": "FORBID_FAMILY",
+      "familyId": "motion.wheel"
+    }
+  ],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "ledge",
+      "definitionId": "motion.platform",
+      "position": {
+        "x": 2.6,
+        "y": 4.25
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "friction": 0.04
+      },
+      "tags": [
+        "ledge"
+      ]
+    },
+    {
+      "id": "goal-zone.safe",
+      "definitionId": "motion.goal-zone",
+      "position": {
+        "x": 13.2,
+        "y": 7.6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "zone.safe"
+      ]
+    },
+    {
+      "id": "bolt",
+      "definitionId": "silly.bolt",
+      "position": {
+        "x": 2.6,
+        "y": 3.55
+      },
+      "rotation": 0,
+      "parameters": {
+        "initialVx": 2
+      },
+      "tags": [
+        "subject.bolt"
+      ]
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "OBJECT_ENTERS_ZONE",
+      "objectTag": "subject.bolt",
+      "zoneTag": "zone.safe",
+      "radius": 1.1,
+      "maxSpeed": 3.2
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "motion.slide",
+      "conceptId": "motion.slide",
+      "eventKind": "RAMP_CONTACT",
+      "minimumCount": 1,
+      "truthContractId": "truth.motion.v1"
+    }
+  ],
+  "hints": [
+    "No wheels in the tray today. How else can Bolt travel?",
+    "Slippery things slide a long way."
+  ],
+  "narrationCues": [
+    "No wheels allowed! Get Bolt all the way across the room."
+  ]
+}

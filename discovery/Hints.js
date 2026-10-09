@@ -7,6 +7,7 @@ import { SPACE_HINTS } from "../space/SpaceHints.js";
 import { CHAIN_HINTS } from "../chain/ChainHints.js";
 import { challengeHints } from "../challenge/ChallengeHints.js";
 import { CREATURE_HINTS } from "../creatures/CreatureHints.js";
+import { PROTOTYPE_HINTS } from "../prototype/PrototypeHints.js";
 import { contractHints } from "../contracts/ContractHints.js";
 import { grandHints } from "../grand/GrandHints.js";
 import { describeBlock } from "../robots/BlockEditor.js";
@@ -55,7 +56,7 @@ export const BUILDER_HINTS = {
     "builder.collapsing-workshop-roof": { concept: "TEST it first: what gives way? Then support the middle from above and below.", usefulParts: ["builder.beam-metal", "builder.brace", "builder.rope"], solution: [{ definitionId: "builder.beam-metal", x: 6.5, y: 4.5, rotation: 0, length: 3 }, { definitionId: "builder.beam-wood", x: 6.5, y: 5.25, rotation: 0.463648, length: 3.354102 }, { definitionId: "builder.beam-wood", x: 9.5, y: 5.25, rotation: 2.677945, length: 3.354102 }, { definitionId: "builder.brace", x: 8, y: 5.25, rotation: -1.570796, length: 1.5 }, { definitionId: "builder.rope", x: 3.5, y: 3, rotation: 0.785398, length: 4.242641 }, { definitionId: "builder.rope", x: 12.5, y: 3, rotation: 2.356194, length: 4.242641 }], ghostCount: 3, remove: ["roof-2"] }
 };
 /** Every lab's hints, by level id. */
-const LAB_HINTS = { ...MOTION_HINTS, ...GEAR_HINTS, ...BUILDER_HINTS, ...POWER_HINTS, ...MAGNET_HINTS, ...WATER_HINTS, ...FLIGHT_HINTS, ...ROBOT_HINTS, ...SPACE_HINTS, ...CHAIN_HINTS, ...CREATURE_HINTS };
+const LAB_HINTS = { ...MOTION_HINTS, ...GEAR_HINTS, ...BUILDER_HINTS, ...POWER_HINTS, ...MAGNET_HINTS, ...WATER_HINTS, ...FLIGHT_HINTS, ...ROBOT_HINTS, ...SPACE_HINTS, ...CHAIN_HINTS, ...CREATURE_HINTS, ...PROTOTYPE_HINTS };
 /** Every level's verified answer and clues, including the Challenge Lab (which reuses its lab levels' answers). */
 const CONTRACT_HINTS = contractHints(LAB_HINTS);
 export const LEVEL_HINTS = { ...LAB_HINTS, ...challengeHints(LAB_HINTS), ...CONTRACT_HINTS, ...grandHints({ ...LAB_HINTS, ...CONTRACT_HINTS }) };

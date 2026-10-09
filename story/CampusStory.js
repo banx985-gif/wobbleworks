@@ -76,6 +76,12 @@ export const ENDING_SCENES = [
     scene("finale.partners", "MEMORY", HALL, "BOLT", "Partners", "Bolt", ["She left me charging so I could help the next inventor.", "I'm so glad it was you. Shall we keep on inventing?"], "hub.prop.bolt-charger")
 ];
 export const CREDITS = scene("finale.credits", "CREDITS", HALL, "THE END… FOR NOW", "WobbleWorks", "", ["Made with love by Banx Games.", "Starring Bolt, Sprocket — and you, the inventor!", "Thank you for playing. The Everything Lab is open now: go and build anything!"], "ui.icon.tools");
+// ---------------------------------------------------------------- the Hidden Prototype Lab (M33)
+const SECRET = "hidden-prototype-lab";
+export const PROTOTYPE_ENTRY = scene(`entry.${SECRET}`, "ENTRY", SECRET, "A SECRET LAB!", "Hidden Prototype Lab", "Bolt", ["The key pieces fit! This is where the old team kept their strangest experiments.", "Backwards conveyors, super springs… and something here keeps humming my name."], "ui.icon.blueprint");
+/** Bolt's last missing memory: found at the end of the Prototype Lab's bonus chain. */
+export const BOLT_FINAL_MEMORY = scene("memory.final", "MEMORY", SECRET, "BOLT'S LAST MEMORY", "The memory chip", "Bolt", ["I remember! Professor Wobble built me right here, out of spare prototype parts.", "She said every wobbly invention is just a good one that isn't finished yet.", "She'd be so proud of you, inventor. I know I am."], "hub.prop.bolt-charger");
+export const FINAL_PROTOTYPE_LEVEL = "prototype.bolts-missing-memory";
 function seen(save) { return new Set(activeProfile(save)?.restorationSeen ?? []); }
 function megaDone(save, labId) { const lab = MAIN_LABS.find(l => l.id === labId); const p = activeProfile(save); const mega = lab?.missions.find(m => m.slot === "MEGA"); return Boolean(p && mega && p.levels[mega.id]?.completed); }
 /** Every story piece this inventor has found so far, in campaign order (derived from progress). */
@@ -99,6 +105,8 @@ export function pendingEntryScene(save, labId) {
         return undefined;
     if (labId === HALL)
         return seen(save).has(`story.${GRAND_HALL_ENTRY.id}`) ? undefined : GRAND_HALL_ENTRY;
+    if (labId === SECRET)
+        return seen(save).has(`story.${PROTOTYPE_ENTRY.id}`) ? undefined : PROTOTYPE_ENTRY;
     if (!LAB_STORY[labId])
         return undefined;
     const s = labStoryScenes(labId).entry;
@@ -121,6 +129,8 @@ export function pendingStoryScenes(save) {
         for (const s of ENDING_SCENES)
             if (!done.has(`story.${s.id}`))
                 out.push(s);
+    if (activeProfile(save)?.levels[FINAL_PROTOTYPE_LEVEL]?.completed && !done.has(`story.${BOLT_FINAL_MEMORY.id}`))
+        out.push(BOLT_FINAL_MEMORY);
     return out;
 }
 /** The credits roll once, after the ending (and after the hub's last restoration moment). */

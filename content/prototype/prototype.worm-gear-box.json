@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "id": "prototype.worm-gear-box",
+  "title": "Worm Gear Box",
+  "environmentId": "env.gear-garage",
+  "availablePartIds": [
+    "gear.small",
+    "gear.medium",
+    "gear.large",
+    "proto.worm-gear"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "crank",
+      "definitionId": "gear.crank",
+      "position": {
+        "x": 3.5,
+        "y": 5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "driver.crank"
+      ]
+    },
+    {
+      "id": "winch",
+      "definitionId": "gear.winch",
+      "position": {
+        "x": 4.4,
+        "y": 5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "ropeTo": "crate"
+      },
+      "tags": [
+        "output.winch"
+      ]
+    },
+    {
+      "id": "goal-zone.lift",
+      "definitionId": "motion.goal-zone",
+      "position": {
+        "x": 4.4,
+        "y": 6.4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "zone.lift"
+      ]
+    },
+    {
+      "id": "crate",
+      "definitionId": "gear.heavy-crate",
+      "position": {
+        "x": 4.4,
+        "y": 7.95
+      },
+      "rotation": 0,
+      "parameters": {
+        "density": 6
+      },
+      "tags": [
+        "subject.crate"
+      ]
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "OBJECT_ENTERS_ZONE",
+      "objectTag": "subject.crate",
+      "zoneTag": "zone.lift",
+      "radius": 0.5
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "gear.ratio",
+      "conceptId": "gear.ratio",
+      "eventKind": "WINCH_LIFT",
+      "minimumCount": 1,
+      "truthContractId": "truth.gears.v1"
+    }
+  ],
+  "hints": [
+    "This crate is SO heavy that ordinary gears can't lift it.",
+    "A worm gear turns a big gear very slowly — but very strongly."
+  ],
+  "narrationCues": [
+    "The heaviest crate ever! Lift it with the prototype worm gear."
+  ]
+}

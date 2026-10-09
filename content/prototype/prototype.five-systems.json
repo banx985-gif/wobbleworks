@@ -1,0 +1,344 @@
+{
+  "schemaVersion": 1,
+  "id": "prototype.five-systems",
+  "title": "Five Systems",
+  "environmentId": "env.chain-workshop",
+  "availablePartIds": [
+    "scrap.steel-ball",
+    "plumb.pipe",
+    "chain.domino",
+    "motion.ramp",
+    "structure.block"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "counter",
+      "definitionId": "chain.counter",
+      "position": {
+        "x": 15.2,
+        "y": 0.7
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "ramp",
+      "definitionId": "motion.ramp",
+      "position": {
+        "x": 2.2,
+        "y": 6.9
+      },
+      "rotation": 0.45,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "ball",
+      "definitionId": "motion.ball",
+      "position": {
+        "x": 1.4,
+        "y": 6
+      },
+      "rotation": 0,
+      "parameters": {},
+      "tags": [
+        "start"
+      ]
+    },
+    {
+      "id": "d0",
+      "definitionId": "chain.domino",
+      "position": {
+        "x": 4.6,
+        "y": 7.95
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "button",
+      "definitionId": "circuit.button",
+      "position": {
+        "x": 5.4,
+        "y": 8.25
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "battery",
+      "definitionId": "circuit.battery",
+      "position": {
+        "x": 4.6,
+        "y": 6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "pump",
+      "definitionId": "plumb.pump",
+      "position": {
+        "x": 7.8,
+        "y": 7.6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "pond",
+      "definitionId": "plumb.source",
+      "position": {
+        "x": 6.2,
+        "y": 7.4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "head": 0.3
+      }
+    },
+    {
+      "id": "nozzle",
+      "definitionId": "plumb.nozzle",
+      "position": {
+        "x": 8.6,
+        "y": 6.5
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "w1",
+      "definitionId": "circuit.wire",
+      "position": {
+        "x": 6.3,
+        "y": 6.61
+      },
+      "rotation": 0.470292,
+      "parameters": {
+        "locked": true,
+        "length": 2.692285
+      }
+    },
+    {
+      "id": "w2",
+      "definitionId": "circuit.wire",
+      "position": {
+        "x": 6.975,
+        "y": 7.76
+      },
+      "rotation": 2.694073,
+      "parameters": {
+        "locked": true,
+        "length": 2.495776
+      }
+    },
+    {
+      "id": "w3",
+      "definitionId": "circuit.wire",
+      "position": {
+        "x": 4.525,
+        "y": 7.15
+      },
+      "rotation": 1.216799,
+      "parameters": {
+        "locked": true,
+        "length": 2.45204
+      }
+    },
+    {
+      "id": "p1",
+      "definitionId": "plumb.pipe",
+      "position": {
+        "x": 7.05,
+        "y": 7.75
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "length": 0.6
+      }
+    },
+    {
+      "id": "ledge",
+      "definitionId": "motion.platform",
+      "position": {
+        "x": 10.4,
+        "y": 6.95
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "letter",
+      "definitionId": "flight.cargo",
+      "position": {
+        "x": 10.4,
+        "y": 6.55
+      },
+      "rotation": 0,
+      "parameters": {},
+      "tags": [
+        "letter"
+      ]
+    },
+    {
+      "id": "button-2",
+      "definitionId": "circuit.button",
+      "position": {
+        "x": 12.5,
+        "y": 8.25
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "battery-2",
+      "definitionId": "circuit.battery",
+      "position": {
+        "x": 13.2,
+        "y": 4.6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "magnet",
+      "definitionId": "magnetic.electromagnet",
+      "position": {
+        "x": 15.5,
+        "y": 7.9
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "w4",
+      "definitionId": "circuit.wire",
+      "position": {
+        "x": 14.775,
+        "y": 6.1
+      },
+      "rotation": 0.948972,
+      "parameters": {
+        "locked": true,
+        "length": 3.690867
+      }
+    },
+    {
+      "id": "w5",
+      "definitionId": "circuit.wire",
+      "position": {
+        "x": 14.05,
+        "y": 7.95
+      },
+      "rotation": 2.83354,
+      "parameters": {
+        "locked": true,
+        "length": 2.308679
+      }
+    },
+    {
+      "id": "w6",
+      "definitionId": "circuit.wire",
+      "position": {
+        "x": 12.375,
+        "y": 6.45
+      },
+      "rotation": 1.744698,
+      "parameters": {
+        "locked": true,
+        "length": 3.756661
+      }
+    },
+    {
+      "id": "stop",
+      "definitionId": "motion.barrier",
+      "position": {
+        "x": 13,
+        "y": 7.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "d5",
+      "definitionId": "chain.domino",
+      "position": {
+        "x": 14.2,
+        "y": 7.95
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "bell",
+      "definitionId": "chain.bell",
+      "position": {
+        "x": 14.9,
+        "y": 7.45
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "bell"
+      ]
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "CHAIN_DOMAINS",
+      "min": 5,
+      "minDepth": 8
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "chain.domains",
+      "conceptId": "chain.domains",
+      "eventKind": "MAGNET_PULL_MATERIAL",
+      "minimumCount": 1,
+      "truthContractId": "truth.chain.v1"
+    }
+  ],
+  "hints": [
+    "Motion, electricity, water, air and magnets — all in ONE chain.",
+    "Follow the chain: what does the water hit? What does the magnet need?"
+  ],
+  "narrationCues": [
+    "Five systems in one chain: motion, electricity, water, air and magnetism!"
+  ]
+}

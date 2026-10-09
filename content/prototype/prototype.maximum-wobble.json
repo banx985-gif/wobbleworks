@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "id": "prototype.maximum-wobble",
+  "title": "Maximum Wobble",
+  "environmentId": "env.builder-bay",
+  "availablePartIds": [
+    "builder.beam-wood",
+    "builder.beam-metal",
+    "builder.brace",
+    "builder.column",
+    "builder.rope"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "wind",
+      "definitionId": "builder.wind",
+      "position": {
+        "x": 12,
+        "y": 2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "wind"
+      ]
+    },
+    {
+      "id": "line",
+      "definitionId": "motion.goal-zone",
+      "position": {
+        "x": 7,
+        "y": 2.4
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "target.height"
+      ]
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "STRUCT_HEIGHT",
+      "aboveY": 2.4,
+      "maxWobble": 0.12,
+      "sustainSeconds": 3
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "struct.brace",
+      "conceptId": "struct.brace",
+      "eventKind": "STRUCT_STABLE",
+      "minimumCount": 1,
+      "truthContractId": "truth.structures.v1"
+    }
+  ],
+  "hints": [
+    "Taller towers wobble more — this one has to be right at the edge of what's safe.",
+    "Wide at the bottom, joined at the top, braced in between."
+  ],
+  "narrationCues": [
+    "Build the tallest tower the prototype wind will allow — wobbly, but not TOO wobbly!"
+  ]
+}

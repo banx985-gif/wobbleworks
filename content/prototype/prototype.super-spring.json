@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "id": "prototype.super-spring",
+  "title": "Super Spring",
+  "environmentId": "env.motion-yard",
+  "availablePartIds": [
+    "motion.ramp",
+    "structure.block",
+    "motion.platform",
+    "motion.friction-high"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "ball",
+      "definitionId": "motion.ball",
+      "position": {
+        "x": 2.5,
+        "y": 7.5
+      },
+      "rotation": 0,
+      "parameters": {},
+      "tags": [
+        "ball"
+      ]
+    },
+    {
+      "id": "spring",
+      "definitionId": "proto.super-spring",
+      "position": {
+        "x": 2.5,
+        "y": 8.24
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "spring"
+      ]
+    },
+    {
+      "id": "vase",
+      "definitionId": "scrap.glass-vase",
+      "position": {
+        "x": 6.5,
+        "y": 8.05
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "vase"
+      ]
+    },
+    {
+      "id": "protect",
+      "definitionId": "motion.goal-zone",
+      "position": {
+        "x": 6.5,
+        "y": 7.6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "zone.protected"
+      ]
+    },
+    {
+      "id": "goal-zone.bin",
+      "definitionId": "motion.goal-zone",
+      "position": {
+        "x": 10.5,
+        "y": 8.1
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "zone.bin"
+      ]
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "EVENT_OCCURRED",
+      "eventKind": "SPRING_LAUNCH"
+    },
+    {
+      "kind": "FORBIDDEN_CONTACT",
+      "aTag": "ball",
+      "bTag": "vase"
+    },
+    {
+      "kind": "OBJECT_ENTERS_ZONE",
+      "objectTag": "ball",
+      "zoneTag": "zone.bin",
+      "radius": 0.8
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "motion.spring",
+      "conceptId": "motion.spring",
+      "eventKind": "SPRING_LAUNCH",
+      "minimumCount": 1,
+      "truthContractId": "truth.motion.v1"
+    }
+  ],
+  "hints": [
+    "The Super Spring is WAY too strong — the ball flies sky-high and comes down anywhere!",
+    "You can't make the spring weaker… but you can change where the ball goes after it."
+  ],
+  "narrationCues": [
+    "The Super Spring is out of control! Get the ball into the bin — and keep it away from the precious vase."
+  ]
+}

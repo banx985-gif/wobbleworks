@@ -203,4 +203,10 @@ export const GRAND_HALL = { id: "grand-invention-hall", title: "Grand Invention 
         ["grand.flight-robot-relay", "Flight + Robot Relay"], ["grand.great-bell-machine", "The Great Bell Machine"], ["grand.bolt-rescue", "Bolt Rescue"],
         ["grand.sprockets-shortcut", "Sprocket's Impossible Shortcut"], ["grand.giant-chain-reaction", "The Giant Chain Reaction"], ["grand.great-wobbleworks-machine", "The Great WobbleWorks Machine"]
     ].map(([id, title]) => ({ id: id, title: title, slot: "CHALLENGE", objective: "A Grand Hall challenge.", requiredForProgression: false })) };
+/** Hidden Prototype Lab (M33): the secret bonus chain of 12 locked challenges (rules in content/prototype, unlocks in src/prototype/PrototypeLab.ts). */
+export const PROTOTYPE_LAB = { id: "hidden-prototype-lab", title: "Hidden Prototype Lab", concepts: "Strange prototypes — and Bolt's last memory", colour: "#ced4da", icon: "❓", missions: [
+        ["prototype.reverse-conveyor", "Reverse Conveyor"], ["prototype.super-spring", "Super Spring"], ["prototype.magnet-maze", "Magnet Maze"], ["prototype.bubble-lift", "Bubble Lift"],
+        ["prototype.worm-gear-box", "Worm Gear Box"], ["prototype.tiny-factory", "Tiny Factory"], ["prototype.no-wheels-allowed", "No Wheels Allowed"], ["prototype.upside-down-test", "Upside-Down Test"],
+        ["prototype.five-systems", "Five Systems"], ["prototype.maximum-wobble", "Maximum Wobble"], ["prototype.sprocket-shortcut", "Sprocket Shortcut"], ["prototype.bolts-missing-memory", "Bolt's Missing Memory"]
+    ].map(([id, title]) => ({ id: id, title: title, slot: "CHALLENGE", objective: "A prototype challenge.", requiredForProgression: false })) };
 export const CREATIVE_MODES = [CHAIN_WORKSHOP, EXPERIMENT_LAB, FREE_BUILD_ROOMS, CHALLENGE_LAB, CONTRACT_BOARD, SCIENCE_FAIR, CREATURE_MUSIC];

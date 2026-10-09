@@ -287,6 +287,20 @@ export const REWARDS = [
     { id: "sticker.grand-bolt-rescue", kind: "STICKER", title: "Bolt's Hero", icon: "🦺", description: "Grand Invention Hall: Got Bolt safely off the roof!" },
     { id: "sticker.grand-sprockets-shortcut", kind: "STICKER", title: "Shortcut Champion", icon: "🐕", description: "Grand Invention Hall: Beat Sprocket's clock." },
     { id: "sticker.grand-giant-chain-reaction", kind: "STICKER", title: "Giant Chain Maker", icon: "⛓️", description: "Grand Invention Hall: The biggest chain reactions on campus." },
+    // Hidden Prototype Lab (M33): stickers, rare cosmetics and the secret badge.
+    { id: "sticker.proto-reverse-conveyor", kind: "STICKER", title: "Backwards Thinker", icon: "🔄", description: "Prototype Lab: Made a backwards conveyor go forwards." },
+    { id: "sticker.proto-super-spring", kind: "STICKER", title: "Spring Tamer", icon: "🌀", description: "Prototype Lab: Tamed the Super Spring." },
+    { id: "sticker.proto-magnet-maze", kind: "STICKER", title: "Maze Magnetist", icon: "🧲", description: "Prototype Lab: Steered a puck with magnets alone." },
+    { id: "sticker.proto-worm-gear-box", kind: "STICKER", title: "Worm Gear Wizard", icon: "🐛", description: "Prototype Lab: Lifted the heaviest crate ever." },
+    { id: "sticker.proto-tiny-factory", kind: "STICKER", title: "Tiny Factory Boss", icon: "🏭", description: "Prototype Lab: A whole machine in a tiny space." },
+    { id: "sticker.proto-no-wheels-allowed", kind: "STICKER", title: "No-Wheels Hero", icon: "🚫", description: "Prototype Lab: Moved Bolt without a single wheel." },
+    { id: "sticker.proto-five-systems", kind: "STICKER", title: "Five-System Chain", icon: "5️⃣", description: "Prototype Lab: Five systems in one chain reaction." },
+    { id: "sticker.proto-sprocket-shortcut", kind: "STICKER", title: "Shortcut Finder", icon: "⏱️", description: "Prototype Lab: Beat Sprocket's old route." },
+    { id: "sprocket.bubble-helmet", kind: "SPROCKET_ACCESSORY", title: "Bubble Helmet", icon: "🫧", description: "A rare prototype: Sprocket's very own bubble." },
+    { id: "bolt.prototype-goggles", kind: "BOLT_COSTUME", title: "Prototype Goggles", icon: "🥽", description: "Rare! Upside-down-proof goggles from the secret lab." },
+    { id: "frame.blueprint", kind: "FRAME", title: "Blueprint Frame", icon: "📐", description: "A rare frame for your wobbliest inventions." },
+    { id: "bolt.memory-spark", kind: "BOLT_COSTUME", title: "Memory Spark", icon: "✨", description: "The rarest of all: Bolt remembers everything now." },
+    { id: "badge.prototype-lab", kind: "BADGE", title: "Prototype Pioneer", icon: "❓", description: "Finished every challenge in the Hidden Prototype Lab." },
     { id: "badge.campus-restored", kind: "BADGE", title: "WobbleWorks Restored", icon: "🏛️", description: "The Great WobbleWorks Machine runs — the whole campus is alive again!" }
 ];
 export function rewardById(id) { return REWARDS.find(r => r.id === id); }
@@ -478,7 +492,19 @@ export const MISSION_REWARDS = Object.freeze({
     "grand.bolt-rescue": { onComplete: ["sticker.grand-bolt-rescue"] },
     "grand.sprockets-shortcut": { onComplete: ["sticker.grand-sprockets-shortcut"] },
     "grand.giant-chain-reaction": { onComplete: ["sticker.grand-giant-chain-reaction"] },
-    "grand.great-wobbleworks-machine": { onComplete: ["badge.campus-restored"] }
+    "grand.great-wobbleworks-machine": { onComplete: ["badge.campus-restored"] },
+    "prototype.reverse-conveyor": { onComplete: ["sticker.proto-reverse-conveyor"] },
+    "prototype.super-spring": { onComplete: ["sticker.proto-super-spring"] },
+    "prototype.magnet-maze": { onComplete: ["sticker.proto-magnet-maze"] },
+    "prototype.worm-gear-box": { onComplete: ["sticker.proto-worm-gear-box"] },
+    "prototype.tiny-factory": { onComplete: ["sticker.proto-tiny-factory"] },
+    "prototype.no-wheels-allowed": { onComplete: ["sticker.proto-no-wheels-allowed"] },
+    "prototype.five-systems": { onComplete: ["sticker.proto-five-systems"] },
+    "prototype.sprocket-shortcut": { onComplete: ["sticker.proto-sprocket-shortcut"] },
+    "prototype.bubble-lift": { onComplete: ["sprocket.bubble-helmet"] },
+    "prototype.upside-down-test": { onComplete: ["bolt.prototype-goggles"] },
+    "prototype.maximum-wobble": { onComplete: ["frame.blueprint"] },
+    "prototype.bolts-missing-memory": { onComplete: ["bolt.memory-spark", "badge.prototype-lab"] }
 });
 /** Rewards owed for missions already completed (used when old saves or guest progress move into a profile). */
 export function completionRewardIds(levelIds) {

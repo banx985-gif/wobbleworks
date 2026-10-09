@@ -6,7 +6,7 @@ import { lockerItems, progressSummary } from "../progression/ProgressionManager.
 import { hubFeatures, restorationStage, dueVisitors, restorationProps } from "../progression/Restoration.js";
 import { REWARDS, rewardById, MISSION_STARS } from "../progression/Rewards.js";
 import { renderLook } from "../inventor/LookView.js";
-import { CENTRAL_MACHINE_SYSTEMS, CREDITS, ENDING_SCENES, collectedStory } from "../story/CampusStory.js";
+import { BOLT_FINAL_MEMORY, CENTRAL_MACHINE_SYSTEMS, CREDITS, ENDING_SCENES, FINAL_PROTOTYPE_LEVEL, collectedStory } from "../story/CampusStory.js";
 import { dueContractVisitors, openJobs } from "../contracts/Contracts.js";
 /**
  * The look to draw: the maker look, wearing whatever the locker has equipped in the avatar slot when that
@@ -88,6 +88,8 @@ export function boltPoseUrl(pose) { return `./assets/char/char.bolt.${pose}.webp
 export const BOLT_COSTUME_OVERLAYS = {
     "bolt.duck-floatie": { cls: "bolt-over waist", svg: `<svg viewBox="0 0 120 40" aria-hidden="true"><ellipse cx="60" cy="22" rx="52" ry="14" fill="#ffd43b" stroke="#18323f" stroke-width="5"/><circle cx="104" cy="12" r="10" fill="#ffd43b" stroke="#18323f" stroke-width="4"/><path d="M112 12 l9 2 -9 3z" fill="#ff922b" stroke="#18323f" stroke-width="2"/></svg>` },
     "bolt.top-hat": { cls: "bolt-over head", svg: `<svg viewBox="0 0 80 60" aria-hidden="true"><rect x="22" y="4" width="36" height="40" rx="4" fill="#212529" stroke="#18323f" stroke-width="4"/><rect x="22" y="30" width="36" height="8" fill="#e03131"/><ellipse cx="40" cy="46" rx="36" ry="9" fill="#212529" stroke="#18323f" stroke-width="4"/></svg>` },
+    "bolt.prototype-goggles": { cls: "bolt-over head", svg: `<svg viewBox="0 0 80 60" aria-hidden="true"><rect x="6" y="30" width="68" height="8" rx="4" fill="#495057"/><circle cx="26" cy="34" r="14" fill="#63e6be" stroke="#18323f" stroke-width="5"/><circle cx="54" cy="34" r="14" fill="#63e6be" stroke="#18323f" stroke-width="5"/><path d="M20 30 l6 -5 M48 30 l6 -5" stroke="#fff" stroke-width="4" stroke-linecap="round"/></svg>` },
+    "bolt.memory-spark": { cls: "bolt-over head", svg: `<svg viewBox="0 0 80 60" aria-hidden="true"><path d="M40 4 l7 16 17 2 -13 11 4 17 -15 -9 -15 9 4 -17 -13 -11 17 -2z" fill="#ffd43b" stroke="#18323f" stroke-width="4" stroke-linejoin="round"/><circle cx="12" cy="14" r="4" fill="#63e6be"/><circle cx="70" cy="10" r="3" fill="#63e6be"/></svg>` },
     "bolt.builder-hat": { cls: "bolt-over head", svg: `<svg viewBox="0 0 80 60" aria-hidden="true"><path d="M10 46 Q10 8 40 8 Q70 8 70 46Z" fill="#ffd43b" stroke="#18323f" stroke-width="5"/><rect x="2" y="42" width="76" height="10" rx="5" fill="#fab005" stroke="#18323f" stroke-width="4"/></svg>` }
 };
 export const BOLT_COSTUMES_WITHOUT_OVERLAY = ["bolt.racing-stripes"];
@@ -124,7 +126,8 @@ export function sprocketArt(accessory, awake = true) {
                     : accessory === "sprocket.space-helmet" ? `<circle cx="69" cy="30" r="22" fill="#a5d8ff55" stroke="#18323f" stroke-width="3"/><path d="M50 40 q19 10 38 0" stroke="#18323f" stroke-width="3" fill="none"/>`
                         : accessory === "sprocket.antenna" ? `<path d="M69 18 v-14" stroke="#18323f" stroke-width="3"/><circle cx="69" cy="4" r="4" fill="#63e6be" stroke="#18323f" stroke-width="2"/>`
                             : accessory === "sprocket.glow-collar" ? `<path d="M55 51 q14 8 28 0" fill="none" stroke="#ffd43b" stroke-width="7" stroke-linecap="round" opacity=".9"/><circle cx="69" cy="58" r="5" fill="#fff59d" stroke="#18323f" stroke-width="2"/>`
-                                : accessory === "sprocket.spring-collar" ? `<path d="M56 54 q4 -6 8 0 q4 6 8 0 q4 -6 8 0" fill="none" stroke="#845ef7" stroke-width="5"/>` : "";
+                                : accessory === "sprocket.bubble-helmet" ? `<circle cx="69" cy="30" r="23" fill="#d0ebff66" stroke="#74c0fc" stroke-width="3"/><path d="M56 18 q6 -6 12 -4" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round"/>`
+                                    : accessory === "sprocket.spring-collar" ? `<path d="M56 54 q4 -6 8 0 q4 6 8 0 q4 -6 8 0" fill="none" stroke="#845ef7" stroke-width="5"/>` : "";
     return svg(`
     <path d="M18 60 q-12 -6 -8 -20" fill="none" stroke="#18323f" stroke-width="9" stroke-linecap="round" class="sprocket-tail"/>
     <path d="M18 60 q-12 -6 -8 -20" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" class="sprocket-tail"/>
@@ -458,6 +461,8 @@ function storyBook(save, cb) {
     };
     book.append(list("Old inventor recordings", c.recordings, "Finish a lab's Mega Build to find its recording."), list("Bolt's memories", c.memories, "Restore a lab to help Bolt remember."));
     book.append(list("The ending", campaignComplete(save) ? [...ENDING_SCENES, CREDITS] : [], "Run the Great WobbleWorks Machine in the Grand Invention Hall."));
+    if (activeProfile(save)?.levels[FINAL_PROTOTYPE_LEVEL]?.completed)
+        book.append(list("Bolt's last memory", [BOLT_FINAL_MEMORY], ""));
     return book;
 }
 export function renderShelf(root, save, cb) {

@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "id": "prototype.sprocket-shortcut",
+  "title": "Sprocket Shortcut",
+  "environmentId": "env.motion-yard",
+  "availablePartIds": [
+    "motion.ramp",
+    "structure.block",
+    "motion.spring",
+    "motion.bounce-pad",
+    "motion.friction-low"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "start",
+      "definitionId": "motion.ramp",
+      "position": {
+        "x": 2.2,
+        "y": 3.9
+      },
+      "rotation": 0.3,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "sprocket",
+      "definitionId": "motion.ball",
+      "position": {
+        "x": 1.4,
+        "y": 3.3
+      },
+      "rotation": 0,
+      "parameters": {},
+      "tags": [
+        "sprocket"
+      ]
+    },
+    {
+      "id": "goal-zone.home",
+      "definitionId": "motion.goal-zone",
+      "position": {
+        "x": 13,
+        "y": 8
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "zone.home"
+      ]
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "OBJECT_ENTERS_ZONE",
+      "objectTag": "sprocket",
+      "zoneTag": "zone.home",
+      "radius": 1
+    },
+    {
+      "kind": "ELAPSED_AT_MOST",
+      "seconds": 4
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "motion.ramp",
+      "conceptId": "motion.ramp",
+      "eventKind": "RAMP_CONTACT",
+      "minimumCount": 1,
+      "truthContractId": "truth.motion.v1"
+    }
+  ],
+  "hints": [
+    "Sprocket bounces down and then rolls slowly the rest of the way.",
+    "What if his fall turned into speed instead of a bump?"
+  ],
+  "narrationCues": [
+    "Sprocket's old route takes nearly 5 seconds. Build a shortcut that gets him home in 4!"
+  ]
+}

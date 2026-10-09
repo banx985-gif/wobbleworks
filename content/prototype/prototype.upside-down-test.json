@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "id": "prototype.upside-down-test",
+  "title": "Upside-Down Test",
+  "environmentId": "env.flight-hangar",
+  "availablePartIds": [
+    "motion.ramp",
+    "structure.block"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "ceiling-1",
+      "definitionId": "motion.platform",
+      "position": {
+        "x": 1,
+        "y": 0.25
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "ceiling-2",
+      "definitionId": "motion.platform",
+      "position": {
+        "x": 3,
+        "y": 0.25
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "ceiling-3",
+      "definitionId": "motion.platform",
+      "position": {
+        "x": 5,
+        "y": 0.25
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "ceiling-4",
+      "definitionId": "motion.platform",
+      "position": {
+        "x": 7,
+        "y": 0.25
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "ceiling-5",
+      "definitionId": "motion.platform",
+      "position": {
+        "x": 9,
+        "y": 0.25
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "ceiling-6",
+      "definitionId": "motion.platform",
+      "position": {
+        "x": 11,
+        "y": 0.25
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "ceiling-7",
+      "definitionId": "motion.platform",
+      "position": {
+        "x": 13,
+        "y": 0.25
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "ceiling-8",
+      "definitionId": "motion.platform",
+      "position": {
+        "x": 15,
+        "y": 0.25
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "anchor-1",
+      "definitionId": "structure.block",
+      "position": {
+        "x": 4.6,
+        "y": 0.62
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      }
+    },
+    {
+      "id": "balloon",
+      "definitionId": "sandbox.balloon",
+      "position": {
+        "x": 2,
+        "y": 7.4
+      },
+      "rotation": 0,
+      "parameters": {},
+      "tags": [
+        "balloon"
+      ]
+    },
+    {
+      "id": "goal-zone.top",
+      "definitionId": "motion.goal-zone",
+      "position": {
+        "x": 8.6,
+        "y": 1.1
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "zone.top"
+      ]
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "OBJECT_ENTERS_ZONE",
+      "objectTag": "balloon",
+      "zoneTag": "zone.top",
+      "radius": 1
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "sandbox.float",
+      "conceptId": "sandbox.float",
+      "eventKind": "FLOAT",
+      "minimumCount": 1,
+      "truthContractId": "truth.motion.v1"
+    }
+  ],
+  "hints": [
+    "A balloon 'falls' UP. So everything has to be upside down!",
+    "A ramp under the ceiling works like a ramp on the floor — for things that float."
+  ],
+  "narrationCues": [
+    "Upside-down test! Guide the balloon along the ceiling to the top corner."
+  ]
+}

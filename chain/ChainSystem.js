@@ -302,7 +302,7 @@ export class ChainSystem {
         catch {
             return undefined;
         } let best; for (const p of this.parts) {
-            if (p.definitionId !== "flight.fan")
+            if (!this.definition(p.definitionId)?.behaviours.some(b => b.kind === "WIND_FAN"))
                 continue;
             const d = Math.hypot(st.x - p.position.x, st.y - p.position.y);
             if (!best || d < best.d)

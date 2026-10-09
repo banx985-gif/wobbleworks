@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "id": "prototype.reverse-conveyor",
+  "title": "Reverse Conveyor",
+  "environmentId": "env.gear-garage",
+  "availablePartIds": [
+    "gear.small",
+    "gear.medium",
+    "gear.large",
+    "gear.belt-pulley",
+    "gear.belt-pulley-big"
+  ],
+  "starterParts": [],
+  "starterConnections": [],
+  "constraints": [],
+  "environmentModifiers": [],
+  "goals": [],
+  "staticObjects": [
+    {
+      "id": "motor",
+      "definitionId": "gear.motor",
+      "position": {
+        "x": 2.5,
+        "y": 6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "driver.motor"
+      ]
+    },
+    {
+      "id": "drum",
+      "definitionId": "proto.reverse-drum",
+      "position": {
+        "x": 5.2,
+        "y": 6
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true,
+        "drives": "belt"
+      },
+      "tags": [
+        "output.drum"
+      ]
+    },
+    {
+      "id": "belt",
+      "definitionId": "motion.conveyor",
+      "position": {
+        "x": 8,
+        "y": 8.2
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "belt"
+      ]
+    },
+    {
+      "id": "goal-zone.bay",
+      "definitionId": "motion.goal-zone",
+      "position": {
+        "x": 10.8,
+        "y": 7.7
+      },
+      "rotation": 0,
+      "parameters": {
+        "locked": true
+      },
+      "tags": [
+        "zone.bay"
+      ]
+    },
+    {
+      "id": "cargo",
+      "definitionId": "motion.parcel",
+      "position": {
+        "x": 6.5,
+        "y": 7.8
+      },
+      "rotation": 0,
+      "parameters": {},
+      "tags": [
+        "subject.cargo"
+      ]
+    }
+  ],
+  "outcomeRules": [
+    {
+      "kind": "OBJECT_ENTERS_ZONE",
+      "objectTag": "subject.cargo",
+      "zoneTag": "zone.bay",
+      "radius": 0.8
+    }
+  ],
+  "evidenceRules": [
+    {
+      "id": "gear.direction",
+      "conceptId": "gear.direction",
+      "eventKind": "CONVEYOR_CARRY",
+      "minimumCount": 1,
+      "truthContractId": "truth.gears.v1"
+    }
+  ],
+  "hints": [
+    "This prototype drum is fitted backwards! Which way does the belt go when the drum turns?",
+    "Each pair of meshing gears swaps the direction. Count them."
+  ],
+  "narrationCues": [
+    "This prototype conveyor runs backwards! Get the parcel to the bay anyway."
+  ]
+}

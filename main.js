@@ -33,7 +33,8 @@ import { OpeningDirector, evaluateOpeningSuccess } from "./opening/OpeningDirect
 import { loadMotionYardLevels } from "./motion/MotionContent.js";
 import { MOTION_PERFORMANCE_BUDGET } from "./motion/MotionPerformanceBudget.js";
 import { evaluateMotionMission, MOTION_REAL_WORLD_CARDS } from "./motion/MotionYard.js";
-import { CHAIN_WORKSHOP, CHALLENGE_LAB, CONTRACT_BOARD, CREATURE_MUSIC, EXPERIMENT_LAB, FREE_BUILD_ROOMS, GRAND_HALL, MAIN_LABS, SCIENCE_FAIR } from "./progression/CampaignData.js";
+import { CHAIN_WORKSHOP, CHALLENGE_LAB, CONTRACT_BOARD, CREATURE_MUSIC, EXPERIMENT_LAB, FREE_BUILD_ROOMS, GRAND_HALL, MAIN_LABS, PROTOTYPE_LAB, SCIENCE_FAIR } from "./progression/CampaignData.js";
+import { prototypeChallengeOpen, prototypeLabOpen } from "./prototype/PrototypeLab.js";
 import { CAMPUS_SWITCH_ROOM, FINAL_CHALLENGE_ID, GRAND_STAGE_LEVEL_IDS, grandChallengeById, grandChallengeOpen, grandHallOpen, grandStage, grandStageLevelId, grandStageOf, completeGrandStage } from "./grand/GrandHall.js";
 import { CREATURE_MUSIC_LABS, RING_SECONDS, creatureMusicChallengeOpen, creatureMusicOpen } from "./creatures/CreatureMusic.js";
 import { SCALE_HZ, familyOf } from "./music/MusicSystem.js";
@@ -290,7 +291,7 @@ function readSettingsForm() {
     return { textScale: Number.isFinite(num) ? Math.max(0.9, Math.min(1.4, num)) : 1, reducedMotion: chk("#setting-reduced-motion"), highContrast: chk("#setting-high-contrast"), narration: chk("#setting-narration"), subtitles: chk("#setting-subtitles"), soundEffects: chk("#setting-sfx"), music: chk("#setting-music"), vibration: chk("#setting-vibration") };
 }
 /** The nine campaign labs plus the creative modes that use the same mission menu (the Chain Reaction Workshop). */
-const PLAY_SETS = [...MAIN_LABS, CHAIN_WORKSHOP, EXPERIMENT_LAB, FREE_BUILD_ROOMS, CHALLENGE_LAB, CONTRACT_BOARD, SCIENCE_FAIR, CREATURE_MUSIC, GRAND_HALL];
+const PLAY_SETS = [...MAIN_LABS, CHAIN_WORKSHOP, EXPERIMENT_LAB, FREE_BUILD_ROOMS, CHALLENGE_LAB, CONTRACT_BOARD, SCIENCE_FAIR, CREATURE_MUSIC, GRAND_HALL, PROTOTYPE_LAB];
 function labDef(id = currentLabId) { return PLAY_SETS.find(l => l.id === id); }
 function labOfLevel(levelId) { if (levelId.startsWith("grand."))
     return GRAND_HALL.id; return PLAY_SETS.find(l => l.missions.some(m => m.id === levelId))?.id ?? "motion-yard"; }
@@ -313,6 +314,8 @@ function evaluateLevel(level, runtime) {
         return { levelId: level.id, success: false, discoveries: [] };
     // Job Board: each job uses its lab room's own rules, checked the same way as every other level.
     // Grand Invention Hall: each stage is a lab room, checked by that room's own rules.
+    if (lab === PROTOTYPE_LAB.id)
+        return { levelId: level.id, success: runtime ? evaluateLevelOutcome(level, build, runtime).complete : false, discoveries: [] };
     if (lab === GRAND_HALL.id)
         return { levelId: level.id, success: runtime ? evaluateLevelOutcome(level, build, runtime).complete : false, discoveries: [] };
     if (lab === CREATURE_MUSIC.id)
@@ -329,7 +332,8 @@ function evaluateLevel(level, runtime) {
 /** Remember this run so the next TEST can show whether a change (like a brace) really helped. */
 function rememberRun() { const runtime = tests.active(); if (runtime && activeLevel)
     lastRuns.set(activeLevel.id, runSummary(build, runtime)); }
-function labIsOpen(labId) { if (labId === GRAND_HALL.id)
+function labIsOpen(labId) { if (labId === PROTOTYPE_LAB.id)
+    return labLevels.has(labId) && (prototypeLabOpen(appSave) || testingLabs.has(labId)); if (labId === GRAND_HALL.id)
     return labLevels.has(labId) && (grandHallOpen(appSave) || testingLabs.has(labId)); if (labId === CREATURE_MUSIC.id)
     return labLevels.has(labId) && (creatureMusicOpen(appSave) || testingLabs.has(labId)); if (labId === SCIENCE_FAIR.id)
     return labLevels.has(labId) && (scienceFairOpen(appSave) || testingLabs.has(labId)); if (labId === CONTRACT_BOARD.id)
@@ -389,13 +393,13 @@ function renderLabMenu() {
     const completed = completedSet();
     const requiredNext = nextRequiredLabMission(lab, completed);
     document.querySelector("#btn-creator").classList.toggle("hidden", lab.id !== CHALLENGE_LAB.id || !activeProfile(appSave));
-    document.querySelector("#lab-badge").textContent = MAIN_LABS.includes(lab) ? `LAB ${MAIN_LABS.indexOf(lab) + 1}` : lab.id === GRAND_HALL.id ? "FINALE" : "WORKSHOP MODE";
+    document.querySelector("#lab-badge").textContent = MAIN_LABS.includes(lab) ? `LAB ${MAIN_LABS.indexOf(lab) + 1}` : lab.id === GRAND_HALL.id ? "FINALE" : lab.id === PROTOTYPE_LAB.id ? "SECRET LAB" : "WORKSHOP MODE";
     document.querySelector("#lab-badge").style.background = lab.colour;
     document.querySelector("#lab-title").textContent = lab.title;
     document.querySelector("#lab-lead").textContent = `${lab.concepts}. Build, TEST, watch what happens, then change it.`;
     motionProgressLabel.textContent = `${lab.missions.filter(m => completed.has(m.id)).length} / ${lab.missions.length} ${lab.title} experiences completed`;
     for (const meta of lab.missions) {
-        const unlocked = labMissionUnlocked(lab, meta.id, completed) && (lab.id !== EXPERIMENT_LAB.id || experimentUnlocked(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== FREE_BUILD_ROOMS.id || sandboxOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== CHALLENGE_LAB.id || challengeOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== CONTRACT_BOARD.id || contractOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== SCIENCE_FAIR.id || fairOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== CREATURE_MUSIC.id || creatureMusicChallengeOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== GRAND_HALL.id || grandChallengeOpen(appSave, meta.id, completed) || testingLabs.has(lab.id));
+        const unlocked = labMissionUnlocked(lab, meta.id, completed) && (lab.id !== EXPERIMENT_LAB.id || experimentUnlocked(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== FREE_BUILD_ROOMS.id || sandboxOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== CHALLENGE_LAB.id || challengeOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== CONTRACT_BOARD.id || contractOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== SCIENCE_FAIR.id || fairOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== CREATURE_MUSIC.id || creatureMusicChallengeOpen(appSave, meta.id) || testingLabs.has(lab.id)) && (lab.id !== GRAND_HALL.id || grandChallengeOpen(appSave, meta.id, completed) || testingLabs.has(lab.id)) && (lab.id !== PROTOTYPE_LAB.id || prototypeChallengeOpen(meta.id, completed) || testingLabs.has(lab.id));
         const button = document.createElement("button");
         button.className = `motion-mission${completed.has(meta.id) ? " done" : ""}${!unlocked ? " locked" : ""}${requiredNext === meta.id ? " required" : ""}`;
         button.disabled = !unlocked;
@@ -413,7 +417,9 @@ function renderLabMenu() {
         const fd = lab.id === SCIENCE_FAIR.id ? fairById(meta.id) : undefined;
         const cmLab = lab.id === CREATURE_MUSIC.id ? CREATURE_MUSIC_LABS[meta.id] : undefined;
         const gc = lab.id === GRAND_HALL.id ? grandChallengeById(meta.id) : undefined;
-        if (gc) {
+        if (lab.id === PROTOTYPE_LAB.id)
+            objective.textContent = unlocked ? labLevels.get(PROTOTYPE_LAB.id)?.get(meta.id)?.narrationCues?.[0] ?? meta.objective : "Finish the one before to open this.";
+        else if (gc) {
             slot.textContent = `${gc.icon} CHALLENGE ${lab.missions.indexOf(meta) + 1}`;
             const at = grandStage(appSave, gc.id);
             objective.textContent = unlocked ? `${gc.story} · ${gc.stages.length} stages${at > 0 ? ` · on stage ${at + 1}` : ""}` : "Finish the other 11 challenges to start the great machine.";
@@ -484,6 +490,8 @@ function loadMission(id) {
         return;
     if (!grand && !labMissionUnlocked(lab, id, completedSet()))
         return;
+    if (labId === PROTOTYPE_LAB.id && !(prototypeChallengeOpen(id, completedSet()) || testingLabs.has(labId)))
+        return;
     photo.exit();
     editingInvention = undefined;
     lastRun = undefined;
@@ -531,7 +539,7 @@ function loadMission(id) {
     setupChallenge(labId === CHALLENGE_LAB.id ? challengeById(level.id) : undefined);
     contract = labId === CONTRACT_BOARD.id ? contractById(level.id) : undefined;
     setupFair(labId === SCIENCE_FAIR.id ? fairById(level.id) : undefined, level);
-    if (labId === CREATURE_MUSIC.id)
+    if (labId === CREATURE_MUSIC.id || labId === PROTOTYPE_LAB.id)
         motionObjective.textContent = level.narrationCues?.[0] ?? motionObjective.textContent;
     grandRun = grand;
     nextStageButton.classList.add("hidden");
@@ -967,6 +975,7 @@ async function loadAppState() {
         labLevels.set(CONTRACT_BOARD.id, await loadLabLevels(registry, CONTRACT_BOARD.id, "contract"));
         labLevels.set(SCIENCE_FAIR.id, await loadLabLevels(registry, SCIENCE_FAIR.id, "fair"));
         labLevels.set(CREATURE_MUSIC.id, await loadLabLevels(registry, CREATURE_MUSIC.id, "creature"));
+        labLevels.set(PROTOTYPE_LAB.id, await loadLabLevels(registry, PROTOTYPE_LAB.id, "prototype"));
         labLevels.set(GRAND_HALL.id, await loadLevelFiles(registry, GRAND_STAGE_LEVEL_IDS, "grand", GRAND_HALL.title));
         appSave = loaded.payload ?? createDefaultAppSave();
         savingBlocked = loaded.futureVersion;
@@ -2338,8 +2347,8 @@ function hitPart(x, y, padding = (labActive || freeBuildActive) ? currentGuidanc
         const d = registry.get(p.definitionId);
         const rigid = d.behaviours.find(b => b.kind === "RIGID_BODY");
         const gear = d.behaviours.find(b => b.kind === "GEAR");
-        const w = gear?.kind === "GEAR" ? gear.radius * 2 : rigid?.kind === "RIGID_BODY" ? rigid.width : 0.9;
-        const h = gear?.kind === "GEAR" ? gear.radius * 2 : rigid?.kind === "RIGID_BODY" ? rigid.height : 0.7;
+        const w = gear?.kind === "GEAR" ? Math.max(0.5, gear.radius * 2) : rigid?.kind === "RIGID_BODY" ? rigid.width : 0.9;
+        const h = gear?.kind === "GEAR" ? Math.max(0.5, gear.radius * 2) : rigid?.kind === "RIGID_BODY" ? rigid.height : 0.7;
         return Math.abs(p.position.x - x) <= w / 2 + padding && Math.abs(p.position.y - y) <= h / 2 + padding;
     })?.id;
 }
